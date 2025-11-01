@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: meal-planning
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: "pip install -r requirements.txt && chmod +x railway-build.sh && ./railway-build.sh"
+    startCommand: "python setup.py && gunicorn app:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: ANTHROPIC_API_KEY
+        sync: false

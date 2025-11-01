@@ -18,8 +18,8 @@ def setup_database():
 
     # Check if database already exists
     if os.path.exists(db.db_path):
-        # In production (Railway), skip the prompt and just use existing DB
-        if os.getenv('RAILWAY_ENVIRONMENT'):
+        # In production (Railway or Render), skip the prompt and just use existing DB
+        if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('RENDER'):
             print(f"✓ Using existing database at '{db.db_path}'")
             print("  (Skipping recreation in production environment)")
             return

@@ -1,0 +1,6 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python setup.py && gunicorn app:app"
+restartPolicyType = "on_failure"

@@ -990,6 +990,318 @@ function formatExpirationStatus(daysUntil) {
 }
 
 // ============================================================================
+// School Menu Management
+// ============================================================================
+
+function initSchoolMenu() {
+    const addMenuItemBtn = document.getElementById('add-school-menu-item-btn');
+    const bulkUploadBtn = document.getElementById('bulk-upload-menu-btn');
+    const menuDateInput = document.getElementById('school-menu-date');
+
+    // Set default date to today
+    menuDateInput.valueAsDate = new Date();
+
+    // Load initial data
+    loadTodayLunchPlan();
+    loadUpcomingSchoolMenu();
+
+    addMenuItemBtn.addEventListener('click', addSchoolMenuItem);
+    bulkUploadBtn.addEventListener('click', bulkUploadSchoolMenu);
+
+    // Listen for tab changes to refresh when viewing school menu tab
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (e.target.getAttribute('data-tab') === 'school-menu') {
+                loadTodayLunchPlan();
+                loadUpcomingSchoolMenu();
+            }
+        });
+    });
+}
+
+async function loadTodayLunchPlan() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch(`${API_BASE}/api/school-menu/lunch-alternatives/${today}`);
+        const data = await response.json();
+
+        const content = document.getElementById('today-lunch-plan');
+
+        if (data.success) {
+            const alt = data.data;
+            content.innerHTML = `
+                <div class="lunch-plan-card">
+                    <div class="recommendation-box">
+                        <h3>${alt.recommendation}</h3>
+                    </div>
+
+                    ${alt.school_menu && alt.school_menu.length > 0 ? `
+                        <div class="school-menu-today">
+                            <h4>School is serving:</h4>
+                            ${alt.school_menu.map(item => `
+                                <div class="menu-item ${item.dislike_count > 0 ? 'disliked' : ''}">
+                                    <span>${item.meal_name}</span>
+                                    ${item.dislike_count > 0 ? '<span class="dislike-badge">👎 Marked as disliked</span>' : ''}
+                                    ${item.dislike_count === 0 ? `
+                                        <button class="btn-sm btn-secondary" onclick="markDisliked(${item.id}, '${item.meal_name}')">
+                                            👎 Kid won't eat this
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : '<p>No school menu for today</p>'}
+
+                    ${alt.available_leftovers && alt.available_leftovers.length > 0 ? `
+                        <div class="leftovers-available">
+                            <h4>🥡 Leftovers available:</h4>
+                            ${alt.available_leftovers.map(l => `
+                                <div class="leftover-option">
+                                    ${l.meal_name} (${l.servings_remaining} servings, ${l.days_until_expiry} days left)
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${alt.quick_lunch_options && alt.quick_lunch_options.length > 0 ? `
+                        <div class="quick-options">
+                            <h4>🍱 Quick lunch options:</h4>
+                            ${alt.quick_lunch_options.map(meal => `
+                                <div class="quick-lunch-option">
+                                    ${meal.name} (${meal.prep_time_minutes + meal.cook_time_minutes} min)
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        } else {
+            content.innerHTML = '<p class="status-msg error">Failed to load lunch plan</p>';
+        }
+    } catch (error) {
+        console.error('Error loading lunch plan:', error);
+        document.getElementById('today-lunch-plan').innerHTML =
+            '<p class="status-msg error">Failed to load lunch plan</p>';
+    }
+}
+
+async function loadUpcomingSchoolMenu() {
+    try {
+        const response = await fetch(`${API_BASE}/api/school-menu?days=7`);
+        const data = await response.json();
+
+        const content = document.getElementById('upcoming-school-menu');
+
+        if (data.success && data.menu_items && data.menu_items.length > 0) {
+            // Group by date
+            const byDate = {};
+            data.menu_items.forEach(item => {
+                if (!byDate[item.menu_date]) {
+                    byDate[item.menu_date] = [];
+                }
+                byDate[item.menu_date].push(item);
+            });
+
+            content.innerHTML = Object.keys(byDate).sort().map(date => {
+                const items = byDate[date];
+                const dateObj = new Date(date + 'T00:00:00');
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                return `
+                    <div class="school-menu-day">
+                        <div class="menu-day-header">
+                            <strong>${dayName}, ${dateStr}</strong>
+                        </div>
+                        <div class="menu-items">
+                            ${items.map(item => `
+                                <div class="menu-item-card ${item.dislike_count > 0 ? 'disliked' : ''}">
+                                    <span class="meal-name">${item.meal_name}</span>
+                                    ${item.description ? `<span class="meal-description">${item.description}</span>` : ''}
+                                    ${item.dislike_count > 0 ? '<span class="dislike-badge">👎 Disliked</span>' : ''}
+                                    <button class="btn-delete" onclick="deleteSchoolMenuItem(${item.id})">×</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            content.innerHTML = `
+                <div class="empty-state">
+                    <p class="empty-icon">📅</p>
+                    <h3>No school menu items</h3>
+                    <p>Add menu items below to track what's being served at school</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading school menu:', error);
+        document.getElementById('upcoming-school-menu').innerHTML =
+            '<p class="status-msg error">Failed to load school menu</p>';
+    }
+}
+
+async function addSchoolMenuItem() {
+    const menuDate = document.getElementById('school-menu-date').value;
+    const mealName = document.getElementById('school-meal-name').value;
+    const mealType = document.getElementById('school-meal-type').value;
+    const description = document.getElementById('school-meal-description').value;
+
+    if (!menuDate || !mealName) {
+        alert('Please enter date and meal name');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/school-menu`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                menu_date: menuDate,
+                meal_name: mealName,
+                meal_type: mealType,
+                description: description || null
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus('Menu item added!', 'success');
+            // Reset form
+            document.getElementById('school-meal-name').value = '';
+            document.getElementById('school-meal-description').value = '';
+            document.getElementById('school-menu-date').valueAsDate = new Date();
+            // Reload
+            loadUpcomingSchoolMenu();
+            loadTodayLunchPlan();
+        } else {
+            showStatus(`Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error adding menu item:', error);
+        showStatus('Failed to add menu item', 'error');
+    }
+}
+
+async function bulkUploadSchoolMenu() {
+    const bulkInput = document.getElementById('school-menu-bulk-input').value;
+
+    if (!bulkInput.trim()) {
+        alert('Please paste menu text');
+        return;
+    }
+
+    // Parse the input (format: "YYYY-MM-DD: Meal Name" or "MM/DD: Meal Name")
+    const lines = bulkInput.split('\n').filter(line => line.trim());
+    const menuItems = [];
+    const currentYear = new Date().getFullYear();
+
+    for (const line of lines) {
+        const match = line.match(/(\d{4}-\d{2}-\d{2}|(\d{1,2})\/(\d{1,2})):\s*(.+)/);
+        if (match) {
+            let menuDate;
+            if (match[1].includes('-')) {
+                // Full date format
+                menuDate = match[1];
+            } else {
+                // MM/DD format, add current year
+                const month = match[2].padStart(2, '0');
+                const day = match[3].padStart(2, '0');
+                menuDate = `${currentYear}-${month}-${day}`;
+            }
+
+            const mealName = match[4].trim();
+            menuItems.push({
+                menu_date: menuDate,
+                meal_name: mealName,
+                meal_type: 'lunch'
+            });
+        }
+    }
+
+    if (menuItems.length === 0) {
+        alert('No valid menu items found. Format should be "YYYY-MM-DD: Meal Name" or "MM/DD: Meal Name"');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/school-menu`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(menuItems)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus(`Added ${data.added_count} menu items!`, 'success');
+            document.getElementById('school-menu-bulk-input').value = '';
+            loadUpcomingSchoolMenu();
+            loadTodayLunchPlan();
+        } else {
+            showStatus(`Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error bulk uploading:', error);
+        showStatus('Failed to upload menu', 'error');
+    }
+}
+
+async function deleteSchoolMenuItem(menuId) {
+    if (!confirm('Delete this menu item?')) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/api/school-menu/${menuId}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus('Menu item deleted', 'success');
+            loadUpcomingSchoolMenu();
+            loadTodayLunchPlan();
+        } else {
+            showStatus(`Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting menu item:', error);
+        showStatus('Failed to delete', 'error');
+    }
+}
+
+async function markDisliked(menuItemId, mealName) {
+    if (!confirm(`Mark "${mealName}" as a meal your kid won't eat?`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/api/school-menu/feedback`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                menu_item_id: menuItemId,
+                feedback_type: 'wont_eat',
+                notes: 'Marked by parent'
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus('Feedback recorded', 'success');
+            loadTodayLunchPlan();
+            loadUpcomingSchoolMenu();
+        } else {
+            showStatus(`Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error recording feedback:', error);
+        showStatus('Failed to record feedback', 'error');
+    }
+}
+
+// ============================================================================
 // Initialize
 // ============================================================================
 
@@ -1001,6 +1313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initShopping();
     initHistory();
     initLeftovers();
+    initSchoolMenu();
 
     console.log('🍽️ Family Meal Planner initialized');
 });

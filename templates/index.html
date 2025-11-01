@@ -19,6 +19,7 @@
             <button class="tab-btn" data-tab="browse">Browse Meals</button>
             <button class="tab-btn" data-tab="history">Favorites & History</button>
             <button class="tab-btn" data-tab="leftovers">Leftovers</button>
+            <button class="tab-btn" data-tab="school-menu">School Menu</button>
             <button class="tab-btn" data-tab="shopping">Shopping List</button>
         </nav>
 
@@ -283,6 +284,75 @@ Instructions:
                 </div>
 
                 <button id="add-leftover-btn" class="btn btn-primary">Add to Fridge</button>
+            </section>
+        </div>
+
+        <!-- SCHOOL MENU TAB -->
+        <div id="school-menu" class="tab-content">
+            <!-- Lunch Alternatives Today -->
+            <section class="card">
+                <h2>🍱 Today's Lunch Plan</h2>
+                <p>Smart suggestions based on school menu and leftovers</p>
+                <div id="today-lunch-plan">
+                    <p class="status-msg info">Loading today's plan...</p>
+                </div>
+            </section>
+
+            <!-- Upcoming School Menu -->
+            <section class="card">
+                <h2>📅 Upcoming School Menu</h2>
+                <p>What's being served at school this week</p>
+                <div id="upcoming-school-menu">
+                    <p class="status-msg info">Loading school menu...</p>
+                </div>
+            </section>
+
+            <!-- Add Menu Items -->
+            <section class="card">
+                <h2>➕ Add School Menu</h2>
+                <p>Enter school cafeteria menu (single item or bulk upload)</p>
+
+                <!-- Single Item Form -->
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="school-menu-date">
+                </div>
+
+                <div class="form-group">
+                    <label>Meal Name</label>
+                    <input type="text" id="school-meal-name" placeholder="e.g., Pizza, Chicken Nuggets">
+                </div>
+
+                <div class="form-group">
+                    <label>Meal Type</label>
+                    <select id="school-meal-type">
+                        <option value="lunch">Lunch</option>
+                        <option value="breakfast">Breakfast</option>
+                        <option value="snack">Snack</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Description (optional)</label>
+                    <input type="text" id="school-meal-description" placeholder="e.g., With marinara sauce and salad">
+                </div>
+
+                <button id="add-school-menu-item-btn" class="btn btn-primary">Add Menu Item</button>
+
+                <!-- Bulk Upload -->
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border);">
+                    <h3>📋 Bulk Upload (Paste Monthly Menu)</h3>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Paste menu text here (one item per line, format: "YYYY-MM-DD: Meal Name")
+                    </p>
+                    <textarea
+                        id="school-menu-bulk-input"
+                        rows="8"
+                        placeholder="2025-11-04: Pizza&#10;2025-11-05: Chicken Nuggets&#10;2025-11-06: Tacos"
+                        style="width: 100%; padding: 1rem; border: 2px solid var(--border); border-radius: var(--radius-md); font-family: monospace;"
+                    ></textarea>
+                    <button id="bulk-upload-menu-btn" class="btn btn-secondary" style="margin-top: 1rem;">📤 Upload Menu</button>
+                </div>
             </section>
         </div>
 

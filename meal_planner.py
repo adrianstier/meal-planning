@@ -635,6 +635,212 @@ class MealPlannerDB:
 
         return suggestions
 
+    # ========================================================================
+    # School Menu Methods
+    # ========================================================================
+
+    def add_school_menu_item(self, menu_date: str, meal_name: str,
+                             meal_type: str = 'lunch', description: str = None):
+        """Add a school cafeteria menu item"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                INSERT INTO school_menu_items (menu_date, meal_name, meal_type, description)
+                VALUES (?, ?, ?, ?)
+            """, (menu_date, meal_name, meal_type, description))
+            conn.commit()
+            return cursor.lastrowid
+        except sqlite3.IntegrityError:
+            # Item already exists for this date
+            return None
+
+    def add_school_menu_bulk(self, menu_items: List[Dict]) -> int:
+        """
+        Add multiple school menu items at once
+        menu_items: List of dicts with keys: menu_date, meal_name, meal_type, description
+        Returns: number of items added
+        """
+        conn = self.connect()
+        cursor = conn.cursor()
+        added_count = 0
+
+        for item in menu_items:
+            try:
+                cursor.execute("""
+                    INSERT INTO school_menu_items (menu_date, meal_name, meal_type, description)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    item['menu_date'],
+                    item['meal_name'],
+                    item.get('meal_type', 'lunch'),
+                    item.get('description')
+                ))
+                added_count += 1
+            except sqlite3.IntegrityError:
+                # Skip duplicates
+                continue
+
+        conn.commit()
+        return added_count
+
+    def get_school_menu_by_date(self, menu_date: str) -> List[Dict]:
+        """Get school menu for a specific date"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT sm.*,
+                   COUNT(sf.id) as dislike_count,
+                   GROUP_CONCAT(sf.feedback_type) as feedback_types
+            FROM school_menu_items sm
+            LEFT JOIN school_menu_feedback sf ON sm.id = sf.menu_item_id
+            WHERE sm.menu_date = ?
+            GROUP BY sm.id
+            ORDER BY sm.meal_type, sm.meal_name
+        """, (menu_date,))
+
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_school_menu_range(self, start_date: str, end_date: str) -> List[Dict]:
+        """Get school menu for a date range"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT sm.*,
+                   COUNT(sf.id) as dislike_count,
+                   GROUP_CONCAT(sf.feedback_type) as feedback_types
+            FROM school_menu_items sm
+            LEFT JOIN school_menu_feedback sf ON sm.id = sf.menu_item_id
+            WHERE sm.menu_date BETWEEN ? AND ?
+            GROUP BY sm.id
+            ORDER BY sm.menu_date, sm.meal_type, sm.meal_name
+        """, (start_date, end_date))
+
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_upcoming_school_menu(self, days: int = 7) -> List[Dict]:
+        """Get upcoming school menu items"""
+        today = datetime.now().strftime('%Y-%m-%d')
+        end_date = (datetime.now() + timedelta(days=days)).strftime('%Y-%m-%d')
+        return self.get_school_menu_range(today, end_date)
+
+    def add_menu_feedback(self, menu_item_id: int, feedback_type: str, notes: str = None):
+        """Record feedback about a school menu item (disliked, allergic, wont_eat)"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO school_menu_feedback (menu_item_id, feedback_type, notes)
+            VALUES (?, ?, ?)
+        """, (menu_item_id, feedback_type, notes))
+
+        conn.commit()
+        return cursor.lastrowid
+
+    def get_disliked_school_meals(self) -> List[str]:
+        """Get list of school meals kids don't like"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT DISTINCT sm.meal_name
+            FROM school_menu_items sm
+            JOIN school_menu_feedback sf ON sm.id = sf.menu_item_id
+            WHERE sf.feedback_type IN ('disliked', 'wont_eat')
+        """)
+
+        return [row['meal_name'] for row in cursor.fetchall()]
+
+    def suggest_lunch_alternatives(self, menu_date: str) -> Dict:
+        """
+        Suggest lunch alternatives based on:
+        1. What's for school lunch that day
+        2. If kids dislike school lunch
+        3. What leftovers are available
+        4. Quick-to-make lunch options
+        """
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        # Get school menu for that date
+        school_menu = self.get_school_menu_by_date(menu_date)
+
+        # Get disliked meals
+        disliked_meals = self.get_disliked_school_meals()
+
+        # Check if any school menu items are disliked
+        needs_alternative = any(
+            item['meal_name'] in disliked_meals or item['dislike_count'] > 0
+            for item in school_menu
+        )
+
+        # Get available leftovers
+        leftovers = self.get_active_leftovers()
+
+        # Get quick lunch meals (under 15 min total time)
+        cursor.execute("""
+            SELECT m.*, mt.name as meal_type_name
+            FROM meals m
+            JOIN meal_types mt ON m.meal_type_id = mt.id
+            WHERE mt.name IN ('lunch', 'snack')
+            AND (m.prep_time_minutes + m.cook_time_minutes) <= 15
+            AND m.kid_friendly_level >= 7
+            ORDER BY m.kid_friendly_level DESC
+            LIMIT 5
+        """)
+        quick_lunches = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            'date': menu_date,
+            'school_menu': school_menu,
+            'needs_alternative': needs_alternative,
+            'available_leftovers': leftovers,
+            'quick_lunch_options': quick_lunches,
+            'recommendation': self._generate_lunch_recommendation(
+                needs_alternative, leftovers, quick_lunches, school_menu
+            )
+        }
+
+    def _generate_lunch_recommendation(self, needs_alternative: bool,
+                                      leftovers: List, quick_lunches: List,
+                                      school_menu: List) -> str:
+        """Generate a smart lunch recommendation"""
+        if not needs_alternative and school_menu:
+            return f"School lunch looks good today: {school_menu[0]['meal_name']}"
+
+        if needs_alternative:
+            if leftovers and len(leftovers) > 0:
+                expiring_soon = [l for l in leftovers if l['days_until_expiry'] <= 2]
+                if expiring_soon:
+                    return f"🎯 Pack {expiring_soon[0]['meal_name']} leftovers (expires soon!)"
+                return f"💡 Pack {leftovers[0]['meal_name']} leftovers"
+
+            if quick_lunches:
+                return f"🍱 Make quick lunch: {quick_lunches[0]['name']} (under 15 min)"
+
+            return "⚠️ Plan ahead: Make extra dinner tonight for lunch tomorrow"
+
+        return "✓ School lunch should be fine"
+
+    def delete_school_menu_item(self, menu_item_id: int):
+        """Delete a school menu item"""
+        conn = self.connect()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM school_menu_items WHERE id = ?", (menu_item_id,))
+        conn.commit()
+
+    def clear_old_school_menus(self, days_ago: int = 30):
+        """Clear school menu items older than specified days"""
+        cutoff_date = (datetime.now() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
+        conn = self.connect()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM school_menu_items WHERE menu_date < ?", (cutoff_date,))
+        conn.commit()
+        return cursor.rowcount
+
 
 def print_meal(meal: Dict, show_ingredients: bool = True):
     """Pretty print a meal"""

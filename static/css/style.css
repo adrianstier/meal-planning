@@ -842,3 +842,148 @@ html {
     font-size: 4rem;
     margin: 0;
 }
+
+/* ============================================================================
+   School Menu Styles
+   ============================================================================ */
+
+.lunch-plan-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+}
+
+.recommendation-box {
+    background: var(--primary);
+    color: white;
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    text-align: center;
+}
+
+.recommendation-box h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.school-menu-today,
+.leftovers-available,
+.quick-options {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 2px solid var(--border);
+}
+
+.school-menu-today h4,
+.leftovers-available h4,
+.quick-options h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--text-primary);
+}
+
+.menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-xs) 0;
+}
+
+.menu-item.disliked {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid #ef4444;
+}
+
+.dislike-badge {
+    background: #ef4444;
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.leftover-option,
+.quick-lunch-option {
+    padding: var(--spacing-sm);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-xs) 0;
+}
+
+.school-menu-day {
+    margin-bottom: var(--spacing-lg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.menu-day-header {
+    background: var(--primary);
+    color: white;
+    padding: var(--spacing-md);
+    font-weight: 600;
+}
+
+.menu-items {
+    padding: var(--spacing-md);
+}
+
+.menu-item-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-sm) 0;
+    transition: var(--transition);
+}
+
+.menu-item-card:hover {
+    border-color: var(--primary);
+}
+
+.menu-item-card.disliked {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: #ef4444;
+}
+
+.menu-item-card .meal-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.menu-item-card .meal-description {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    flex: 1;
+}
+
+.btn-delete {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}

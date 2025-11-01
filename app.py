@@ -570,6 +570,166 @@ def update_leftover_settings(meal_id):
 
 
 # ============================================================================
+# SCHOOL CAFETERIA MENU ENDPOINTS
+# ============================================================================
+
+@app.route('/api/school-menu', methods=['GET'])
+def get_school_menu():
+    """Get school menu for date range or upcoming week"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        days = request.args.get('days', 7, type=int)
+
+        if start_date and end_date:
+            menu_items = db.get_school_menu_range(start_date, end_date)
+        else:
+            menu_items = db.get_upcoming_school_menu(days)
+
+        return jsonify({
+            'success': True,
+            'menu_items': menu_items,
+            'count': len(menu_items)
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/school-menu/date/<date>', methods=['GET'])
+def get_school_menu_by_date(date):
+    """Get school menu for a specific date"""
+    try:
+        menu_items = db.get_school_menu_by_date(date)
+        return jsonify({
+            'success': True,
+            'date': date,
+            'menu_items': menu_items,
+            'count': len(menu_items)
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/school-menu', methods=['POST'])
+def add_school_menu():
+    """Add school menu item(s) - single or bulk upload"""
+    try:
+        data = request.json
+
+        # Check if bulk upload (array of items)
+        if isinstance(data, list):
+            added_count = db.add_school_menu_bulk(data)
+            return jsonify({
+                'success': True,
+                'message': f'Added {added_count} menu items',
+                'added_count': added_count
+            })
+        else:
+            # Single item
+            menu_date = data.get('menu_date')
+            meal_name = data.get('meal_name')
+            meal_type = data.get('meal_type', 'lunch')
+            description = data.get('description')
+
+            if not menu_date or not meal_name:
+                return jsonify({
+                    'success': False,
+                    'error': 'menu_date and meal_name are required'
+                }), 400
+
+            menu_id = db.add_school_menu_item(menu_date, meal_name, meal_type, description)
+
+            if menu_id:
+                return jsonify({
+                    'success': True,
+                    'menu_id': menu_id,
+                    'message': 'Menu item added'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Menu item already exists for this date'
+                }), 409
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/school-menu/<int:menu_id>', methods=['DELETE'])
+def delete_school_menu(menu_id):
+    """Delete a school menu item"""
+    try:
+        db.delete_school_menu_item(menu_id)
+        return jsonify({
+            'success': True,
+            'message': 'Menu item deleted'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/school-menu/feedback', methods=['POST'])
+def add_menu_feedback():
+    """Add feedback about a school menu item"""
+    try:
+        data = request.json
+        menu_item_id = data.get('menu_item_id')
+        feedback_type = data.get('feedback_type')  # disliked, allergic, wont_eat
+        notes = data.get('notes')
+
+        if not menu_item_id or not feedback_type:
+            return jsonify({
+                'success': False,
+                'error': 'menu_item_id and feedback_type are required'
+            }), 400
+
+        feedback_id = db.add_menu_feedback(menu_item_id, feedback_type, notes)
+
+        return jsonify({
+            'success': True,
+            'feedback_id': feedback_id,
+            'message': 'Feedback recorded'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/school-menu/lunch-alternatives/<date>', methods=['GET'])
+def get_lunch_alternatives(date):
+    """Get smart lunch alternatives for a specific date"""
+    try:
+        alternatives = db.suggest_lunch_alternatives(date)
+        return jsonify({
+            'success': True,
+            'data': alternatives
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/school-menu/cleanup', methods=['POST'])
+def cleanup_old_menus():
+    """Clean up old school menu items"""
+    try:
+        days_ago = request.json.get('days_ago', 30)
+        deleted_count = db.clear_old_school_menus(days_ago)
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted_count,
+            'message': f'Deleted {deleted_count} old menu items'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
 # RUN SERVER
 # ============================================================================
 
@@ -617,6 +777,21 @@ if __name__ == '__main__':
                 print("✅ Leftovers feature added!")
     except Exception as e:
         print(f"⚠️  Leftovers migration check: {e}")
+
+    # Run migration for school menu feature if needed
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='school_menu_items'")
+        if not cursor.fetchone():
+            print("🔄 Running school menu feature migration...")
+            if os.path.exists('add_school_menu_feature.sql'):
+                with open('add_school_menu_feature.sql', 'r') as f:
+                    cursor.executescript(f.read())
+                conn.commit()
+                print("✅ School menu feature added!")
+    except Exception as e:
+        print(f"⚠️  School menu migration check: {e}")
 
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', '1') == '1'

@@ -1015,6 +1015,35 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"⚠️  School menu migration check: {e}")
 
+    # Run migration for React schema if needed
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Check if meal_type column exists
+        cursor.execute("PRAGMA table_info(meals)")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        if 'meal_type' not in columns:
+            print("🔄 Running React schema migration...")
+
+            # Import and run the migration
+            import subprocess
+            result = subprocess.run(['python3', 'migrate_to_react_schema.py'],
+                                  capture_output=True, text=True)
+
+            if result.returncode == 0:
+                print("✅ React schema migration completed!")
+                print(result.stdout)
+            else:
+                print(f"⚠️  React schema migration failed: {result.stderr}")
+        else:
+            print("✅ React schema already migrated")
+    except Exception as e:
+        print(f"⚠️  React schema migration check: {e}")
+        import traceback
+        traceback.print_exc()
+
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', '1') == '1'
 

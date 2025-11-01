@@ -485,8 +485,7 @@ def get_week_plan():
                 m.name as meal_name,
                 sm.notes,
                 m.cook_time_minutes,
-                m.difficulty,
-                m.is_favorite
+                m.difficulty
             FROM scheduled_meals sm
             JOIN meals m ON sm.meal_id = m.id
             JOIN meal_types mt ON sm.meal_type_id = mt.id

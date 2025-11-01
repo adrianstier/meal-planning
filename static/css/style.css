@@ -987,3 +987,109 @@ html {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
 }
+
+/* Photo Parsing Styles */
+.parse-results-box {
+    background: var(--bg-secondary);
+    border: 2px solid var(--success);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+}
+
+.detected-items {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: var(--spacing-md) 0;
+}
+
+.detected-item {
+    padding: var(--spacing-sm);
+    background: var(--bg-primary);
+    border-left: 3px solid var(--primary);
+    margin: var(--spacing-xs) 0;
+    border-radius: var(--radius-sm);
+}
+
+.detected-item small {
+    color: var(--text-secondary);
+}
+
+/* Calendar Table Styles */
+.calendar-table-container {
+    overflow-x: auto;
+    margin-top: var(--spacing-md);
+}
+
+.calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.calendar-table thead {
+    background: var(--primary);
+    color: white;
+}
+
+.calendar-table th {
+    padding: var(--spacing-md);
+    text-align: left;
+    font-weight: 600;
+}
+
+.calendar-table td {
+    padding: var(--spacing-md);
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+}
+
+.calendar-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.calendar-date {
+    font-weight: 600;
+    color: var(--primary);
+    white-space: nowrap;
+}
+
+.calendar-cell {
+    min-width: 150px;
+}
+
+.calendar-meal {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-xs) 0;
+    font-size: 0.875rem;
+}
+
+.calendar-meal.disliked {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.empty-cell {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Mobile responsive calendar */
+@media (max-width: 768px) {
+    .calendar-table {
+        font-size: 0.875rem;
+    }
+
+    .calendar-table th,
+    .calendar-table td {
+        padding: var(--spacing-sm);
+    }
+
+    .calendar-cell {
+        min-width: 120px;
+    }
+}

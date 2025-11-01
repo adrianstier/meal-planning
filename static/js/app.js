@@ -997,6 +997,10 @@ function initSchoolMenu() {
     const addMenuItemBtn = document.getElementById('add-school-menu-item-btn');
     const bulkUploadBtn = document.getElementById('bulk-upload-menu-btn');
     const menuDateInput = document.getElementById('school-menu-date');
+    const takePhotoBtn = document.getElementById('take-photo-btn');
+    const parsePhotoBtn = document.getElementById('parse-photo-btn');
+    const photoInput = document.getElementById('menu-photo-input');
+    const viewCalendarBtn = document.getElementById('view-calendar-btn');
 
     // Set default date to today
     menuDateInput.valueAsDate = new Date();
@@ -1007,6 +1011,10 @@ function initSchoolMenu() {
 
     addMenuItemBtn.addEventListener('click', addSchoolMenuItem);
     bulkUploadBtn.addEventListener('click', bulkUploadSchoolMenu);
+    takePhotoBtn.addEventListener('click', () => photoInput.click());
+    photoInput.addEventListener('change', handlePhotoSelected);
+    parsePhotoBtn.addEventListener('click', parseMenuPhoto);
+    viewCalendarBtn.addEventListener('click', toggleCalendarView);
 
     // Listen for tab changes to refresh when viewing school menu tab
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1017,6 +1025,217 @@ function initSchoolMenu() {
             }
         });
     });
+}
+
+let currentPhotoData = null;
+
+function handlePhotoSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        currentPhotoData = e.target.result;
+
+        // Show preview
+        const preview = document.getElementById('photo-preview');
+        const previewImg = document.getElementById('photo-preview-img');
+        previewImg.src = currentPhotoData;
+        preview.style.display = 'block';
+
+        // Show parse button
+        document.getElementById('parse-photo-btn').style.display = 'inline-block';
+
+        // Clear previous results
+        document.getElementById('photo-parse-results').style.display = 'none';
+        document.getElementById('photo-parse-status').innerHTML = '';
+    };
+    reader.readAsDataURL(file);
+}
+
+async function parseMenuPhoto() {
+    if (!currentPhotoData) {
+        alert('Please select a photo first');
+        return;
+    }
+
+    const statusDiv = document.getElementById('photo-parse-status');
+    const resultsDiv = document.getElementById('photo-parse-results');
+
+    statusDiv.innerHTML = '<p class="status-msg info">🤖 Analyzing photo with AI... This may take a moment.</p>';
+    resultsDiv.style.display = 'none';
+
+    try {
+        const response = await fetch(`${API_BASE}/api/school-menu/parse-photo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                image_data: currentPhotoData,
+                image_type: currentPhotoData.split(';')[0].split(':')[1],
+                auto_add: false // Don't auto-add, show preview first
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            statusDiv.innerHTML = `<p class="status-msg success">✓ Found ${data.count} menu items!</p>`;
+
+            // Show results with option to add
+            resultsDiv.innerHTML = `
+                <div class="parse-results-box">
+                    <h4>Detected Menu Items:</h4>
+                    <div class="detected-items">
+                        ${data.menu_items.map(item => `
+                            <div class="detected-item">
+                                <strong>${item.menu_date}</strong>: ${item.meal_name}
+                                ${item.description ? `<br><small>${item.description}</small>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="btn btn-primary" onclick="addParsedMenuItems(${JSON.stringify(data.menu_items).replace(/"/g, '&quot;')})">
+                        ✓ Add All ${data.count} Items to Menu
+                    </button>
+                </div>
+            `;
+            resultsDiv.style.display = 'block';
+        } else {
+            statusDiv.innerHTML = `<p class="status-msg error">Error: ${data.error}</p>`;
+        }
+    } catch (error) {
+        console.error('Error parsing photo:', error);
+        statusDiv.innerHTML = '<p class="status-msg error">Failed to parse photo</p>';
+    }
+}
+
+async function addParsedMenuItems(menuItems) {
+    try {
+        const response = await fetch(`${API_BASE}/api/school-menu`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(menuItems)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus(`Added ${data.added_count} menu items!`, 'success');
+
+            // Clear photo upload
+            document.getElementById('photo-preview').style.display = 'none';
+            document.getElementById('parse-photo-btn').style.display = 'none';
+            document.getElementById('photo-parse-results').style.display = 'none';
+            document.getElementById('photo-parse-status').innerHTML = '';
+            document.getElementById('menu-photo-input').value = '';
+            currentPhotoData = null;
+
+            // Reload menus
+            loadUpcomingSchoolMenu();
+            loadTodayLunchPlan();
+        } else {
+            showStatus(`Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error adding menu items:', error);
+        showStatus('Failed to add menu items', 'error');
+    }
+}
+
+let calendarVisible = false;
+
+async function toggleCalendarView() {
+    const calendarDiv = document.getElementById('calendar-view');
+    const btn = document.getElementById('view-calendar-btn');
+
+    if (calendarVisible) {
+        calendarDiv.style.display = 'none';
+        btn.textContent = '📊 View Calendar';
+        calendarVisible = false;
+    } else {
+        calendarDiv.style.display = 'block';
+        btn.textContent = '📋 Hide Calendar';
+        calendarVisible = true;
+        await loadCalendarView();
+    }
+}
+
+async function loadCalendarView() {
+    try {
+        const response = await fetch(`${API_BASE}/api/school-menu/calendar`);
+        const data = await response.json();
+
+        const calendarDiv = document.getElementById('calendar-view');
+
+        if (data.success) {
+            const calendarData = data.calendar_data;
+            const dates = Object.keys(calendarData).sort();
+
+            if (dates.length === 0) {
+                calendarDiv.innerHTML = `
+                    <div class="empty-state">
+                        <p class="empty-icon">📅</p>
+                        <h3>No menu data for calendar</h3>
+                        <p>Add some menu items to see the calendar view</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Build calendar table
+            let html = `
+                <div class="calendar-table-container">
+                    <table class="calendar-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Breakfast</th>
+                                <th>Lunch</th>
+                                <th>Snack</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            dates.forEach(date => {
+                const dateObj = new Date(date + 'T00:00:00');
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const meals = calendarData[date];
+
+                html += `
+                    <tr>
+                        <td class="calendar-date">
+                            <strong>${dayName}</strong><br>
+                            ${dateStr}
+                        </td>
+                        <td class="calendar-cell">
+                            ${meals.breakfast.map(m => `<div class="calendar-meal">${m.meal_name}</div>`).join('') || '<span class="empty-cell">-</span>'}
+                        </td>
+                        <td class="calendar-cell">
+                            ${meals.lunch.map(m => `<div class="calendar-meal ${m.dislike_count > 0 ? 'disliked' : ''}">${m.meal_name}</div>`).join('') || '<span class="empty-cell">-</span>'}
+                        </td>
+                        <td class="calendar-cell">
+                            ${meals.snack.map(m => `<div class="calendar-meal">${m.meal_name}</div>`).join('') || '<span class="empty-cell">-</span>'}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            calendarDiv.innerHTML = html;
+        } else {
+            calendarDiv.innerHTML = '<p class="status-msg error">Failed to load calendar</p>';
+        }
+    } catch (error) {
+        console.error('Error loading calendar:', error);
+        document.getElementById('calendar-view').innerHTML =
+            '<p class="status-msg error">Failed to load calendar</p>';
+    }
 }
 
 async function loadTodayLunchPlan() {

@@ -8,12 +8,14 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from meal_planner import MealPlannerDB
 from ai_recipe_parser import RecipeParser
+from school_menu_vision_parser import SchoolMenuVisionParser
 import os
 from dotenv import load_dotenv
 import random
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import traceback
+import base64
 
 # Load environment variables
 load_dotenv()
@@ -35,6 +37,18 @@ try:
 except Exception as e:
     recipe_parser = None
     print(f"⚠️  Failed to initialize AI parser: {e}")
+
+# Initialize vision parser for school menus
+try:
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+    if api_key:
+        vision_parser = SchoolMenuVisionParser(api_key)
+    else:
+        vision_parser = None
+        print("⚠️  No ANTHROPIC_API_KEY found. Menu photo parsing will be disabled.")
+except Exception as e:
+    vision_parser = None
+    print(f"⚠️  Failed to initialize vision parser: {e}")
 
 
 # ============================================================================
@@ -724,6 +738,114 @@ def cleanup_old_menus():
             'deleted_count': deleted_count,
             'message': f'Deleted {deleted_count} old menu items'
         })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/school-menu/parse-photo', methods=['POST'])
+def parse_menu_photo():
+    """Parse school menu from uploaded photo using Claude Vision"""
+    if not vision_parser:
+        return jsonify({
+            'success': False,
+            'error': 'Vision parser is not configured. Please set ANTHROPIC_API_KEY'
+        }), 503
+
+    try:
+        data = request.json
+        image_data = data.get('image_data')  # Base64 encoded image
+        image_type = data.get('image_type', 'image/jpeg')
+        auto_add = data.get('auto_add', False)  # Automatically add to database
+
+        if not image_data:
+            return jsonify({
+                'success': False,
+                'error': 'image_data is required (base64 encoded)'
+            }), 400
+
+        # Remove data URL prefix if present (data:image/jpeg;base64,)
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+
+        # Parse menu from image
+        menu_items = vision_parser.parse_menu_from_base64(image_data, image_type)
+
+        if not menu_items:
+            return jsonify({
+                'success': False,
+                'error': 'No menu items found in image'
+            }), 400
+
+        # Optionally add to database automatically
+        added_count = 0
+        if auto_add:
+            added_count = db.add_school_menu_bulk(menu_items)
+
+        return jsonify({
+            'success': True,
+            'menu_items': menu_items,
+            'count': len(menu_items),
+            'added_count': added_count if auto_add else None,
+            'message': f'Parsed {len(menu_items)} menu items' + (f' and added {added_count} to database' if auto_add else '')
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/school-menu/calendar', methods=['GET'])
+def get_school_menu_calendar():
+    """Get school menu in calendar format for table view"""
+    try:
+        # Get date range (default to current month)
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        if not start_date:
+            # Default to start of current month
+            now = datetime.now()
+            start_date = now.replace(day=1).strftime('%Y-%m-%d')
+
+        if not end_date:
+            # Default to end of next month
+            now = datetime.now()
+            if now.month == 12:
+                next_month = now.replace(year=now.year + 1, month=1, day=1)
+            else:
+                next_month = now.replace(month=now.month + 1, day=1)
+
+            # Get last day of next month
+            if next_month.month == 12:
+                last_day = next_month.replace(year=next_month.year + 1, month=1, day=1) - timedelta(days=1)
+            else:
+                last_day = next_month.replace(month=next_month.month + 1, day=1) - timedelta(days=1)
+
+            end_date = last_day.strftime('%Y-%m-%d')
+
+        menu_items = db.get_school_menu_range(start_date, end_date)
+
+        # Group by date and meal type
+        calendar_data = {}
+        for item in menu_items:
+            date = item['menu_date']
+            if date not in calendar_data:
+                calendar_data[date] = {
+                    'breakfast': [],
+                    'lunch': [],
+                    'snack': []
+                }
+            meal_type = item['meal_type']
+            calendar_data[date][meal_type].append(item)
+
+        return jsonify({
+            'success': True,
+            'start_date': start_date,
+            'end_date': end_date,
+            'calendar_data': calendar_data
+        })
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -298,9 +298,19 @@ Instructions:
                 </div>
             </section>
 
+            <!-- Calendar View -->
+            <section class="card">
+                <h2>📅 Calendar View</h2>
+                <p>Monthly menu at a glance</p>
+                <button id="view-calendar-btn" class="btn btn-secondary" style="margin-bottom: 1rem;">📊 View Calendar</button>
+                <div id="calendar-view" style="display: none;">
+                    <p class="status-msg info">Loading calendar...</p>
+                </div>
+            </section>
+
             <!-- Upcoming School Menu -->
             <section class="card">
-                <h2>📅 Upcoming School Menu</h2>
+                <h2>📋 Upcoming School Menu (List)</h2>
                 <p>What's being served at school this week</p>
                 <div id="upcoming-school-menu">
                     <p class="status-msg info">Loading school menu...</p>
@@ -338,6 +348,30 @@ Instructions:
                 </div>
 
                 <button id="add-school-menu-item-btn" class="btn btn-primary">Add Menu Item</button>
+
+                <!-- Photo Upload with Camera -->
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border);">
+                    <h3>📸 Upload Menu Photo</h3>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Take a photo or upload an image of the school menu - AI will automatically extract all meals!
+                    </p>
+                    <div style="margin-bottom: 1rem;">
+                        <input
+                            type="file"
+                            id="menu-photo-input"
+                            accept="image/*"
+                            capture="environment"
+                            style="display: none;"
+                        />
+                        <button id="take-photo-btn" class="btn btn-secondary">📷 Take/Upload Photo</button>
+                        <button id="parse-photo-btn" class="btn btn-primary" style="display: none; margin-left: 0.5rem;">🤖 Parse with AI</button>
+                    </div>
+                    <div id="photo-preview" style="display: none; margin-bottom: 1rem;">
+                        <img id="photo-preview-img" style="max-width: 100%; max-height: 400px; border-radius: var(--radius-md); border: 2px solid var(--border);">
+                    </div>
+                    <div id="photo-parse-status"></div>
+                    <div id="photo-parse-results" style="display: none; margin-top: 1rem;"></div>
+                </div>
 
                 <!-- Bulk Upload -->
                 <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border);">

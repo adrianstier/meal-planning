@@ -80,25 +80,27 @@ def get_meals():
     """Get all meals with optional filters"""
     try:
         meal_type = request.args.get('type')  # dinner, lunch, snack, breakfast
-        min_kid_friendly = int(request.args.get('min_kid_friendly', 1))
+
+        # Get all meals with new schema
+        conn = db.connect()
+        cursor = conn.cursor()
 
         if meal_type:
-            meals = db.get_meals_by_type(meal_type, min_kid_friendly)
-        else:
-            # Get all meals
-            conn = db.connect()
-            cursor = conn.cursor()
             cursor.execute("""
-                SELECT m.*, mt.name as meal_type_name
-                FROM meals m
-                JOIN meal_types mt ON m.meal_type_id = mt.id
-                WHERE m.kid_friendly_level >= ?
-                ORDER BY m.name
-            """, (min_kid_friendly,))
-            meals = [dict(row) for row in cursor.fetchall()]
+                SELECT *
+                FROM meals
+                WHERE meal_type = ?
+                ORDER BY name
+            """, (meal_type,))
+        else:
+            cursor.execute("""
+                SELECT *
+                FROM meals
+                ORDER BY name
+            """)
 
-            for meal in meals:
-                meal['ingredients'] = db.get_meal_ingredients(meal['id'])
+        meals = [dict(row) for row in cursor.fetchall()]
+        conn.close()
 
         return jsonify({'success': True, 'data': meals})
     except Exception as e:
@@ -114,6 +116,172 @@ def search_meals():
 
         meals = db.search_meals(query, meal_type)
         return jsonify({'success': True, 'data': meals})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meals/<int:meal_id>', methods=['GET'])
+def get_meal(meal_id):
+    """Get a single meal by ID"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
+        meal = cursor.fetchone()
+        conn.close()
+
+        if not meal:
+            return jsonify({'success': False, 'error': 'Meal not found'}), 404
+
+        return jsonify({'success': True, 'data': dict(meal)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meals', methods=['POST'])
+def create_meal():
+    """Create a new meal"""
+    try:
+        data = request.json
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO meals (
+                name, meal_type, cook_time_minutes, servings, difficulty,
+                tags, ingredients, instructions, is_favorite, makes_leftovers,
+                leftover_servings, leftover_days
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data.get('name'),
+            data.get('meal_type', 'dinner'),
+            data.get('cook_time_minutes'),
+            data.get('servings'),
+            data.get('difficulty', 'medium'),
+            data.get('tags'),
+            data.get('ingredients'),
+            data.get('instructions'),
+            data.get('is_favorite', False),
+            data.get('makes_leftovers', False),
+            data.get('leftover_servings'),
+            data.get('leftover_days')
+        ))
+
+        meal_id = cursor.lastrowid
+        conn.commit()
+
+        # Return the created meal
+        cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
+        meal = dict(cursor.fetchone())
+        conn.close()
+
+        return jsonify({'success': True, 'data': meal}), 201
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meals/<int:meal_id>', methods=['PUT'])
+def update_meal(meal_id):
+    """Update an existing meal"""
+    try:
+        data = request.json
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Build update query dynamically based on provided fields
+        update_fields = []
+        update_values = []
+
+        for field in ['name', 'meal_type', 'cook_time_minutes', 'servings', 'difficulty',
+                      'tags', 'ingredients', 'instructions', 'is_favorite', 'makes_leftovers',
+                      'leftover_servings', 'leftover_days']:
+            if field in data:
+                update_fields.append(f"{field} = ?")
+                update_values.append(data[field])
+
+        if not update_fields:
+            return jsonify({'success': False, 'error': 'No fields to update'}), 400
+
+        update_values.append(meal_id)
+        query = f"UPDATE meals SET {', '.join(update_fields)} WHERE id = ?"
+
+        cursor.execute(query, update_values)
+        conn.commit()
+
+        # Return the updated meal
+        cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
+        meal = cursor.fetchone()
+        conn.close()
+
+        if not meal:
+            return jsonify({'success': False, 'error': 'Meal not found'}), 404
+
+        return jsonify({'success': True, 'data': dict(meal)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meals/<int:meal_id>', methods=['DELETE'])
+def delete_meal(meal_id):
+    """Delete a meal"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM meals WHERE id = ?", (meal_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Meal deleted'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meals/<int:meal_id>/favorite', methods=['POST'])
+def favorite_meal(meal_id):
+    """Mark a meal as favorite"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE meals SET is_favorite = 1 WHERE id = ?", (meal_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Meal marked as favorite'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meals/<int:meal_id>/favorite', methods=['DELETE'])
+def unfavorite_meal(meal_id):
+    """Remove favorite status from a meal"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE meals SET is_favorite = 0 WHERE id = ?", (meal_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Meal unfavorited'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meals/parse', methods=['POST'])
+def parse_recipe():
+    """Parse a recipe using AI"""
+    try:
+        if not recipe_parser:
+            return jsonify({'success': False, 'error': 'AI parser not available'}), 503
+
+        data = request.json
+        recipe_text = data.get('recipe_text', '')
+
+        if not recipe_text:
+            return jsonify({'success': False, 'error': 'No recipe text provided'}), 400
+
+        parsed = recipe_parser.parse_recipe(recipe_text)
+
+        return jsonify({'success': True, 'data': parsed})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -238,87 +406,6 @@ def get_shopping_list():
         shopping_list = db.generate_shopping_list(plan_id)
         return jsonify({'success': True, 'data': shopping_list})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/parse-recipe', methods=['POST'])
-def parse_recipe():
-    """
-    Parse a recipe URL or text using AI
-    Returns structured meal data to add to database
-    """
-    if not recipe_parser:
-        return jsonify({
-            'success': False,
-            'error': 'AI recipe parser is not configured. Please set ANTHROPIC_API_KEY'
-        }), 503
-
-    try:
-        data = request.json
-        recipe_text = data.get('recipe_text', '')
-        recipe_url = data.get('recipe_url', '')
-
-        if not recipe_text and not recipe_url:
-            return jsonify({
-                'success': False,
-                'error': 'Please provide either recipe_text or recipe_url'
-            }), 400
-
-        # Parse the recipe using AI
-        parsed_meal = recipe_parser.parse_recipe(recipe_text or recipe_url)
-
-        return jsonify({'success': True, 'data': parsed_meal})
-
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/api/meals', methods=['POST'])
-def add_meal():
-    """Add a new meal to the database"""
-    try:
-        data = request.json
-
-        # Required fields
-        name = data.get('name')
-        meal_type = data.get('meal_type', 'dinner')
-        kid_friendly_level = int(data.get('kid_friendly_level', 5))
-        prep_time = int(data.get('prep_time_minutes', 15))
-        cook_time = int(data.get('cook_time_minutes', 30))
-        adult_friendly = data.get('adult_friendly', True)
-        notes = data.get('notes')
-
-        if not name:
-            return jsonify({
-                'success': False,
-                'error': 'Meal name is required'
-            }), 400
-
-        # Add meal
-        meal_id = db.add_meal(
-            name, meal_type, kid_friendly_level,
-            prep_time, cook_time, adult_friendly, notes
-        )
-
-        # Add ingredients
-        ingredients = data.get('ingredients', [])
-        for ing in ingredients:
-            db.add_ingredient_to_meal(
-                meal_id,
-                ing.get('name'),
-                ing.get('component_type', 'side'),
-                ing.get('quantity', ''),
-                ing.get('is_optional', False)
-            )
-
-        return jsonify({
-            'success': True,
-            'data': {'meal_id': meal_id, 'message': f'Added meal: {name}'}
-        })
-
-    except Exception as e:
-        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

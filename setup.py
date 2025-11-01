@@ -36,10 +36,11 @@ def setup_database():
     # Initialize with schema and seed data
     db.initialize_database()
 
-    # Load additional meals
+    # Load additional meals and run migrations
     sql_files = [
         'database/sql/additional_meals.sql',
-        'database/sql/weekly_produce.sql'
+        'database/sql/weekly_produce.sql',
+        'database/migrations/add_history_features.sql'
     ]
 
     conn = db.connect()

@@ -8,9 +8,11 @@ import { format } from 'date-fns';
 const SchoolMenuPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [parseSuccess, setParseSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: menuItems, isLoading } = useSchoolMenu();
+  const { data: menuItems, isLoading, refetch } = useSchoolMenu();
   const deleteMenuItem = useDeleteSchoolMenuItem();
   const parsePhoto = useParseMenuPhoto();
   const addFeedback = useAddMenuFeedback();
@@ -18,6 +20,10 @@ const SchoolMenuPage: React.FC = () => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Clear previous messages
+    setParseError(null);
+    setParseSuccess(null);
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -30,19 +36,35 @@ const SchoolMenuPage: React.FC = () => {
     if (!selectedImage) return;
 
     setParsing(true);
+    setParseError(null);
+    setParseSuccess(null);
+
     try {
       const imageType = selectedImage.split(';')[0].split(':')[1];
-      await parsePhoto.mutateAsync({
+      const result = await parsePhoto.mutateAsync({
         imageData: selectedImage,
         imageType,
         autoAdd: true,
       });
+
+      // Success! Refresh the menu list
+      await refetch();
+
       setSelectedImage(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-    } catch (error) {
+
+      // Show success message
+      const count = result?.data?.added_count || result?.data?.count || 0;
+      setParseSuccess(`Successfully added ${count} menu item${count !== 1 ? 's' : ''}!`);
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setParseSuccess(null), 5000);
+    } catch (error: any) {
       console.error('Failed to parse menu photo:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to parse menu photo. Please try again.';
+      setParseError(errorMessage);
     } finally {
       setParsing(false);
     }
@@ -103,6 +125,20 @@ const SchoolMenuPage: React.FC = () => {
             className="hidden"
           />
 
+          {/* Success Message */}
+          {parseSuccess && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
+              {parseSuccess}
+            </div>
+          )}
+
+          {/* Error Message */}
+          {parseError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+              <strong>Error:</strong> {parseError}
+            </div>
+          )}
+
           {!selectedImage ? (
             <Button
               onClick={() => fileInputRef.current?.click()}
@@ -126,16 +162,19 @@ const SchoolMenuPage: React.FC = () => {
                   className="flex-1"
                 >
                   <Sparkles className="mr-2 h-4 w-4" />
-                  {parsing ? 'Parsing with AI...' : 'Parse Menu with AI'}
+                  {parsing ? 'Parsing with AI... (this may take 10-30 seconds)' : 'Parse Menu with AI'}
                 </Button>
                 <Button
                   onClick={() => {
                     setSelectedImage(null);
+                    setParseError(null);
+                    setParseSuccess(null);
                     if (fileInputRef.current) {
                       fileInputRef.current.value = '';
                     }
                   }}
                   variant="outline"
+                  disabled={parsing}
                 >
                   Cancel
                 </Button>

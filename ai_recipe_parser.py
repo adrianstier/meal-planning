@@ -39,6 +39,7 @@ Please analyze this recipe and provide a JSON response with the following struct
     "adult_friendly": true|false,
     "dietary_category": "omnivore|vegetarian|pescatarian|vegan",
     "notes": "Any special notes or tips",
+    "instructions": "Step-by-step cooking instructions as a single string with numbered steps",
     "ingredients": [
         {{
             "name": "ingredient name",
@@ -52,6 +53,7 @@ Please analyze this recipe and provide a JSON response with the following struct
 Guidelines:
 - kid_friendly_level: Consider whether kids aged 4-7 would typically enjoy this
 - meal_type: What meal this would typically be served as
+- instructions: Extract and format cooking steps as a clear, numbered list. If no instructions are provided, write brief but complete step-by-step instructions based on typical cooking methods for this recipe.
 - component_type: Classify each ingredient appropriately
   - protein: meat, fish, beans, eggs, cheese
   - veggie: vegetables

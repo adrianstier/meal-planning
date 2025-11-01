@@ -26,6 +26,10 @@ CORS(app)
 # Initialize database
 db = MealPlannerDB()
 
+# Track initialization errors for diagnostics
+recipe_parser_error = None
+vision_parser_error = None
+
 # Initialize AI recipe parser
 try:
     api_key = os.getenv('ANTHROPIC_API_KEY')
@@ -33,9 +37,11 @@ try:
         recipe_parser = RecipeParser(api_key)
     else:
         recipe_parser = None
+        recipe_parser_error = "No ANTHROPIC_API_KEY found"
         print("⚠️  No ANTHROPIC_API_KEY found. Recipe parsing will be disabled.")
 except Exception as e:
     recipe_parser = None
+    recipe_parser_error = str(e)
     print(f"⚠️  Failed to initialize AI parser: {e}")
 
 # Initialize vision parser for school menus
@@ -45,9 +51,11 @@ try:
         vision_parser = SchoolMenuVisionParser(api_key)
     else:
         vision_parser = None
+        vision_parser_error = "No ANTHROPIC_API_KEY found"
         print("⚠️  No ANTHROPIC_API_KEY found. Menu photo parsing will be disabled.")
 except Exception as e:
     vision_parser = None
+    vision_parser_error = str(e)
     print(f"⚠️  Failed to initialize vision parser: {e}")
 
 
@@ -60,14 +68,23 @@ def health():
     """Health check endpoint"""
     api_key_present = os.getenv('ANTHROPIC_API_KEY') is not None
     api_key_length = len(os.getenv('ANTHROPIC_API_KEY', ''))
-    return jsonify({
+
+    response = {
         'status': 'ok',
         'ai_enabled': recipe_parser is not None,
         'vision_enabled': vision_parser is not None,
         'database': os.path.exists(db.db_path),
         'env_key_present': api_key_present,
         'env_key_length': api_key_length
-    })
+    }
+
+    # Add error messages if parsers failed to initialize
+    if recipe_parser_error:
+        response['recipe_parser_error'] = recipe_parser_error
+    if vision_parser_error:
+        response['vision_parser_error'] = vision_parser_error
+
+    return jsonify(response)
 
 
 @app.route('/api/stats', methods=['GET'])

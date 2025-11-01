@@ -1421,11 +1421,14 @@ if __name__ == '__main__':
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='school_menu_items'")
         if not cursor.fetchone():
             print("🔄 Running school menu feature migration...")
-            if os.path.exists('add_school_menu_feature.sql'):
-                with open('add_school_menu_feature.sql', 'r') as f:
+            migration_file = 'database/migrations/add_school_menu_feature.sql'
+            if os.path.exists(migration_file):
+                with open(migration_file, 'r') as f:
                     cursor.executescript(f.read())
                 conn.commit()
                 print("✅ School menu feature added!")
+            else:
+                print(f"⚠️  Migration file not found: {migration_file}")
     except Exception as e:
         print(f"⚠️  School menu migration check: {e}")
 

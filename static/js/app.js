@@ -507,6 +507,232 @@ function showStatus(type, message, elementId = 'status-msg') {
 }
 
 // ============================================================================
+// FAVORITES & HISTORY
+// ============================================================================
+
+function initHistory() {
+    // Load data when tab is clicked
+    const historyTab = document.querySelector('[data-tab="history"]');
+    if (historyTab) {
+        historyTab.addEventListener('click', () => {
+            loadFavorites();
+            loadRecentlyCooked();
+            loadHaventMade();
+            loadHistory();
+        });
+    }
+}
+
+async function toggleFavorite(mealId, button) {
+    try {
+        const response = await fetch(`/api/meals/${mealId}/toggle-favorite`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            button.classList.toggle('favorited');
+            button.textContent = data.is_favorite ? '⭐' : '☆';
+            showMessage(data.is_favorite ? 'Added to favorites!' : 'Removed from favorites', 'success');
+
+            // Refresh favorites if on history tab
+            if (document.getElementById('history').classList.contains('active')) {
+                loadFavorites();
+            }
+        }
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
+        showMessage('Error updating favorite', 'error');
+    }
+}
+
+async function markAsCooked(mealId) {
+    const rating = prompt('How was it? (1-5 stars, or leave blank)');
+    const notes = prompt('Any notes? (optional)');
+
+    try {
+        const response = await fetch(`/api/meals/${mealId}/mark-cooked`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                rating: rating ? parseInt(rating) : null,
+                notes: notes || null
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showMessage('Meal marked as cooked!', 'success');
+
+            // Refresh history if on history tab
+            if (document.getElementById('history').classList.contains('active')) {
+                loadRecentlyCooked();
+                loadHistory();
+            }
+        }
+    } catch (error) {
+        console.error('Error marking meal as cooked:', error);
+        showMessage('Error saving', 'error');
+    }
+}
+
+async function loadFavorites() {
+    const container = document.getElementById('favorites-content');
+    try {
+        const response = await fetch('/api/favorites');
+        const data = await response.json();
+
+        if (data.meals && data.meals.length > 0) {
+            container.innerHTML = '<div class="meals-grid">' +
+                data.meals.map(meal => createMealCard(meal, true)).join('') +
+                '</div>';
+        } else {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⭐</div>
+                    <p>No favorites yet! Star your favorite meals to see them here.</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading favorites:', error);
+        container.innerHTML = '<p class="status-msg error">Error loading favorites</p>';
+    }
+}
+
+async function loadRecentlyCooked() {
+    const container = document.getElementById('recently-cooked-content');
+    try {
+        const response = await fetch('/api/recently-cooked?limit=5');
+        const data = await response.json();
+
+        if (data.meals && data.meals.length > 0) {
+            container.innerHTML = data.meals.map(meal => `
+                <div class="meal-card">
+                    <div class="meal-name">${meal.name}</div>
+                    <div class="meal-stats">
+                        <span class="meal-stat">📅 Last: ${formatDate(meal.last_cooked)}</span>
+                        <span class="meal-stat">🔢 Made ${meal.times_cooked}x</span>
+                        ${meal.rating ? `<span class="meal-stat history-rating">${'⭐'.repeat(meal.rating)}</span>` : ''}
+                    </div>
+                    ${meal.last_notes ? `<div class="history-notes">${meal.last_notes}</div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🕐</div>
+                    <p>No cooking history yet! Mark meals as cooked to see them here.</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading recent meals:', error);
+        container.innerHTML = '<p class="status-msg error">Error loading recent meals</p>';
+    }
+}
+
+async function loadHaventMade() {
+    const container = document.getElementById('havent-made-content');
+    try {
+        const response = await fetch('/api/havent-made?days=30&limit=5');
+        const data = await response.json();
+
+        if (data.meals && data.meals.length > 0) {
+            container.innerHTML = '<div class="meals-grid">' +
+                data.meals.map(meal => createMealCard(meal, true)).join('') +
+                '</div>';
+        } else {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">💡</div>
+                    <p>You've been cooking variety! All meals made recently.</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading suggestions:', error);
+        container.innerHTML = '<p class="status-msg error">Error loading suggestions</p>';
+    }
+}
+
+async function loadHistory() {
+    const container = document.getElementById('history-content');
+    try {
+        const response = await fetch('/api/history?limit=20');
+        const data = await response.json();
+
+        if (data.history && data.history.length > 0) {
+            container.innerHTML = data.history.map(entry => `
+                <div class="history-entry">
+                    <div class="history-date">${formatDate(entry.cooked_date)} - ${entry.meal_name}</div>
+                    ${entry.rating ? `<div class="history-rating">${'⭐'.repeat(entry.rating)}</div>` : ''}
+                    ${entry.notes ? `<div class="history-notes">"${entry.notes}"</div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📜</div>
+                    <p>No cooking history yet! Start tracking your meals.</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+        container.innerHTML = '<p class="status-msg error">Error loading history</p>';
+    }
+}
+
+function createMealCard(meal, withActions = false) {
+    const totalTime = (meal.prep_time_minutes || 0) + (meal.cook_time_minutes || 0);
+    const isFavorite = meal.is_favorite || false;
+
+    return `
+        <div class="meal-card-browse">
+            <div class="meal-name">${meal.name}</div>
+            <div class="meal-meta">
+                <span class="meal-tag">${meal.meal_type_name || 'meal'}</span>
+                <span class="meal-tag kid-friendly">Kid: ${meal.kid_friendly_level}/10</span>
+                <span class="meal-tag">⏱️ ${totalTime} min</span>
+            </div>
+            ${withActions ? `
+                <div class="meal-actions">
+                    <button class="btn-favorite ${isFavorite ? 'favorited' : ''}"
+                            onclick="toggleFavorite(${meal.id}, this)">
+                        ${isFavorite ? '⭐' : '☆'}
+                    </button>
+                    <button class="btn-cooked" onclick="markAsCooked(${meal.id})">
+                        ✓ Mark as Cooked
+                    </button>
+                </div>
+            ` : ''}
+            ${meal.last_cooked ? `
+                <div class="meal-stats">
+                    <span class="meal-stat">Last: ${formatDate(meal.last_cooked)}</span>
+                    <span class="meal-stat">Made ${meal.times_cooked || 0}x</span>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+
+    return date.toLocaleDateString();
+}
+
+// ============================================================================
 // Initialize
 // ============================================================================
 
@@ -516,6 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initRecipeParser();
     initBrowse();
     initShopping();
+    initHistory();
 
     console.log('🍽️ Family Meal Planner initialized');
 });

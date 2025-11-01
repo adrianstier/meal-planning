@@ -17,6 +17,7 @@
             <button class="tab-btn active" data-tab="randomizer">Meal Randomizer</button>
             <button class="tab-btn" data-tab="add-recipe">Add Recipe</button>
             <button class="tab-btn" data-tab="browse">Browse Meals</button>
+            <button class="tab-btn" data-tab="history">Favorites & History</button>
             <button class="tab-btn" data-tab="shopping">Shopping List</button>
         </nav>
 
@@ -190,6 +191,45 @@ Instructions:
                 </div>
 
                 <div id="browse-results" class="meals-grid"></div>
+            </section>
+        </div>
+
+        <!-- FAVORITES & HISTORY TAB -->
+        <div id="history" class="tab-content">
+            <!-- Favorites Section -->
+            <section class="card">
+                <h2>⭐ Favorite Meals</h2>
+                <p>Your starred meals for quick access</p>
+                <div id="favorites-content">
+                    <p class="status-msg info">Loading favorites...</p>
+                </div>
+            </section>
+
+            <!-- Recently Cooked Section -->
+            <section class="card">
+                <h2>🕐 Recently Cooked</h2>
+                <p>Meals you've made recently to avoid repetition</p>
+                <div id="recently-cooked-content">
+                    <p class="status-msg info">Loading recent meals...</p>
+                </div>
+            </section>
+
+            <!-- Haven't Made in a While Section -->
+            <section class="card">
+                <h2>💡 Try These!</h2>
+                <p>Meals you haven't made in over 30 days</p>
+                <div id="havent-made-content">
+                    <p class="status-msg info">Loading suggestions...</p>
+                </div>
+            </section>
+
+            <!-- Cooking History -->
+            <section class="card">
+                <h2>📜 Cooking History</h2>
+                <p>Your complete cooking log</p>
+                <div id="history-content">
+                    <p class="status-msg info">Loading history...</p>
+                </div>
             </section>
         </div>
 

@@ -24,6 +24,12 @@ export interface MealPlan {
   meal_id: number;
   meal_name?: string;
   notes?: string;
+  cook_time_minutes?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  servings?: number;
+  tags?: string;
+  ingredients?: string;
+  instructions?: string;
 }
 
 // Leftovers types

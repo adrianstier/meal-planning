@@ -3,6 +3,14 @@ import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { useWeekPlan } from '../hooks/usePlan';
 import AddMealDialog from '../components/features/plan/AddMealDialog';
 import type { MealPlan } from '../types/api';
@@ -14,6 +22,8 @@ const PlanPage: React.FC = () => {
   });
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState<MealPlan | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{
     date: string;
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -181,6 +191,10 @@ const PlanPage: React.FC = () => {
                       <div
                         key={meal.id}
                         className="p-2 rounded-md bg-accent/50 hover:bg-accent cursor-pointer transition-colors"
+                        onClick={() => {
+                          setSelectedMeal(meal);
+                          setViewDialogOpen(true);
+                        }}
                       >
                         {meal.meal_name}
                       </div>
@@ -208,6 +222,10 @@ const PlanPage: React.FC = () => {
                       <div
                         key={meal.id}
                         className="p-2 rounded-md bg-accent/50 hover:bg-accent cursor-pointer transition-colors"
+                        onClick={() => {
+                          setSelectedMeal(meal);
+                          setViewDialogOpen(true);
+                        }}
                       >
                         {meal.meal_name}
                       </div>
@@ -235,6 +253,10 @@ const PlanPage: React.FC = () => {
                       <div
                         key={meal.id}
                         className="p-2 rounded-md bg-accent/50 hover:bg-accent cursor-pointer transition-colors"
+                        onClick={() => {
+                          setSelectedMeal(meal);
+                          setViewDialogOpen(true);
+                        }}
                       >
                         {meal.meal_name}
                       </div>
@@ -262,6 +284,10 @@ const PlanPage: React.FC = () => {
                       <div
                         key={meal.id}
                         className="p-2 rounded-md bg-accent/50 hover:bg-accent cursor-pointer transition-colors text-xs"
+                        onClick={() => {
+                          setSelectedMeal(meal);
+                          setViewDialogOpen(true);
+                        }}
                       >
                         {meal.meal_name}
                       </div>
@@ -273,6 +299,66 @@ const PlanPage: React.FC = () => {
           );
         })}
       </div>
+
+      {/* View Meal Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedMeal?.meal_name}</DialogTitle>
+            <DialogDescription>
+              <div className="flex gap-3 text-sm mt-2">
+                {selectedMeal?.cook_time_minutes && (
+                  <span>{selectedMeal.cook_time_minutes} min</span>
+                )}
+                {selectedMeal?.difficulty && (
+                  <span className="capitalize">{selectedMeal.difficulty}</span>
+                )}
+                {selectedMeal?.servings && <span>{selectedMeal.servings} servings</span>}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {selectedMeal?.tags && (
+              <div>
+                <h3 className="font-semibold mb-2">Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedMeal.tags.split(',').map((tag, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 text-sm rounded-full bg-secondary"
+                    >
+                      {tag.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {selectedMeal?.ingredients && (
+              <div>
+                <h3 className="font-semibold mb-2">Ingredients</h3>
+                <div className="bg-muted p-4 rounded-lg">
+                  <pre className="whitespace-pre-wrap font-sans text-sm">
+                    {selectedMeal.ingredients}
+                  </pre>
+                </div>
+              </div>
+            )}
+            {selectedMeal?.instructions && (
+              <div>
+                <h3 className="font-semibold mb-2">Instructions</h3>
+                <div className="bg-muted p-4 rounded-lg">
+                  <pre className="whitespace-pre-wrap font-sans text-sm">
+                    {selectedMeal.instructions}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Meal Dialog */}
       {selectedSlot && (

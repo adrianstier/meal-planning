@@ -28,6 +28,7 @@ const RecipesPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [parseDialogOpen, setParseDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [recipeText, setRecipeText] = useState('');
   const [parsedRecipe, setParsedRecipe] = useState<Partial<Meal> | null>(null);
@@ -198,7 +199,14 @@ const RecipesPage: React.FC = () => {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {mealsByType[type].map((meal) => (
-                  <Card key={meal.id} className="flex flex-col">
+                  <Card
+                    key={meal.id}
+                    className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => {
+                      setSelectedMeal(meal);
+                      setViewDialogOpen(true);
+                    }}
+                  >
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-lg">{meal.name}</CardTitle>
@@ -206,7 +214,10 @@ const RecipesPage: React.FC = () => {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => handleToggleFavorite(meal)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleFavorite(meal);
+                          }}
                         >
                           <Heart
                             className={`h-4 w-4 ${
@@ -243,13 +254,15 @@ const RecipesPage: React.FC = () => {
                           Last cooked: {new Date(meal.last_cooked).toLocaleDateString()}
                         </p>
                       )}
+                      <p className="text-xs text-muted-foreground mt-2">Click to view recipe</p>
                     </CardContent>
                     <div className="px-6 pb-4 flex gap-2">
                       <Button
                         variant="destructive"
                         size="sm"
                         className="flex-1"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedMeal(meal);
                           setDeleteDialogOpen(true);
                         }}
@@ -439,6 +452,66 @@ const RecipesPage: React.FC = () => {
             >
               {createMeal.isPending ? 'Adding...' : 'Add Recipe'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Recipe Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedMeal?.name}</DialogTitle>
+            <DialogDescription>
+              <div className="flex gap-3 text-sm mt-2">
+                {selectedMeal?.cook_time_minutes && (
+                  <span>{selectedMeal.cook_time_minutes} min</span>
+                )}
+                {selectedMeal?.difficulty && (
+                  <span className="capitalize">{selectedMeal.difficulty}</span>
+                )}
+                {selectedMeal?.servings && <span>{selectedMeal.servings} servings</span>}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {selectedMeal?.tags && (
+              <div>
+                <h3 className="font-semibold mb-2">Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedMeal.tags.split(',').map((tag, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 text-sm rounded-full bg-secondary"
+                    >
+                      {tag.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {selectedMeal?.ingredients && (
+              <div>
+                <h3 className="font-semibold mb-2">Ingredients</h3>
+                <div className="bg-muted p-4 rounded-lg">
+                  <pre className="whitespace-pre-wrap font-sans text-sm">
+                    {selectedMeal.ingredients}
+                  </pre>
+                </div>
+              </div>
+            )}
+            {selectedMeal?.instructions && (
+              <div>
+                <h3 className="font-semibold mb-2">Instructions</h3>
+                <div className="bg-muted p-4 rounded-lg">
+                  <pre className="whitespace-pre-wrap font-sans text-sm">
+                    {selectedMeal.instructions}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

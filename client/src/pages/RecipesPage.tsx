@@ -52,30 +52,49 @@ const RecipesPage: React.FC = () => {
   const handleParseRecipe = async () => {
     try {
       const result = await parseRecipe.mutateAsync(recipeText);
-      setParsedRecipe(result.data);
+
+      // The axios interceptor unwraps { success: true, data: {...} } to just {...}
+      // So result.data is the parsed recipe object
+      const parsedData = result.data;
+      console.log('Parsed recipe data:', parsedData);
+
+      setParsedRecipe(parsedData);
       setParseDialogOpen(false);
 
       // Pre-fill form with parsed data
       // Convert ingredients array to formatted string
       let ingredientsText = '';
-      if (Array.isArray(result.data.ingredients)) {
-        ingredientsText = result.data.ingredients
-          .map((ing: any) => `${ing.quantity ? ing.quantity + ' ' : ''}${ing.name}`)
+      if (parsedData.ingredients && Array.isArray(parsedData.ingredients)) {
+        ingredientsText = parsedData.ingredients
+          .map((ing: any) => {
+            const quantity = ing.quantity ? `${ing.quantity} ` : '';
+            const name = ing.name || '';
+            return `${quantity}${name}`.trim();
+          })
+          .filter(line => line.length > 0)
           .join('\n');
-      } else if (typeof result.data.ingredients === 'string') {
-        ingredientsText = result.data.ingredients;
+      } else if (typeof parsedData.ingredients === 'string') {
+        ingredientsText = parsedData.ingredients;
+      }
+
+      // Convert instructions if it's an array
+      let instructionsText = '';
+      if (parsedData.instructions && Array.isArray(parsedData.instructions)) {
+        instructionsText = parsedData.instructions.join('\n');
+      } else if (typeof parsedData.instructions === 'string') {
+        instructionsText = parsedData.instructions;
       }
 
       setFormData({
         ...formData,
-        name: result.data.name || '',
-        meal_type: result.data.meal_type || 'dinner',
-        cook_time_minutes: result.data.cook_time_minutes,
-        servings: result.data.servings,
-        difficulty: result.data.difficulty || 'medium',
-        tags: result.data.tags || '',
+        name: parsedData.name || '',
+        meal_type: parsedData.meal_type || 'dinner',
+        cook_time_minutes: parsedData.cook_time_minutes,
+        servings: parsedData.servings,
+        difficulty: parsedData.difficulty || 'medium',
+        tags: parsedData.tags || '',
         ingredients: ingredientsText,
-        instructions: result.data.instructions || '',
+        instructions: instructionsText,
       });
       setAddDialogOpen(true);
       setRecipeText('');

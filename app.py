@@ -168,15 +168,21 @@ def create_meal():
         conn = db.connect()
         cursor = conn.cursor()
 
+        # Map meal_type to meal_type_id
+        meal_type = data.get('meal_type', 'dinner')
+        meal_type_map = {'dinner': 1, 'lunch': 2, 'snack': 3, 'breakfast': 4}
+        meal_type_id = meal_type_map.get(meal_type, 1)
+
         cursor.execute("""
             INSERT INTO meals (
-                name, meal_type, cook_time_minutes, servings, difficulty,
+                name, meal_type, meal_type_id, cook_time_minutes, servings, difficulty,
                 tags, ingredients, instructions, is_favorite, makes_leftovers,
                 leftover_servings, leftover_days
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data.get('name'),
-            data.get('meal_type', 'dinner'),
+            meal_type,
+            meal_type_id,
             data.get('cook_time_minutes'),
             data.get('servings'),
             data.get('difficulty', 'medium'),
@@ -220,6 +226,13 @@ def update_meal(meal_id):
             if field in data:
                 update_fields.append(f"{field} = ?")
                 update_values.append(data[field])
+
+        # If meal_type is being updated, also update meal_type_id
+        if 'meal_type' in data:
+            meal_type_map = {'dinner': 1, 'lunch': 2, 'snack': 3, 'breakfast': 4}
+            meal_type_id = meal_type_map.get(data['meal_type'], 1)
+            update_fields.append("meal_type_id = ?")
+            update_values.append(meal_type_id)
 
         if not update_fields:
             return jsonify({'success': False, 'error': 'No fields to update'}), 400

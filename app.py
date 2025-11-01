@@ -467,6 +467,21 @@ if __name__ == '__main__':
             conn.commit()
             print("✓ Additional meals loaded")
 
+    # Run migration for history features if needed
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='meal_history'")
+        if not cursor.fetchone():
+            print("🔄 Running history features migration...")
+            if os.path.exists('add_history_features.sql'):
+                with open('add_history_features.sql', 'r') as f:
+                    cursor.executescript(f.read())
+                conn.commit()
+                print("✅ History features added!")
+    except Exception as e:
+        print(f"⚠️  Migration check: {e}")
+
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', '1') == '1'
 

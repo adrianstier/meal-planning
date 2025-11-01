@@ -52,6 +52,19 @@ def setup_database():
         else:
             print(f"⚠️  {sql_file} not found, skipping...")
 
+    # Run React schema migration
+    print("\n🔄 Running React schema migration...")
+    try:
+        import subprocess
+        result = subprocess.run(['python3', 'migrate_to_react_schema.py'],
+                              capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✅ React schema migrated!")
+        else:
+            print(f"⚠️  Migration warning: {result.stderr}")
+    except Exception as e:
+        print(f"⚠️  Could not run migration: {e}")
+
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")
     print("=" * 60)

@@ -56,6 +56,16 @@ const RecipesPage: React.FC = () => {
       setParseDialogOpen(false);
 
       // Pre-fill form with parsed data
+      // Convert ingredients array to formatted string
+      let ingredientsText = '';
+      if (Array.isArray(result.data.ingredients)) {
+        ingredientsText = result.data.ingredients
+          .map((ing: any) => `${ing.quantity ? ing.quantity + ' ' : ''}${ing.name}`)
+          .join('\n');
+      } else if (typeof result.data.ingredients === 'string') {
+        ingredientsText = result.data.ingredients;
+      }
+
       setFormData({
         ...formData,
         name: result.data.name || '',
@@ -64,13 +74,14 @@ const RecipesPage: React.FC = () => {
         servings: result.data.servings,
         difficulty: result.data.difficulty || 'medium',
         tags: result.data.tags || '',
-        ingredients: result.data.ingredients || '',
+        ingredients: ingredientsText,
         instructions: result.data.instructions || '',
       });
       setAddDialogOpen(true);
       setRecipeText('');
     } catch (error) {
       console.error('Failed to parse recipe:', error);
+      alert(`Failed to parse recipe: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

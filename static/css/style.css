@@ -728,3 +728,117 @@ html {
     margin-bottom: var(--spacing-md);
     opacity: 0.5;
 }
+
+/* ============================================================================
+   Leftovers Management Styles
+   ============================================================================ */
+
+.leftover-card {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    transition: var(--transition);
+}
+
+.leftover-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.leftover-card.expiring {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.leftover-card.soon {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.leftover-card.fresh {
+    border-color: var(--success);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.leftover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.leftover-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.25rem;
+}
+
+.leftover-status {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+}
+
+.leftover-details {
+    margin-bottom: var(--spacing-md);
+}
+
+.leftover-details p {
+    margin: var(--spacing-xs) 0;
+    color: var(--text-secondary);
+}
+
+.leftover-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.btn-sm {
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: 0.875rem;
+}
+
+.suggestions-list {
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.suggestion-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    transition: var(--transition);
+}
+
+.suggestion-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+}
+
+.suggestion-card h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--primary);
+    font-size: 1.125rem;
+}
+
+.suggestion-card p {
+    margin: var(--spacing-xs) 0;
+    color: var(--text-primary);
+}
+
+.suggestion-details {
+    font-size: 0.875rem;
+    color: var(--text-secondary) !important;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin: 0;
+}

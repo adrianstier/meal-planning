@@ -490,6 +490,151 @@ class MealPlannerDB:
 
         return [dict(row) for row in cursor.fetchall()]
 
+    # ========== LEFTOVERS MANAGEMENT METHODS ==========
+
+    def add_leftovers(self, meal_id: int, cooked_date: str = None,
+                     servings: int = 2, days_good: int = 3):
+        """Add leftovers to inventory when a meal is cooked"""
+        if cooked_date is None:
+            cooked_date = datetime.now().strftime('%Y-%m-%d')
+
+        expires_date = (datetime.strptime(cooked_date, '%Y-%m-%d') +
+                       timedelta(days=days_good)).strftime('%Y-%m-%d')
+
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO leftovers_inventory
+            (meal_id, cooked_date, servings_remaining, expires_date)
+            VALUES (?, ?, ?, ?)
+        """, (meal_id, cooked_date, servings, expires_date))
+
+        conn.commit()
+        return cursor.lastrowid
+
+    def get_active_leftovers(self) -> List[Dict]:
+        """Get all unconsumed leftovers, sorted by expiration"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT l.*, m.name as meal_name, mt.name as meal_type_name
+            FROM leftovers_inventory l
+            JOIN meals m ON l.meal_id = m.id
+            JOIN meal_types mt ON m.meal_type_id = mt.id
+            WHERE l.consumed_at IS NULL
+            ORDER BY l.expires_date ASC
+        """
+
+        cursor.execute(query)
+        leftovers = [dict(row) for row in cursor.fetchall()]
+
+        # Add days until expiration
+        today = datetime.now().date()
+        for item in leftovers:
+            expires = datetime.strptime(item['expires_date'], '%Y-%m-%d').date()
+            item['days_until_expiry'] = (expires - today).days
+            item['is_expiring_soon'] = item['days_until_expiry'] <= 1
+
+        return leftovers
+
+    def mark_leftovers_consumed(self, leftover_id: int):
+        """Mark leftovers as consumed"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE leftovers_inventory
+            SET consumed_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (leftover_id,))
+
+        conn.commit()
+        return cursor.rowcount > 0
+
+    def update_leftover_servings(self, leftover_id: int, servings: int):
+        """Update remaining servings for leftovers"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        if servings <= 0:
+            # Mark as consumed if no servings left
+            return self.mark_leftovers_consumed(leftover_id)
+
+        cursor.execute("""
+            UPDATE leftovers_inventory
+            SET servings_remaining = ?
+            WHERE id = ?
+        """, (servings, leftover_id))
+
+        conn.commit()
+        return cursor.rowcount > 0
+
+    def get_leftover_friendly_meals(self, limit: int = 20) -> List[Dict]:
+        """Get meals that make good leftovers"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT m.*, mt.name as meal_type_name
+            FROM meals m
+            JOIN meal_types mt ON m.meal_type_id = mt.id
+            WHERE m.makes_leftovers = 1
+            ORDER BY m.kid_friendly_level DESC, m.name
+            LIMIT ?
+        """
+
+        cursor.execute(query, (limit,))
+        meals = [dict(row) for row in cursor.fetchall()]
+
+        for meal in meals:
+            meal['ingredients'] = self.get_meal_ingredients(meal['id'])
+
+        return meals
+
+    def update_meal_leftover_settings(self, meal_id: int, makes_leftovers: bool = True,
+                                     servings: int = 2, days: int = 3):
+        """Update leftover settings for a meal"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE meals
+            SET makes_leftovers = ?,
+                leftover_servings = ?,
+                leftover_days = ?
+            WHERE id = ?
+        """, (makes_leftovers, servings, days, meal_id))
+
+        conn.commit()
+        return cursor.rowcount > 0
+
+    def suggest_leftover_lunches(self, date: str = None) -> List[Dict]:
+        """Suggest using leftovers for lunch based on what's in the fridge"""
+        if date is None:
+            date = datetime.now().strftime('%Y-%m-%d')
+
+        # Get active leftovers that are still good
+        leftovers = self.get_active_leftovers()
+
+        suggestions = []
+        for item in leftovers:
+            if item['servings_remaining'] > 0:
+                suggestions.append({
+                    'id': item['id'],
+                    'meal_id': item['meal_id'],
+                    'meal_name': item['meal_name'],
+                    'servings': item['servings_remaining'],
+                    'cooked_date': item['cooked_date'],
+                    'expires_date': item['expires_date'],
+                    'days_until_expiry': item['days_until_expiry'],
+                    'is_expiring_soon': item['is_expiring_soon'],
+                    'suggestion': f"Use up {item['meal_name']} leftovers"
+                })
+
+        return suggestions
+
 
 def print_meal(meal: Dict, show_ingredients: bool = True):
     """Pretty print a meal"""

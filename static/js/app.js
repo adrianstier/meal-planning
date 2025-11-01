@@ -733,6 +733,263 @@ function formatDate(dateString) {
 }
 
 // ============================================================================
+// Leftovers Management
+// ============================================================================
+
+function initLeftovers() {
+    const addLeftoverBtn = document.getElementById('add-leftover-btn');
+    const refreshSuggestionsBtn = document.getElementById('refresh-suggestions-btn');
+    const cookedDateInput = document.getElementById('leftover-cooked-date');
+
+    // Set default cooked date to today
+    cookedDateInput.valueAsDate = new Date();
+
+    // Load meals into dropdown
+    loadMealsForLeftovers();
+
+    // Load initial data
+    loadActiveLeftovers();
+    loadLeftoverSuggestions();
+
+    addLeftoverBtn.addEventListener('click', addLeftover);
+    refreshSuggestionsBtn.addEventListener('click', loadLeftoverSuggestions);
+
+    // Listen for tab changes to refresh when viewing leftovers tab
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (e.target.getAttribute('data-tab') === 'leftovers') {
+                loadActiveLeftovers();
+                loadLeftoverSuggestions();
+            }
+        });
+    });
+}
+
+async function loadMealsForLeftovers() {
+    try {
+        const response = await fetch(`${API_BASE}/api/meals`);
+        const data = await response.json();
+
+        if (data.success) {
+            const select = document.getElementById('leftover-meal-select');
+            select.innerHTML = '<option value="">Choose a meal...</option>';
+
+            data.data.forEach(meal => {
+                const option = document.createElement('option');
+                option.value = meal.id;
+                option.textContent = meal.name;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading meals:', error);
+    }
+}
+
+async function loadActiveLeftovers() {
+    try {
+        const response = await fetch(`${API_BASE}/api/leftovers`);
+        const data = await response.json();
+
+        const content = document.getElementById('active-leftovers-content');
+
+        if (data.success && data.leftovers && data.leftovers.length > 0) {
+            content.innerHTML = data.leftovers.map(leftover => {
+                const expiresIn = getDaysUntil(leftover.expires_date);
+                const statusClass = expiresIn <= 1 ? 'expiring' : expiresIn <= 2 ? 'soon' : 'fresh';
+
+                return `
+                    <div class="leftover-card ${statusClass}">
+                        <div class="leftover-header">
+                            <h3>${leftover.meal_name}</h3>
+                            <span class="leftover-status">${formatExpirationStatus(expiresIn)}</span>
+                        </div>
+                        <div class="leftover-details">
+                            <p><strong>Servings:</strong> ${leftover.servings_remaining}</p>
+                            <p><strong>Cooked:</strong> ${formatDate(leftover.cooked_date)}</p>
+                            <p><strong>Expires:</strong> ${new Date(leftover.expires_date).toLocaleDateString()}</p>
+                        </div>
+                        <div class="leftover-actions">
+                            <button class="btn btn-sm btn-secondary" onclick="updateServings(${leftover.id}, ${leftover.servings_remaining})">
+                                Edit Servings
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="consumeLeftover(${leftover.id})">
+                                ✓ Consumed
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            content.innerHTML = `
+                <div class="empty-state">
+                    <p class="empty-icon">🥡</p>
+                    <h3>No leftovers tracked</h3>
+                    <p>Add leftovers below to track what's in your fridge</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading leftovers:', error);
+        document.getElementById('active-leftovers-content').innerHTML =
+            '<p class="status-msg error">Failed to load leftovers</p>';
+    }
+}
+
+async function loadLeftoverSuggestions() {
+    try {
+        const response = await fetch(`${API_BASE}/api/leftovers/suggestions`);
+        const data = await response.json();
+
+        const content = document.getElementById('leftover-suggestions-content');
+
+        if (data.success && data.suggestions && data.suggestions.length > 0) {
+            content.innerHTML = `
+                <div class="suggestions-list">
+                    ${data.suggestions.map(suggestion => `
+                        <div class="suggestion-card">
+                            <h4>💡 ${suggestion.suggestion}</h4>
+                            <p><strong>${suggestion.meal_name}</strong></p>
+                            <p class="suggestion-details">
+                                ${suggestion.servings_remaining} servings left •
+                                Expires ${formatExpirationStatus(getDaysUntil(suggestion.expires_date))}
+                            </p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            content.innerHTML = `
+                <div class="empty-state">
+                    <p class="empty-icon">💡</p>
+                    <h3>No suggestions yet</h3>
+                    <p>Add some leftovers to get smart lunch suggestions</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading suggestions:', error);
+        document.getElementById('leftover-suggestions-content').innerHTML =
+            '<p class="status-msg error">Failed to load suggestions</p>';
+    }
+}
+
+async function addLeftover() {
+    const mealId = document.getElementById('leftover-meal-select').value;
+    const servings = document.getElementById('leftover-servings').value;
+    const days = document.getElementById('leftover-days').value;
+    const cookedDate = document.getElementById('leftover-cooked-date').value;
+
+    if (!mealId) {
+        alert('Please select a meal');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/leftovers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                meal_id: parseInt(mealId),
+                servings: parseInt(servings),
+                days_good: parseInt(days),
+                cooked_date: cookedDate
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus('Leftovers added successfully!', 'success');
+            // Reset form
+            document.getElementById('leftover-meal-select').value = '';
+            document.getElementById('leftover-servings').value = '2';
+            document.getElementById('leftover-days').value = '3';
+            document.getElementById('leftover-cooked-date').valueAsDate = new Date();
+            // Reload leftovers
+            loadActiveLeftovers();
+            loadLeftoverSuggestions();
+        } else {
+            showStatus(`Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error adding leftover:', error);
+        showStatus('Failed to add leftover', 'error');
+    }
+}
+
+async function consumeLeftover(leftoverId) {
+    if (!confirm('Mark these leftovers as consumed?')) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/api/leftovers/${leftoverId}/consume`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus('Leftovers marked as consumed!', 'success');
+            loadActiveLeftovers();
+            loadLeftoverSuggestions();
+        } else {
+            showStatus(`Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error consuming leftover:', error);
+        showStatus('Failed to update', 'error');
+    }
+}
+
+async function updateServings(leftoverId, currentServings) {
+    const newServings = prompt(`Update servings (current: ${currentServings}):`, currentServings);
+
+    if (newServings === null) return;
+
+    const servings = parseInt(newServings);
+    if (isNaN(servings) || servings < 0) {
+        alert('Please enter a valid number');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/leftovers/${leftoverId}/servings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ servings })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus('Servings updated!', 'success');
+            loadActiveLeftovers();
+        } else {
+            showStatus(`Error: ${data.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error updating servings:', error);
+        showStatus('Failed to update', 'error');
+    }
+}
+
+function getDaysUntil(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = date - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+}
+
+function formatExpirationStatus(daysUntil) {
+    if (daysUntil < 0) return '⚠️ Expired';
+    if (daysUntil === 0) return '⚠️ Expires today';
+    if (daysUntil === 1) return '🔴 Expires tomorrow';
+    if (daysUntil === 2) return '🟡 2 days left';
+    return `🟢 ${daysUntil} days left`;
+}
+
+// ============================================================================
 // Initialize
 // ============================================================================
 
@@ -743,6 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initBrowse();
     initShopping();
     initHistory();
+    initLeftovers();
 
     console.log('🍽️ Family Meal Planner initialized');
 });

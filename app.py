@@ -449,6 +449,127 @@ def get_history():
 
 
 # ============================================================================
+# LEFTOVERS MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@app.route('/api/leftovers', methods=['GET'])
+def get_leftovers():
+    """Get all active leftovers"""
+    try:
+        leftovers = db.get_active_leftovers()
+        return jsonify({
+            'success': True,
+            'leftovers': leftovers,
+            'count': len(leftovers)
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/leftovers', methods=['POST'])
+def add_leftover():
+    """Add leftovers to inventory"""
+    try:
+        data = request.json
+        meal_id = data.get('meal_id')
+        cooked_date = data.get('cooked_date')
+        servings = int(data.get('servings', 2))
+        days_good = int(data.get('days_good', 3))
+
+        if not meal_id:
+            return jsonify({
+                'success': False,
+                'error': 'meal_id is required'
+            }), 400
+
+        leftover_id = db.add_leftovers(meal_id, cooked_date, servings, days_good)
+
+        return jsonify({
+            'success': True,
+            'leftover_id': leftover_id,
+            'message': 'Leftovers added to inventory'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/leftovers/<int:leftover_id>/consume', methods=['POST'])
+def consume_leftover(leftover_id):
+    """Mark leftovers as consumed"""
+    try:
+        db.mark_leftovers_consumed(leftover_id)
+
+        return jsonify({
+            'success': True,
+            'message': 'Leftovers marked as consumed'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/leftovers/<int:leftover_id>/servings', methods=['PUT'])
+def update_leftover_servings(leftover_id):
+    """Update remaining servings"""
+    try:
+        data = request.json
+        servings = int(data.get('servings', 0))
+
+        if servings < 0:
+            return jsonify({
+                'success': False,
+                'error': 'Servings must be non-negative'
+            }), 400
+
+        db.update_leftover_servings(leftover_id, servings)
+
+        return jsonify({
+            'success': True,
+            'message': 'Servings updated'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/leftovers/suggestions', methods=['GET'])
+def get_leftover_suggestions():
+    """Get leftover lunch suggestions"""
+    try:
+        suggestions = db.suggest_leftover_lunches()
+        return jsonify({
+            'success': True,
+            'suggestions': suggestions,
+            'count': len(suggestions)
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meals/<int:meal_id>/leftover-settings', methods=['PUT'])
+def update_leftover_settings(meal_id):
+    """Update leftover settings for a meal"""
+    try:
+        data = request.json
+        makes_leftovers = data.get('makes_leftovers', False)
+        servings = int(data.get('leftover_servings', 0))
+        days = int(data.get('leftover_days', 1))
+
+        db.update_meal_leftover_settings(meal_id, makes_leftovers, servings, days)
+
+        return jsonify({
+            'success': True,
+            'message': 'Leftover settings updated'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
 # RUN SERVER
 # ============================================================================
 
@@ -481,6 +602,21 @@ if __name__ == '__main__':
                 print("✅ History features added!")
     except Exception as e:
         print(f"⚠️  Migration check: {e}")
+
+    # Run migration for leftovers feature if needed
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='leftovers_inventory'")
+        if not cursor.fetchone():
+            print("🔄 Running leftovers feature migration...")
+            if os.path.exists('add_leftovers_feature.sql'):
+                with open('add_leftovers_feature.sql', 'r') as f:
+                    cursor.executescript(f.read())
+                conn.commit()
+                print("✅ Leftovers feature added!")
+    except Exception as e:
+        print(f"⚠️  Leftovers migration check: {e}")
 
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', '1') == '1'

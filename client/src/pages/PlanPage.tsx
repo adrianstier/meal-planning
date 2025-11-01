@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { useWeekPlan } from '../hooks/usePlan';
+import AddMealDialog from '../components/features/plan/AddMealDialog';
 import type { MealPlan } from '../types/api';
 
 const PlanPage: React.FC = () => {
@@ -11,6 +12,12 @@ const PlanPage: React.FC = () => {
     const today = new Date();
     return format(startOfWeek(today, { weekStartsOn: 0 }), 'yyyy-MM-dd');
   });
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<{
+    date: string;
+    mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  } | null>(null);
 
   const { data: weekPlan, isLoading, error } = useWeekPlan(currentWeekStart);
 
@@ -63,6 +70,11 @@ const PlanPage: React.FC = () => {
   const goToThisWeek = () => {
     const today = new Date();
     setCurrentWeekStart(format(startOfWeek(today, { weekStartsOn: 0 }), 'yyyy-MM-dd'));
+  };
+
+  const handleAddMeal = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
+    setSelectedSlot({ date, mealType });
+    setDialogOpen(true);
   };
 
   if (isLoading) {
@@ -155,7 +167,12 @@ const PlanPage: React.FC = () => {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-xs text-muted-foreground">Breakfast</h4>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleAddMeal(day.date, 'breakfast')}
+                    >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
@@ -177,7 +194,12 @@ const PlanPage: React.FC = () => {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-xs text-muted-foreground">Lunch</h4>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleAddMeal(day.date, 'lunch')}
+                    >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
@@ -199,7 +221,12 @@ const PlanPage: React.FC = () => {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-xs text-muted-foreground">Dinner</h4>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleAddMeal(day.date, 'dinner')}
+                    >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
@@ -222,7 +249,12 @@ const PlanPage: React.FC = () => {
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <h4 className="font-semibold text-xs text-muted-foreground">Snacks</h4>
-                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleAddMeal(day.date, 'snack')}
+                      >
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
@@ -241,6 +273,16 @@ const PlanPage: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Add Meal Dialog */}
+      {selectedSlot && (
+        <AddMealDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          date={selectedSlot.date}
+          mealType={selectedSlot.mealType}
+        />
+      )}
     </div>
   );
 };

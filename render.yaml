@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     branch: main
-    buildCommand: "pip install -r requirements.txt && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash && export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && nvm install 18 && nvm use 18 && chmod +x railway-build.sh && ./railway-build.sh"
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "python setup.py && gunicorn app:app"
     envVars:
       - key: PYTHON_VERSION

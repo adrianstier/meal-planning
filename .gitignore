@@ -54,3 +54,35 @@ Thumbs.db
 
 # Logs
 *.log
+
+# React build
+client/build/
+client/dist/
+client/node_modules/
+
+# Static files (React production build gets copied here)
+# Keep the directory but ignore generated files
+static/css/
+static/js/
+static/media/
+!static/.gitkeep
+
+# Template (React build gets copied here)
+templates/index.html
+!templates/.gitkeep
+
+# Backups
+*_backup/
+*.bak
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Railway
+.railway/
+
+# R Project files
+*.Rproj
+.Rproj.user/

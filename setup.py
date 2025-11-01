@@ -32,8 +32,8 @@ def setup_database():
 
     # Load additional meals
     sql_files = [
-        'additional_meals.sql',
-        'weekly_produce.sql'
+        'database/sql/additional_meals.sql',
+        'database/sql/weekly_produce.sql'
     ]
 
     conn = db.connect()
@@ -41,22 +41,22 @@ def setup_database():
 
     for sql_file in sql_files:
         if os.path.exists(sql_file):
-            print(f"\n📥 Loading {sql_file}...")
+            print(f"\n📥 Loading {os.path.basename(sql_file)}...")
             with open(sql_file, 'r') as f:
                 try:
                     cursor.executescript(f.read())
                     conn.commit()
-                    print(f"✓ {sql_file} loaded successfully")
+                    print(f"✓ {os.path.basename(sql_file)} loaded successfully")
                 except Exception as e:
-                    print(f"⚠️  Warning loading {sql_file}: {e}")
+                    print(f"⚠️  Warning loading {os.path.basename(sql_file)}: {e}")
         else:
-            print(f"⚠️  {sql_file} not found, skipping...")
+            print(f"⚠️  {os.path.basename(sql_file)} not found, skipping...")
 
     # Run React schema migration
     print("\n🔄 Running React schema migration...")
     try:
         import subprocess
-        result = subprocess.run(['python3', 'migrate_to_react_schema.py'],
+        result = subprocess.run(['python3', 'database/migrations/migrate_to_react_schema.py'],
                               capture_output=True, text=True)
         if result.returncode == 0:
             print("✅ React schema migrated!")

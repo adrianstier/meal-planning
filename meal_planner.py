@@ -53,8 +53,8 @@ class MealPlannerDB:
         if self.conn:
             self.conn.close()
 
-    def initialize_database(self, schema_file: str = "schema.sql",
-                           seed_file: str = "seed_data.sql"):
+    def initialize_database(self, schema_file: str = "database/sql/schema.sql",
+                           seed_file: str = "database/sql/seed_data.sql"):
         """Initialize database with schema and seed data"""
         conn = self.connect()
         cursor = conn.cursor()

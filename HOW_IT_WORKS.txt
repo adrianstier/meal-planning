@@ -1,0 +1,171 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                 HOW YOUR MEAL PLANNER WORKS                          ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+📍 DATABASE LOCATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   /Users/adrianstiermbp2023/meal-planning/meal_planner.db
+   
+   📊 Size: 84 KB
+   📋 Contains: 49 meals, 118 ingredients, 1 meal plan
+
+
+🔒 WHAT'S PROTECTED (Never Goes to GitHub)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ❌ meal_planner.db    → Your personal meals & plans
+   ❌ .env               → Your API key
+   ❌ key.txt            → Your API key file
+   
+   Protected by: .gitignore
+
+
+✅ WHAT GOES TO GITHUB (Shareable Code)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ✅ app.py              → Web application
+   ✅ meal_planner.py     → Database manager
+   ✅ ai_recipe_parser.py → AI integration
+   ✅ schema.sql          → Database blueprint
+   ✅ seed_data.sql       → 44 starter meals
+   ✅ templates/*.html    → Web pages
+   ✅ static/*.css        → Styling
+   ✅ *.md                → Documentation
+   
+   Everyone can use the code, but gets their own database!
+
+
+🔄 HOW DATA FLOWS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   1. YOU USE THE WEB APP
+      └─> http://localhost:5001
+      
+   2. YOU ADD A RECIPE
+      ├─> Paste recipe text
+      ├─> AI parses it (Claude API)
+      └─> Saves to meal_planner.db
+      
+   3. YOU GENERATE A MEAL PLAN
+      ├─> Select filters (veggie, quick, kid-friendly)
+      ├─> App queries database
+      └─> Returns randomized meals
+      
+   4. YOU GENERATE SHOPPING LIST
+      ├─> App reads scheduled meals
+      ├─> Extracts all ingredients
+      └─> Groups by category
+      
+   5. YOU RESTART COMPUTER
+      └─> All data still in meal_planner.db ✅
+
+
+📤 SHARING YOUR CODE ON GITHUB
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   YOUR COMPUTER                    GITHUB                    OTHER PERSON
+   ──────────────                   ──────                    ────────────
+   
+   meal_planner.db   ────X────>                  ────X────>  (not shared)
+   (YOUR 49 meals)                                           
+   
+   .env              ────X────>                  ────X────>  (not shared)
+   (YOUR API key)                                            
+   
+   app.py            ─────────────> ✅ Code     ──────────>  app.py
+   schema.sql        ─────────────> ✅ Structure ─────────>  schema.sql
+   seed_data.sql     ─────────────> ✅ 44 meals ──────────>  seed_data.sql
+   
+   Then they run:
+   python3 setup.py  → Creates THEIR database with 44 meals
+   Add their API key → Their own .env file
+
+
+🗄️ DATABASE TABLES (What's Inside)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ┌─────────────────────┐
+   │  family_members     │  You, your wife, kids (ages 4 & 7)
+   └─────────────────────┘
+   
+   ┌─────────────────────┐
+   │  meals (49)         │  Chicken Tacos, Quesadillas, etc.
+   │  ├─ name            │  Each has: name, type, kid-rating
+   │  ├─ meal_type       │  prep time, cook time, notes
+   │  ├─ kid_friendly    │
+   │  └─ times           │
+   └─────────────────────┘
+   
+   ┌─────────────────────┐
+   │  ingredients (118)  │  Chicken, Rice, Broccoli, etc.
+   │  ├─ name            │  Organized by category
+   │  ├─ category        │  (protein, veggie, starch, fruit)
+   │  └─ kid_friendly    │
+   └─────────────────────┘
+   
+   ┌─────────────────────┐
+   │  meal_ingredients   │  Links meals to ingredients
+   │                     │  "Tacos needs: chicken, cheese, tortillas"
+   └─────────────────────┘
+   
+   ┌─────────────────────┐
+   │  meal_plans         │  Your weekly plans
+   └─────────────────────┘
+   
+   ┌─────────────────────┐
+   │  scheduled_meals    │  Monday: Tacos, Tuesday: Pasta, etc.
+   └─────────────────────┘
+
+
+🌐 MULTIPLE USERS OPTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   OPTION 1: SAME COMPUTER (Current Setup)
+   ────────────────────────────────────────
+   You & Wife → Same meal_planner.db → Shared meals ✅
+   
+   
+   OPTION 2: DIFFERENT COMPUTERS
+   ──────────────────────────────
+   Your Computer  →  your_meal_planner.db  →  Your meals
+   Wife's Computer → wife_meal_planner.db  →  Her meals
+   
+   Share via: GitHub repo (code only, not data)
+   
+   
+   OPTION 3: CLOUD DEPLOYMENT (Advanced)
+   ──────────────────────────────────────
+   Deploy to Heroku/Railway
+   Use PostgreSQL (cloud database)
+   Both access: https://yourapp.herokuapp.com
+   Shared meals, accessible anywhere ✅
+
+
+💾 BACKUP YOUR DATABASE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   # Quick backup
+   cp meal_planner.db meal_planner_backup.db
+   
+   # Restore
+   cp meal_planner_backup.db meal_planner.db
+   
+   # Reset to original 44 meals
+   rm meal_planner.db
+   python3 setup.py
+
+
+🎯 KEY POINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ✅ Database is local (on your computer)
+   ✅ Currently has 49 meals (you've added 5!)
+   ✅ Never uploaded to GitHub (.gitignore protects it)
+   ✅ API key also protected
+   ✅ Data persists through restarts
+   ✅ Safe to share code publicly
+   ✅ Others get code + 44 starter meals
+   ✅ Everyone has their own separate database
+
+╚══════════════════════════════════════════════════════════════════════╝

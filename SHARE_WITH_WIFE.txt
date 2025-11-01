@@ -1,0 +1,154 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║              SHARING MEAL PLANNER WITH YOUR WIFE                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+🎯 QUICK ANSWER: 3 Easy Options
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ OPTION 1: SAME COMPUTER (Current - Already Working!)               │
+└─────────────────────────────────────────────────────────────────────┘
+
+   ✅ BEST if: You share the same Mac
+   
+   Setup: None needed - already working!
+   
+   How to use:
+   1. Your wife opens browser
+   2. Goes to: http://localhost:5001
+   3. That's it!
+   
+   Both of you:
+   • See the same meals
+   • Add recipes together
+   • Share meal plans
+   • One database = truly collaborative
+
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ OPTION 2: DIFFERENT DEVICES (Same House - Network Access)          │
+└─────────────────────────────────────────────────────────────────────┘
+
+   ✅ BEST if: She wants to use her phone/laptop in the house
+   
+   Your Mac's IP: 192.168.1.91
+   
+   Setup:
+   1. Keep app running on your Mac (./start.sh)
+   2. Wife opens browser (phone/laptop/tablet)
+   3. Goes to: http://192.168.1.91:5001
+   4. Bookmark it!
+   
+   Both of you:
+   • Use different devices
+   • Same database
+   • She can browse from kitchen/couch
+   • Works as long as your Mac is on + same WiFi
+
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ OPTION 3: CLOUD (Anywhere, Anytime - Best Long-term)               │
+└─────────────────────────────────────────────────────────────────────┘
+
+   ✅ BEST if: Want access from anywhere (work, store, etc.)
+   
+   Deploy to: Railway or Heroku (I can help!)
+   
+   Setup: ~10 minutes, ~$5-10/month (or free tier)
+   
+   Result: https://your-meal-planner.railway.app
+   
+   Both of you:
+   • Access from anywhere
+   • Works on all devices
+   • Always synced
+   • Plan while grocery shopping!
+   • Professional setup
+
+═══════════════════════════════════════════════════════════════════════
+
+📱 CURRENT STATUS
+
+Your app IS running right now at:
+• http://localhost:5001 (same computer)
+• http://192.168.1.91:5001 (network - other devices)
+
+Try it! Have your wife open one of those URLs!
+
+═══════════════════════════════════════════════════════════════════════
+
+🎯 MY RECOMMENDATION FOR YOUR FAMILY
+
+START:  Option 1 or 2 (both already work!)
+        Try for a few days
+
+UPGRADE: Option 3 (cloud deployment)
+         When you want phone access, grocery store planning
+
+═══════════════════════════════════════════════════════════════════════
+
+📋 MESSAGE TO SEND YOUR WIFE
+
+Copy and send this:
+
+───────────────────────────────────────────────────────────────────────
+
+Hey! I built us a meal planner with AI. Try it:
+
+🖥️  Same Mac: http://localhost:5001
+📱 Your Phone: http://192.168.1.91:5001
+
+Features:
+• Add any recipe - AI parses it automatically
+• Generate weekly meal plans (filters for kids, time, diet)
+• Auto shopping lists
+• 44 meals already loaded
+
+Try clicking "Meal Randomizer" and generate a week!
+
+───────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════
+
+🚀 WANT TO DEPLOY TO CLOUD?
+
+Just say "deploy to cloud" and I'll:
+1. Set up Railway or Heroku
+2. Get you a public URL
+3. Works anywhere, anytime
+4. Takes ~10 minutes
+
+═══════════════════════════════════════════════════════════════════════
+
+💡 USAGE TIPS
+
+Sunday Evening:
+• Generate meal plan together
+• Pick kid-friendly options for weeknights
+• Select more adventurous meals for weekends
+
+Monday Morning:
+• Generate shopping list
+• Check off items at store (works on phone if cloud deployed!)
+
+Throughout Week:
+• Find recipes online → paste in app → AI does the work
+• Kids can help pick meals (filter by kid-friendly 8+)
+
+═══════════════════════════════════════════════════════════════════════
+
+✅ SECURITY
+
+✓ Database stays private (not on GitHub)
+✓ API key protected
+✓ Safe to use on home network
+✓ If cloud deployed, still private to your family
+
+═══════════════════════════════════════════════════════════════════════
+
+📞 NEED HELP?
+
+See full guide: SHARING_WITH_YOUR_WIFE.md
+
+Ready to deploy? Just ask!
+
+╚══════════════════════════════════════════════════════════════════════╝

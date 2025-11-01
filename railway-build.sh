@@ -11,4 +11,7 @@ echo "📦 Copying build files..."
 rm -rf static/css static/js static/media
 cp -r client/build/* static/
 
+echo "📄 Copying index.html to templates folder..."
+cp client/build/index.html templates/index.html
+
 echo "✅ Build complete!"

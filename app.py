@@ -55,12 +55,6 @@ except Exception as e:
 # API ENDPOINTS
 # ============================================================================
 
-@app.route('/')
-def index():
-    """Serve the main web interface"""
-    return render_template('index.html')
-
-
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""
@@ -849,6 +843,25 @@ def get_school_menu_calendar():
     except Exception as e:
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# REACT ROUTING - Catch-all route for client-side routing
+# ============================================================================
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react(path):
+    """
+    Serve React app for all non-API routes.
+    This enables React Router to handle client-side routing.
+    """
+    # If the path starts with 'api/', return 404
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+
+    # Otherwise serve React's index.html
+    return render_template('index.html')
 
 
 # ============================================================================

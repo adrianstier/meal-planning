@@ -40,7 +40,8 @@ def setup_database():
     sql_files = [
         'database/sql/additional_meals.sql',
         'database/sql/weekly_produce.sql',
-        'database/migrations/add_history_features.sql'
+        'database/migrations/add_history_features.sql',
+        'database/migrations/add_leftovers_feature.sql'
     ]
 
     conn = db.connect()

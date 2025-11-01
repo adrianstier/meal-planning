@@ -434,6 +434,299 @@ def init_database():
 
 
 # ============================================================================
+# MEAL PLAN API ENDPOINTS
+# ============================================================================
+
+@app.route('/api/plan/week', methods=['GET'])
+def get_week_plan():
+    """Get week's meal plan starting from specified date"""
+    try:
+        start_date = request.args.get('start_date')
+
+        if not start_date:
+            return jsonify({'success': False, 'error': 'start_date is required'}), 400
+
+        # Calculate end date (6 days after start)
+        start = datetime.strptime(start_date, '%Y-%m-%d')
+        end = start + timedelta(days=6)
+        end_date = end.strftime('%Y-%m-%d')
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                sm.id,
+                sm.meal_date as plan_date,
+                mt.name as meal_type,
+                sm.meal_id,
+                m.name as meal_name,
+                sm.notes,
+                m.cook_time_minutes,
+                m.difficulty,
+                m.is_favorite
+            FROM scheduled_meals sm
+            JOIN meals m ON sm.meal_id = m.id
+            JOIN meal_types mt ON sm.meal_type_id = mt.id
+            WHERE sm.meal_date BETWEEN ? AND ?
+            ORDER BY sm.meal_date,
+                CASE mt.name
+                    WHEN 'breakfast' THEN 1
+                    WHEN 'lunch' THEN 2
+                    WHEN 'snack' THEN 3
+                    WHEN 'dinner' THEN 4
+                END
+        """, (start_date, end_date))
+
+        plan_items = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
+        return jsonify({'success': True, 'data': plan_items})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/plan', methods=['POST'])
+def add_plan_entry():
+    """Add meal to plan"""
+    try:
+        data = request.json
+        plan_date = data.get('plan_date')
+        meal_type = data.get('meal_type')
+        meal_id = data.get('meal_id')
+        notes = data.get('notes', '')
+
+        if not plan_date or not meal_type or not meal_id:
+            return jsonify({
+                'success': False,
+                'error': 'plan_date, meal_type, and meal_id are required'
+            }), 400
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Get meal_type_id
+        cursor.execute("SELECT id FROM meal_types WHERE name = ?", (meal_type,))
+        meal_type_row = cursor.fetchone()
+
+        if not meal_type_row:
+            conn.close()
+            return jsonify({'success': False, 'error': f'Invalid meal_type: {meal_type}'}), 400
+
+        meal_type_id = meal_type_row['id']
+
+        # Get day of week
+        date_obj = datetime.strptime(plan_date, '%Y-%m-%d')
+        day_of_week = date_obj.strftime('%A')
+
+        # Get or create meal plan for this week
+        week_start = date_obj - timedelta(days=date_obj.weekday())
+        week_end = week_start + timedelta(days=6)
+
+        cursor.execute("""
+            SELECT id FROM meal_plans
+            WHERE week_start_date = ?
+        """, (week_start.strftime('%Y-%m-%d'),))
+
+        plan = cursor.fetchone()
+        if plan:
+            meal_plan_id = plan['id']
+        else:
+            cursor.execute("""
+                INSERT INTO meal_plans (name, week_start_date, week_end_date)
+                VALUES (?, ?, ?)
+            """, (f"Week of {week_start.strftime('%Y-%m-%d')}",
+                  week_start.strftime('%Y-%m-%d'),
+                  week_end.strftime('%Y-%m-%d')))
+            meal_plan_id = cursor.lastrowid
+
+        # Add scheduled meal
+        cursor.execute("""
+            INSERT INTO scheduled_meals (
+                meal_plan_id, meal_id, day_of_week, meal_date, meal_type_id, notes
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """, (meal_plan_id, meal_id, day_of_week, plan_date, meal_type_id, notes))
+
+        plan_entry_id = cursor.lastrowid
+        conn.commit()
+
+        # Return the created entry
+        cursor.execute("""
+            SELECT
+                sm.id,
+                sm.meal_date as plan_date,
+                mt.name as meal_type,
+                sm.meal_id,
+                m.name as meal_name,
+                sm.notes
+            FROM scheduled_meals sm
+            JOIN meals m ON sm.meal_id = m.id
+            JOIN meal_types mt ON sm.meal_type_id = mt.id
+            WHERE sm.id = ?
+        """, (plan_entry_id,))
+
+        plan_entry = dict(cursor.fetchone())
+        conn.close()
+
+        return jsonify({'success': True, 'data': plan_entry}), 201
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/plan/<int:plan_id>', methods=['PUT'])
+def update_plan_entry(plan_id):
+    """Update plan entry"""
+    try:
+        data = request.json
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Build update query
+        update_fields = []
+        update_values = []
+
+        if 'meal_id' in data:
+            update_fields.append('meal_id = ?')
+            update_values.append(data['meal_id'])
+
+        if 'meal_type' in data:
+            # Convert meal_type name to meal_type_id
+            cursor.execute("SELECT id FROM meal_types WHERE name = ?", (data['meal_type'],))
+            meal_type_row = cursor.fetchone()
+            if meal_type_row:
+                update_fields.append('meal_type_id = ?')
+                update_values.append(meal_type_row['id'])
+
+        if 'plan_date' in data:
+            update_fields.append('meal_date = ?')
+            update_values.append(data['plan_date'])
+            # Update day_of_week too
+            date_obj = datetime.strptime(data['plan_date'], '%Y-%m-%d')
+            update_fields.append('day_of_week = ?')
+            update_values.append(date_obj.strftime('%A'))
+
+        if 'notes' in data:
+            update_fields.append('notes = ?')
+            update_values.append(data['notes'])
+
+        if not update_fields:
+            conn.close()
+            return jsonify({'success': False, 'error': 'No fields to update'}), 400
+
+        update_values.append(plan_id)
+        query = f"UPDATE scheduled_meals SET {', '.join(update_fields)} WHERE id = ?"
+
+        cursor.execute(query, update_values)
+        conn.commit()
+
+        # Return updated entry
+        cursor.execute("""
+            SELECT
+                sm.id,
+                sm.meal_date as plan_date,
+                mt.name as meal_type,
+                sm.meal_id,
+                m.name as meal_name,
+                sm.notes
+            FROM scheduled_meals sm
+            JOIN meals m ON sm.meal_id = m.id
+            JOIN meal_types mt ON sm.meal_type_id = mt.id
+            WHERE sm.id = ?
+        """, (plan_id,))
+
+        plan_entry = cursor.fetchone()
+        conn.close()
+
+        if not plan_entry:
+            return jsonify({'success': False, 'error': 'Plan entry not found'}), 404
+
+        return jsonify({'success': True, 'data': dict(plan_entry)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/plan/<int:plan_id>', methods=['DELETE'])
+def delete_plan_entry(plan_id):
+    """Delete plan entry"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM scheduled_meals WHERE id = ?", (plan_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Plan entry deleted'})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/plan/suggest', methods=['POST'])
+def suggest_meals():
+    """AI meal suggestions based on criteria"""
+    try:
+        data = request.json
+        date = data.get('date')
+        meal_type = data.get('meal_type', 'dinner')
+        max_cook_time = data.get('max_cook_time')
+        difficulty = data.get('difficulty')
+        avoid_recent_days = data.get('avoid_recent_days', 7)
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Build query to find suitable meals
+        query = """
+            SELECT DISTINCT m.*
+            FROM meals m
+            LEFT JOIN meal_types mt ON m.meal_type_id = mt.id
+            WHERE (m.meal_type = ? OR mt.name = ?)
+        """
+        params = [meal_type, meal_type]
+
+        # Filter by cook time
+        if max_cook_time:
+            query += " AND m.cook_time_minutes <= ?"
+            params.append(max_cook_time)
+
+        # Filter by difficulty
+        if difficulty:
+            query += " AND m.difficulty = ?"
+            params.append(difficulty)
+
+        # Exclude recently cooked meals
+        if avoid_recent_days and date:
+            cutoff_date = (datetime.strptime(date, '%Y-%m-%d') - timedelta(days=avoid_recent_days)).strftime('%Y-%m-%d')
+            query += """ AND m.id NOT IN (
+                SELECT DISTINCT meal_id FROM meal_history
+                WHERE cooked_date >= ?
+            )"""
+            params.append(cutoff_date)
+
+            # Also exclude recently scheduled meals
+            query += """ AND m.id NOT IN (
+                SELECT DISTINCT meal_id FROM scheduled_meals
+                WHERE meal_date >= ? AND meal_date < ?
+            )"""
+            params.append(cutoff_date)
+            params.append(date)
+
+        query += " ORDER BY RANDOM() LIMIT 5"
+
+        cursor.execute(query, params)
+        suggestions = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
+        return jsonify({'success': True, 'data': suggestions})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
 # MEAL HISTORY & FAVORITES ENDPOINTS
 # ============================================================================
 
@@ -549,12 +842,34 @@ def get_history():
 
 @app.route('/api/leftovers', methods=['GET'])
 def get_leftovers():
-    """Get all active leftovers"""
+    """Get all active leftovers with days_until_expiry calculated"""
     try:
-        leftovers = db.get_active_leftovers()
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                l.id,
+                l.meal_id,
+                m.name as meal_name,
+                l.cooked_date,
+                l.servings_remaining,
+                l.expires_date,
+                l.notes,
+                l.created_at,
+                CAST(julianday(l.expires_date) - julianday('now') AS INTEGER) as days_until_expiry
+            FROM leftovers_inventory l
+            JOIN meals m ON l.meal_id = m.id
+            WHERE l.consumed_at IS NULL
+            ORDER BY l.expires_date ASC
+        """)
+
+        leftovers = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
         return jsonify({
             'success': True,
-            'leftovers': leftovers,
+            'data': leftovers,
             'count': len(leftovers)
         })
     except Exception as e:
@@ -571,6 +886,7 @@ def add_leftover():
         cooked_date = data.get('cooked_date')
         servings = int(data.get('servings', 2))
         days_good = int(data.get('days_good', 3))
+        notes = data.get('notes', '')
 
         if not meal_id:
             return jsonify({
@@ -578,13 +894,51 @@ def add_leftover():
                 'error': 'meal_id is required'
             }), 400
 
-        leftover_id = db.add_leftovers(meal_id, cooked_date, servings, days_good)
+        # Calculate expires_date
+        if not cooked_date:
+            cooked_date = datetime.now().strftime('%Y-%m-%d')
+
+        cooked_dt = datetime.strptime(cooked_date, '%Y-%m-%d')
+        expires_dt = cooked_dt + timedelta(days=days_good)
+        expires_date = expires_dt.strftime('%Y-%m-%d')
+
+        # Insert into database
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO leftovers_inventory (
+                meal_id, cooked_date, servings_remaining, expires_date, notes
+            ) VALUES (?, ?, ?, ?, ?)
+        """, (meal_id, cooked_date, servings, expires_date, notes))
+
+        leftover_id = cursor.lastrowid
+        conn.commit()
+
+        # Return created leftover
+        cursor.execute("""
+            SELECT
+                l.id,
+                l.meal_id,
+                m.name as meal_name,
+                l.cooked_date,
+                l.servings_remaining,
+                l.expires_date,
+                l.notes,
+                CAST(julianday(l.expires_date) - julianday('now') AS INTEGER) as days_until_expiry
+            FROM leftovers_inventory l
+            JOIN meals m ON l.meal_id = m.id
+            WHERE l.id = ?
+        """, (leftover_id,))
+
+        leftover = dict(cursor.fetchone())
+        conn.close()
 
         return jsonify({
             'success': True,
-            'leftover_id': leftover_id,
+            'data': leftover,
             'message': 'Leftovers added to inventory'
-        })
+        }), 201
     except Exception as e:
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -631,12 +985,35 @@ def update_leftover_servings(leftover_id):
 
 @app.route('/api/leftovers/suggestions', methods=['GET'])
 def get_leftover_suggestions():
-    """Get leftover lunch suggestions"""
+    """Get expiring leftovers needing attention"""
     try:
-        suggestions = db.suggest_leftover_lunches()
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Get leftovers expiring soon (within 2 days)
+        cursor.execute("""
+            SELECT
+                l.id,
+                l.meal_id,
+                m.name as meal_name,
+                l.cooked_date,
+                l.servings_remaining,
+                l.expires_date,
+                l.notes,
+                CAST(julianday(l.expires_date) - julianday('now') AS INTEGER) as days_until_expiry
+            FROM leftovers_inventory l
+            JOIN meals m ON l.meal_id = m.id
+            WHERE l.consumed_at IS NULL
+            AND julianday(l.expires_date) - julianday('now') <= 2
+            ORDER BY l.expires_date ASC
+        """)
+
+        suggestions = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
         return jsonify({
             'success': True,
-            'suggestions': suggestions,
+            'data': suggestions,
             'count': len(suggestions)
         })
     except Exception as e:
@@ -670,20 +1047,24 @@ def update_leftover_settings(meal_id):
 
 @app.route('/api/school-menu', methods=['GET'])
 def get_school_menu():
-    """Get school menu for date range or upcoming week"""
+    """Get school menu - supports ?date= or ?start_date&end_date"""
     try:
+        date = request.args.get('date')
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         days = request.args.get('days', 7, type=int)
 
-        if start_date and end_date:
+        if date:
+            # Get menu for specific date
+            menu_items = db.get_school_menu_by_date(date)
+        elif start_date and end_date:
             menu_items = db.get_school_menu_range(start_date, end_date)
         else:
             menu_items = db.get_upcoming_school_menu(days)
 
         return jsonify({
             'success': True,
-            'menu_items': menu_items,
+            'data': menu_items,
             'count': len(menu_items)
         })
     except Exception as e:
@@ -713,13 +1094,22 @@ def add_school_menu():
     try:
         data = request.json
 
-        # Check if bulk upload (array of items)
-        if isinstance(data, list):
+        # Check if bulk upload (with items array or direct array)
+        if 'items' in data and isinstance(data['items'], list):
+            # Bulk upload with {items: [...]}
+            added_count = db.add_school_menu_bulk(data['items'])
+            return jsonify({
+                'success': True,
+                'data': {'added_count': added_count},
+                'message': f'Added {added_count} menu items'
+            })
+        elif isinstance(data, list):
+            # Direct array format
             added_count = db.add_school_menu_bulk(data)
             return jsonify({
                 'success': True,
-                'message': f'Added {added_count} menu items',
-                'added_count': added_count
+                'data': {'added_count': added_count},
+                'message': f'Added {added_count} menu items'
             })
         else:
             # Single item
@@ -739,9 +1129,9 @@ def add_school_menu():
             if menu_id:
                 return jsonify({
                     'success': True,
-                    'menu_id': menu_id,
+                    'data': {'menu_id': menu_id},
                     'message': 'Menu item added'
-                })
+                }), 201
             else:
                 return jsonify({
                     'success': False,
@@ -786,9 +1176,9 @@ def add_menu_feedback():
 
         return jsonify({
             'success': True,
-            'feedback_id': feedback_id,
+            'data': {'feedback_id': feedback_id},
             'message': 'Feedback recorded'
-        })
+        }), 201
     except Exception as e:
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -812,11 +1202,12 @@ def get_lunch_alternatives(date):
 def cleanup_old_menus():
     """Clean up old school menu items"""
     try:
-        days_ago = request.json.get('days_ago', 30)
+        data = request.get_json() or {}
+        days_ago = data.get('days_ago', 30)
         deleted_count = db.clear_old_school_menus(days_ago)
         return jsonify({
             'success': True,
-            'deleted_count': deleted_count,
+            'data': {'deleted_count': deleted_count},
             'message': f'Deleted {deleted_count} old menu items'
         })
     except Exception as e:
@@ -865,9 +1256,11 @@ def parse_menu_photo():
 
         return jsonify({
             'success': True,
-            'menu_items': menu_items,
-            'count': len(menu_items),
-            'added_count': added_count if auto_add else None,
+            'data': {
+                'menu_items': menu_items,
+                'count': len(menu_items),
+                'added_count': added_count if auto_add else 0
+            },
             'message': f'Parsed {len(menu_items)} menu items' + (f' and added {added_count} to database' if auto_add else '')
         })
 

@@ -337,6 +337,159 @@ class MealPlannerDB:
 
         return stats
 
+    # ========== MEAL HISTORY & FAVORITES METHODS ==========
+
+    def mark_meal_as_cooked(self, meal_id: int, cooked_date: str = None,
+                            rating: int = None, notes: str = None):
+        """Mark a meal as cooked on a specific date"""
+        if cooked_date is None:
+            cooked_date = datetime.now().strftime('%Y-%m-%d')
+
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        # Add to history
+        cursor.execute("""
+            INSERT INTO meal_history (meal_id, cooked_date, rating, notes)
+            VALUES (?, ?, ?, ?)
+        """, (meal_id, cooked_date, rating, notes))
+
+        # Update meal stats
+        cursor.execute("""
+            UPDATE meals
+            SET last_cooked = ?,
+                times_cooked = times_cooked + 1
+            WHERE id = ?
+        """, (cooked_date, meal_id))
+
+        conn.commit()
+        return cursor.lastrowid
+
+    def toggle_favorite(self, meal_id: int) -> bool:
+        """Toggle a meal's favorite status"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        # Check if already favorited
+        cursor.execute("SELECT id FROM meal_favorites WHERE meal_id = ?", (meal_id,))
+        existing = cursor.fetchone()
+
+        if existing:
+            # Remove from favorites
+            cursor.execute("DELETE FROM meal_favorites WHERE meal_id = ?", (meal_id,))
+            cursor.execute("UPDATE meals SET is_favorite = 0 WHERE id = ?", (meal_id,))
+            conn.commit()
+            return False
+        else:
+            # Add to favorites
+            cursor.execute("INSERT INTO meal_favorites (meal_id) VALUES (?)", (meal_id,))
+            cursor.execute("UPDATE meals SET is_favorite = 1 WHERE id = ?", (meal_id,))
+            conn.commit()
+            return True
+
+    def get_favorites(self) -> List[Dict]:
+        """Get all favorite meals"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT m.*, mt.name as meal_type_name, mf.favorited_at
+            FROM meals m
+            JOIN meal_types mt ON m.meal_type_id = mt.id
+            JOIN meal_favorites mf ON m.id = mf.meal_id
+            ORDER BY mf.favorited_at DESC
+        """
+
+        cursor.execute(query)
+        meals = [dict(row) for row in cursor.fetchall()]
+
+        for meal in meals:
+            meal['ingredients'] = self.get_meal_ingredients(meal['id'])
+
+        return meals
+
+    def get_recently_cooked(self, limit: int = 10) -> List[Dict]:
+        """Get recently cooked meals"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT m.*, mt.name as meal_type_name,
+                   m.last_cooked, m.times_cooked,
+                   mh.rating, mh.notes as last_notes
+            FROM meals m
+            JOIN meal_types mt ON m.meal_type_id = mt.id
+            LEFT JOIN meal_history mh ON m.id = mh.meal_id
+                AND mh.cooked_date = m.last_cooked
+            WHERE m.last_cooked IS NOT NULL
+            ORDER BY m.last_cooked DESC
+            LIMIT ?
+        """
+
+        cursor.execute(query, (limit,))
+        meals = [dict(row) for row in cursor.fetchall()]
+
+        for meal in meals:
+            meal['ingredients'] = self.get_meal_ingredients(meal['id'])
+
+        return meals
+
+    def get_havent_made_in_while(self, days: int = 30, limit: int = 10) -> List[Dict]:
+        """Get meals that haven't been made recently or ever"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cutoff_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+
+        query = """
+            SELECT m.*, mt.name as meal_type_name,
+                   m.last_cooked, m.times_cooked
+            FROM meals m
+            JOIN meal_types mt ON m.meal_type_id = mt.id
+            WHERE m.last_cooked IS NULL
+               OR m.last_cooked < ?
+            ORDER BY m.last_cooked ASC NULLS FIRST,
+                     m.kid_friendly_level DESC
+            LIMIT ?
+        """
+
+        cursor.execute(query, (cutoff_date, limit))
+        meals = [dict(row) for row in cursor.fetchall()]
+
+        for meal in meals:
+            meal['ingredients'] = self.get_meal_ingredients(meal['id'])
+
+        return meals
+
+    def get_meal_history(self, meal_id: int = None, limit: int = 20) -> List[Dict]:
+        """Get cooking history, optionally for a specific meal"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        if meal_id:
+            query = """
+                SELECT mh.*, m.name as meal_name, mt.name as meal_type_name
+                FROM meal_history mh
+                JOIN meals m ON mh.meal_id = m.id
+                JOIN meal_types mt ON m.meal_type_id = mt.id
+                WHERE mh.meal_id = ?
+                ORDER BY mh.cooked_date DESC
+                LIMIT ?
+            """
+            cursor.execute(query, (meal_id, limit))
+        else:
+            query = """
+                SELECT mh.*, m.name as meal_name, mt.name as meal_type_name
+                FROM meal_history mh
+                JOIN meals m ON mh.meal_id = m.id
+                JOIN meal_types mt ON m.meal_type_id = mt.id
+                ORDER BY mh.cooked_date DESC
+                LIMIT ?
+            """
+            cursor.execute(query, (limit,))
+
+        return [dict(row) for row in cursor.fetchall()]
+
 
 def print_meal(meal: Dict, show_ingredients: bool = True):
     """Pretty print a meal"""

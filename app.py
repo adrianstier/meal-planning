@@ -339,6 +339,116 @@ def init_database():
 
 
 # ============================================================================
+# MEAL HISTORY & FAVORITES ENDPOINTS
+# ============================================================================
+
+@app.route('/api/meals/<int:meal_id>/mark-cooked', methods=['POST'])
+def mark_meal_cooked(meal_id):
+    """Mark a meal as cooked"""
+    try:
+        data = request.get_json() or {}
+        cooked_date = data.get('cooked_date')
+        rating = data.get('rating')
+        notes = data.get('notes')
+
+        history_id = db.mark_meal_as_cooked(meal_id, cooked_date, rating, notes)
+
+        return jsonify({
+            'success': True,
+            'history_id': history_id,
+            'message': 'Meal marked as cooked'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/meals/<int:meal_id>/toggle-favorite', methods=['POST'])
+def toggle_meal_favorite(meal_id):
+    """Toggle favorite status for a meal"""
+    try:
+        is_favorite = db.toggle_favorite(meal_id)
+
+        return jsonify({
+            'success': True,
+            'is_favorite': is_favorite,
+            'message': 'Favorite toggled'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/favorites', methods=['GET'])
+def get_favorites():
+    """Get all favorite meals"""
+    try:
+        favorites = db.get_favorites()
+        return jsonify({
+            'success': True,
+            'meals': favorites,
+            'count': len(favorites)
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/recently-cooked', methods=['GET'])
+def get_recently_cooked():
+    """Get recently cooked meals"""
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        meals = db.get_recently_cooked(limit)
+
+        return jsonify({
+            'success': True,
+            'meals': meals,
+            'count': len(meals)
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/havent-made', methods=['GET'])
+def get_havent_made():
+    """Get meals not made in a while"""
+    try:
+        days = request.args.get('days', 30, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        meals = db.get_havent_made_in_while(days, limit)
+
+        return jsonify({
+            'success': True,
+            'meals': meals,
+            'count': len(meals),
+            'days_threshold': days
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    """Get cooking history"""
+    try:
+        meal_id = request.args.get('meal_id', type=int)
+        limit = request.args.get('limit', 20, type=int)
+        history = db.get_meal_history(meal_id, limit)
+
+        return jsonify({
+            'success': True,
+            'history': history,
+            'count': len(history)
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
 # RUN SERVER
 # ============================================================================
 

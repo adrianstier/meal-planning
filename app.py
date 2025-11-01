@@ -58,10 +58,15 @@ except Exception as e:
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""
+    api_key_present = os.getenv('ANTHROPIC_API_KEY') is not None
+    api_key_length = len(os.getenv('ANTHROPIC_API_KEY', ''))
     return jsonify({
         'status': 'ok',
         'ai_enabled': recipe_parser is not None,
-        'database': os.path.exists(db.db_path)
+        'vision_enabled': vision_parser is not None,
+        'database': os.path.exists(db.db_path),
+        'env_key_present': api_key_present,
+        'env_key_length': api_key_length
     })
 
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Calendar, BookOpen, Search, UtensilsCrossed, GraduationCap, ListChecks } from 'lucide-react';
+import { Calendar, BookOpen, UtensilsCrossed, GraduationCap, ListChecks } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,7 +10,6 @@ interface LayoutProps {
 const navItems = [
   { path: '/plan', label: 'Plan', icon: Calendar },
   { path: '/recipes', label: 'Recipes', icon: BookOpen },
-  { path: '/browse', label: 'Browse', icon: Search },
   { path: '/leftovers', label: 'Leftovers', icon: UtensilsCrossed },
   { path: '/school-menu', label: 'School Menu', icon: GraduationCap },
   { path: '/lists', label: 'Lists', icon: ListChecks },
@@ -62,7 +61,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Mobile Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t bg-background">
-        <div className="grid grid-cols-6 gap-1 p-2">
+        <div className="grid grid-cols-5 gap-1 p-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;

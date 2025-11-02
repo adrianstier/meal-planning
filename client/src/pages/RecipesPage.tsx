@@ -48,6 +48,7 @@ const RecipesPage: React.FC = () => {
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
   const [prepTimeFilter, setPrepTimeFilter] = useState<string>('all');
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [tagFilter, setTagFilter] = useState<string>('all');
   const [cuisineFilter, setCuisineFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
@@ -264,7 +265,11 @@ const RecipesPage: React.FC = () => {
 
       // Prep time filter
       const matchesPrepTime = prepTimeFilter === 'all' ||
-        (prepTimeFilter === '30' && meal.cook_time_minutes && meal.cook_time_minutes <= 30);
+        (meal.cook_time_minutes && meal.cook_time_minutes <= parseInt(prepTimeFilter));
+
+      // Difficulty filter
+      const matchesDifficulty = difficultyFilter === 'all' ||
+        meal.difficulty === difficultyFilter;
 
       // Tag filter (includes kid favorites rating filter)
       let matchesTag = true;
@@ -278,7 +283,7 @@ const RecipesPage: React.FC = () => {
       const matchesCuisine = cuisineFilter === 'all' ||
         meal.cuisine?.toLowerCase() === cuisineFilter.toLowerCase();
 
-      return matchesSearch && matchesPrepTime && matchesTag && matchesCuisine;
+      return matchesSearch && matchesPrepTime && matchesDifficulty && matchesTag && matchesCuisine;
     });
   };
 
@@ -393,7 +398,22 @@ const RecipesPage: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All times</SelectItem>
+                  <SelectItem value="15">≤15 min</SelectItem>
                   <SelectItem value="30">≤30 min</SelectItem>
+                  <SelectItem value="60">≤60 min</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <ChefHat className="mr-2 h-4 w-4" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All levels</SelectItem>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
                 </SelectContent>
               </Select>
 

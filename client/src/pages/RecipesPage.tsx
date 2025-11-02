@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -41,6 +41,11 @@ const RecipesPage: React.FC = () => {
   const [recipeText, setRecipeText] = useState('');
   const [recipeUrl, setRecipeUrl] = useState('');
   const [parsedRecipe, setParsedRecipe] = useState<Partial<Meal> | null>(null);
+
+  // Filter and search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [prepTimeFilter, setPrepTimeFilter] = useState<string>('all');
+  const [tagFilter, setTagFilter] = useState<string>('all');
 
   const [formData, setFormData] = useState<Partial<Meal>>({
     name: '',
@@ -206,12 +211,39 @@ const RecipesPage: React.FC = () => {
     }
   };
 
-  // Group meals by type
+  // Filter helper functions
+  const filterMeals = (mealList: Meal[]) => {
+    return mealList.filter(meal => {
+      // Search filter
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm ||
+        meal.name.toLowerCase().includes(searchLower) ||
+        meal.ingredients?.toLowerCase().includes(searchLower) ||
+        meal.tags?.toLowerCase().includes(searchLower);
+
+      // Prep time filter
+      const matchesPrepTime = prepTimeFilter === 'all' ||
+        (prepTimeFilter === '30' && meal.cook_time_minutes && meal.cook_time_minutes <= 30);
+
+      // Tag filter
+      const matchesTag = tagFilter === 'all' ||
+        meal.tags?.toLowerCase().includes(tagFilter.toLowerCase());
+
+      return matchesSearch && matchesPrepTime && matchesTag;
+    });
+  };
+
+  // Helper to check if meal has specific tag
+  const hasTag = (meal: Meal, tag: string) => {
+    return meal.tags?.toLowerCase().includes(tag.toLowerCase());
+  };
+
+  // Group meals by type and apply filters
   const mealsByType = {
-    breakfast: meals?.filter(m => m.meal_type === 'breakfast') || [],
-    lunch: meals?.filter(m => m.meal_type === 'lunch') || [],
-    dinner: meals?.filter(m => m.meal_type === 'dinner') || [],
-    snack: meals?.filter(m => m.meal_type === 'snack') || [],
+    breakfast: filterMeals(meals?.filter(m => m.meal_type === 'breakfast') || []),
+    lunch: filterMeals(meals?.filter(m => m.meal_type === 'lunch') || []),
+    dinner: filterMeals(meals?.filter(m => m.meal_type === 'dinner') || []),
+    snack: filterMeals(meals?.filter(m => m.meal_type === 'snack') || []),
   };
 
   return (
@@ -219,7 +251,7 @@ const RecipesPage: React.FC = () => {
       {/* Header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <CardTitle>Recipes</CardTitle>
               <CardDescription>Manage your recipe collection</CardDescription>
@@ -247,6 +279,44 @@ const RecipesPage: React.FC = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search recipes, ingredients, or tags..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Select value={prepTimeFilter} onValueChange={setPrepTimeFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <Clock className="mr-2 h-4 w-4" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All times</SelectItem>
+                  <SelectItem value="30">≤30 min</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={tagFilter} onValueChange={setTagFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All recipes</SelectItem>
+                  <SelectItem value="kid-friendly">Kid-friendly</SelectItem>
+                  <SelectItem value="bento">Bento-friendly</SelectItem>
+                  <SelectItem value="leftovers">Leftover-friendly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
       </Card>
@@ -308,7 +378,36 @@ const RecipesPage: React.FC = () => {
                           />
                         </Button>
                       </div>
-                      <div className="flex gap-2 text-xs text-muted-foreground">
+
+                      {/* Visual Badges */}
+                      <div className="flex flex-wrap gap-1.5 my-2">
+                        {hasTag(meal, 'kid-friendly') && (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-800">
+                            <Baby className="h-3 w-3 mr-1" />
+                            Kid-friendly
+                          </span>
+                        )}
+                        {hasTag(meal, 'bento') && (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-800">
+                            <Package className="h-3 w-3 mr-1" />
+                            Bento
+                          </span>
+                        )}
+                        {hasTag(meal, 'leftovers') && (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-purple-100 text-purple-800">
+                            <Utensils className="h-3 w-3 mr-1" />
+                            Leftovers
+                          </span>
+                        )}
+                        {meal.cook_time_minutes && meal.cook_time_minutes <= 30 && (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-orange-100 text-orange-800">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Quick
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 text-xs text-muted-foreground font-medium">
                         {meal.cook_time_minutes && (
                           <span>{meal.cook_time_minutes} min</span>
                         )}

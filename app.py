@@ -189,8 +189,8 @@ def create_meal():
             INSERT INTO meals (
                 name, meal_type, meal_type_id, cook_time_minutes, servings, difficulty,
                 tags, ingredients, instructions, is_favorite, makes_leftovers,
-                leftover_servings, leftover_days
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                leftover_servings, leftover_days, image_url, source_url, cuisine, top_comments
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data.get('name'),
             meal_type,
@@ -204,7 +204,11 @@ def create_meal():
             data.get('is_favorite', False),
             data.get('makes_leftovers', False),
             data.get('leftover_servings'),
-            data.get('leftover_days')
+            data.get('leftover_days'),
+            data.get('image_url'),
+            data.get('source_url'),
+            data.get('cuisine'),
+            data.get('top_comments')
         ))
 
         meal_id = cursor.lastrowid

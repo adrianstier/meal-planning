@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, Star } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';

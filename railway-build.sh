@@ -24,5 +24,6 @@ python3 database/migrations/migrate_to_react_schema.py || echo "⚠️  React sc
 python3 database/migrations/add_recipe_metadata.py || echo "⚠️  Recipe metadata migration skipped"
 python3 database/migrations/add_cuisine.py || echo "⚠️  Cuisine migration skipped"
 python3 database/migrations/add_bento_tables.py || echo "⚠️  Bento tables migration skipped"
+python3 database/migrations/add_performance_indexes.py || echo "⚠️  Performance indexes migration skipped"
 
 echo "✅ Build complete!"

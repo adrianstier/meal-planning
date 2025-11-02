@@ -4,7 +4,7 @@ Flask Web Application for Family Meal Planning
 Includes AI-powered recipe parsing and meal randomization
 """
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from meal_planner import MealPlannerDB
 from ai_recipe_parser import RecipeParser
@@ -1870,6 +1870,16 @@ def get_school_menu_calendar():
 # ============================================================================
 # REACT ROUTING - Catch-all route for client-side routing
 # ============================================================================
+
+@app.route('/manifest.json')
+def serve_manifest():
+    """Serve manifest.json with correct MIME type"""
+    return send_from_directory('templates', 'manifest.json', mimetype='application/json')
+
+@app.route('/service-worker.js')
+def serve_service_worker():
+    """Serve service-worker.js with correct MIME type"""
+    return send_from_directory('templates', 'service-worker.js', mimetype='application/javascript')
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')

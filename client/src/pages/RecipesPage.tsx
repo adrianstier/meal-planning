@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -20,6 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
@@ -27,11 +33,13 @@ import type { Meal } from '../types/api';
 const RecipesPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [parseDialogOpen, setParseDialogOpen] = useState(false);
+  const [urlDialogOpen, setUrlDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [recipeText, setRecipeText] = useState('');
+  const [recipeUrl, setRecipeUrl] = useState('');
   const [parsedRecipe, setParsedRecipe] = useState<Partial<Meal> | null>(null);
 
   const [formData, setFormData] = useState<Partial<Meal>>({
@@ -107,6 +115,59 @@ const RecipesPage: React.FC = () => {
     }
   };
 
+  const handleParseFromUrl = async () => {
+    try {
+      // For now, we'll just use the same parsing endpoint with the URL as text
+      // The backend might need to be updated to fetch URL content
+      const result = await parseRecipe.mutateAsync(recipeUrl);
+
+      const parsedData = result.data;
+      console.log('Parsed recipe data from URL:', parsedData);
+
+      setParsedRecipe(parsedData);
+      setUrlDialogOpen(false);
+
+      // Pre-fill form with parsed data (same logic as handleParseRecipe)
+      let ingredientsText = '';
+      if (parsedData.ingredients && Array.isArray(parsedData.ingredients)) {
+        ingredientsText = parsedData.ingredients
+          .map((ing: any) => {
+            const quantity = ing.quantity ? `${ing.quantity} ` : '';
+            const name = ing.name || '';
+            return `${quantity}${name}`.trim();
+          })
+          .filter(line => line.length > 0)
+          .join('\n');
+      } else if (typeof parsedData.ingredients === 'string') {
+        ingredientsText = parsedData.ingredients;
+      }
+
+      let instructionsText = '';
+      if (parsedData.instructions && Array.isArray(parsedData.instructions)) {
+        instructionsText = parsedData.instructions.join('\n');
+      } else if (typeof parsedData.instructions === 'string') {
+        instructionsText = parsedData.instructions;
+      }
+
+      setFormData({
+        ...formData,
+        name: parsedData.name || '',
+        meal_type: parsedData.meal_type || 'dinner',
+        cook_time_minutes: parsedData.cook_time_minutes,
+        servings: parsedData.servings,
+        difficulty: parsedData.difficulty || 'medium',
+        tags: parsedData.tags || '',
+        ingredients: ingredientsText,
+        instructions: instructionsText,
+      });
+      setAddDialogOpen(true);
+      setRecipeUrl('');
+    } catch (error) {
+      console.error('Failed to parse recipe from URL:', error);
+      alert(`Failed to parse recipe from URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       if (isEditing && selectedMeal) {
@@ -163,16 +224,29 @@ const RecipesPage: React.FC = () => {
               <CardTitle>Recipes</CardTitle>
               <CardDescription>Manage your recipe collection</CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={() => setParseDialogOpen(true)} variant="outline">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Parse with AI
-              </Button>
-              <Button onClick={() => setAddDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Recipe
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Recipe
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setAddDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Manually
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setParseDialogOpen(true)}>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Parse from Text
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setUrlDialogOpen(true)}>
+                  <Link className="mr-2 h-4 w-4" />
+                  Parse from URL
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
       </Card>
@@ -313,7 +387,7 @@ const RecipesPage: React.FC = () => {
       <Dialog open={parseDialogOpen} onOpenChange={setParseDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Parse Recipe with AI</DialogTitle>
+            <DialogTitle>Parse Recipe from Text</DialogTitle>
             <DialogDescription>
               Paste a recipe and let AI extract the details for you
             </DialogDescription>
@@ -333,6 +407,41 @@ const RecipesPage: React.FC = () => {
             <Button
               onClick={handleParseRecipe}
               disabled={!recipeText || parseRecipe.isPending}
+            >
+              {parseRecipe.isPending ? 'Parsing...' : 'Parse Recipe'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Parse Recipe from URL Dialog */}
+      <Dialog open={urlDialogOpen} onOpenChange={setUrlDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Parse Recipe from URL</DialogTitle>
+            <DialogDescription>
+              Enter a recipe URL and let AI extract the details for you
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="recipe-url">Recipe URL</Label>
+              <Input
+                id="recipe-url"
+                type="url"
+                placeholder="https://example.com/recipe"
+                value={recipeUrl}
+                onChange={(e) => setRecipeUrl(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUrlDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleParseFromUrl}
+              disabled={!recipeUrl || parseRecipe.isPending}
             >
               {parseRecipe.isPending ? 'Parsing...' : 'Parse Recipe'}
             </Button>

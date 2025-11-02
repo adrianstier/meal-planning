@@ -97,6 +97,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not run leftovers migration: {e}")
 
+    # Run cuisine column migration
+    print("\n🔄 Running cuisine column migration...")
+    try:
+        from database.migrations.add_cuisine import migrate
+        migrate(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run cuisine migration: {e}")
+
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")
     print("=" * 60)

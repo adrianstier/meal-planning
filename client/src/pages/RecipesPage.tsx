@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2 } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { useMeals, useCreateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe } from '../hooks/useMeals';
+import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
 
 const RecipesPage: React.FC = () => {
@@ -30,6 +30,7 @@ const RecipesPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [recipeText, setRecipeText] = useState('');
   const [parsedRecipe, setParsedRecipe] = useState<Partial<Meal> | null>(null);
 
@@ -46,6 +47,7 @@ const RecipesPage: React.FC = () => {
 
   const { data: meals, isLoading } = useMeals();
   const createMeal = useCreateMeal();
+  const updateMeal = useUpdateMeal();
   const toggleFavorite = useToggleFavorite();
   const deleteMeal = useDeleteMeal();
   const parseRecipe = useParseRecipe();
@@ -107,7 +109,11 @@ const RecipesPage: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
-      await createMeal.mutateAsync(formData);
+      if (isEditing && selectedMeal) {
+        await updateMeal.mutateAsync({ id: selectedMeal.id, meal: formData });
+      } else {
+        await createMeal.mutateAsync(formData);
+      }
       setAddDialogOpen(false);
       setFormData({
         name: '',
@@ -120,8 +126,10 @@ const RecipesPage: React.FC = () => {
         instructions: '',
       });
       setParsedRecipe(null);
+      setIsEditing(false);
+      setSelectedMeal(null);
     } catch (error) {
-      console.error('Failed to create meal:', error);
+      console.error('Failed to save meal:', error);
     }
   };
 
@@ -254,21 +262,43 @@ const RecipesPage: React.FC = () => {
                           Last cooked: {new Date(meal.last_cooked).toLocaleDateString()}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">Click to view recipe</p>
                     </CardContent>
-                    <div className="px-6 pb-4 flex gap-2">
+                    <div className="px-6 pb-4 flex gap-2 border-t pt-3">
                       <Button
-                        variant="destructive"
+                        variant="outline"
                         size="sm"
                         className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFormData({
+                            name: meal.name,
+                            meal_type: meal.meal_type,
+                            cook_time_minutes: meal.cook_time_minutes,
+                            servings: meal.servings,
+                            difficulty: meal.difficulty,
+                            tags: meal.tags || '',
+                            ingredients: meal.ingredients || '',
+                            instructions: meal.instructions || '',
+                          });
+                          setSelectedMeal(meal);
+                          setIsEditing(true);
+                          setAddDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedMeal(meal);
                           setDeleteDialogOpen(true);
                         }}
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </Card>
@@ -311,13 +341,20 @@ const RecipesPage: React.FC = () => {
       </Dialog>
 
       {/* Add/Edit Recipe Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      <Dialog open={addDialogOpen} onOpenChange={(open) => {
+        setAddDialogOpen(open);
+        if (!open) {
+          setIsEditing(false);
+          setSelectedMeal(null);
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Recipe</DialogTitle>
+            <DialogTitle>{isEditing ? 'Edit Recipe' : 'Add Recipe'}</DialogTitle>
             <DialogDescription>
               {parsedRecipe && 'Review and edit the parsed recipe details'}
-              {!parsedRecipe && 'Enter the recipe details manually'}
+              {!parsedRecipe && isEditing && 'Edit the recipe details'}
+              {!parsedRecipe && !isEditing && 'Enter the recipe details manually'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -448,9 +485,11 @@ const RecipesPage: React.FC = () => {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!formData.name || createMeal.isPending}
+              disabled={!formData.name || createMeal.isPending || updateMeal.isPending}
             >
-              {createMeal.isPending ? 'Adding...' : 'Add Recipe'}
+              {isEditing
+                ? (updateMeal.isPending ? 'Saving...' : 'Save Changes')
+                : (createMeal.isPending ? 'Adding...' : 'Add Recipe')}
             </Button>
           </DialogFooter>
         </DialogContent>

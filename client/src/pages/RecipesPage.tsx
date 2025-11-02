@@ -365,7 +365,7 @@ const RecipesPage: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="text-muted-foreground hover:text-foreground hover:bg-muted"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedMeal(meal);

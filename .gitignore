@@ -62,13 +62,10 @@ client/node_modules/
 
 # Static files (React production build gets copied here)
 # Commit these for deployment platforms without Node.js
-# static/css/
-# static/js/
-# static/media/
 !static/.gitkeep
 
 # Template (React build gets copied here)
-# templates/index.html
+# Uncommented to allow committing for Render deployment
 !templates/.gitkeep
 
 # Backups

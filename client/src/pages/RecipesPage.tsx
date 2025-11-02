@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -36,16 +36,19 @@ const RecipesPage: React.FC = () => {
   const [urlDialogOpen, setUrlDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [bulkTagDialogOpen, setBulkTagDialogOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [recipeText, setRecipeText] = useState('');
   const [recipeUrl, setRecipeUrl] = useState('');
   const [parsedRecipe, setParsedRecipe] = useState<Partial<Meal> | null>(null);
+  const [bulkTagInput, setBulkTagInput] = useState('');
 
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
   const [prepTimeFilter, setPrepTimeFilter] = useState<string>('all');
   const [tagFilter, setTagFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('name');
 
   const [formData, setFormData] = useState<Partial<Meal>>({
     name: '',
@@ -211,6 +214,29 @@ const RecipesPage: React.FC = () => {
     }
   };
 
+  const handleBulkTag = async () => {
+    if (!selectedMeal || !bulkTagInput.trim()) return;
+
+    try {
+      const existingTags = selectedMeal.tags || '';
+      const newTags = bulkTagInput.trim();
+      const combinedTags = existingTags
+        ? `${existingTags}, ${newTags}`
+        : newTags;
+
+      await updateMeal.mutateAsync({
+        id: selectedMeal.id,
+        meal: { ...selectedMeal, tags: combinedTags }
+      });
+
+      setBulkTagDialogOpen(false);
+      setBulkTagInput('');
+      setSelectedMeal(null);
+    } catch (error) {
+      console.error('Failed to add tags:', error);
+    }
+  };
+
   // Filter helper functions
   const filterMeals = (mealList: Meal[]) => {
     return mealList.filter(meal => {
@@ -238,12 +264,46 @@ const RecipesPage: React.FC = () => {
     return meal.tags?.toLowerCase().includes(tag.toLowerCase());
   };
 
-  // Group meals by type and apply filters
+  // Helper to get difficulty icon
+  const getDifficultyIcon = (difficulty?: string) => {
+    switch (difficulty) {
+      case 'easy':
+        return <Zap className="h-3.5 w-3.5 text-green-600" />;
+      case 'medium':
+        return <ChefHat className="h-3.5 w-3.5 text-yellow-600" />;
+      case 'hard':
+        return <AlertCircle className="h-3.5 w-3.5 text-red-600" />;
+      default:
+        return null;
+    }
+  };
+
+  // Sort meals
+  const sortMeals = (mealList: Meal[]) => {
+    return [...mealList].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'prepTime':
+          const timeA = a.cook_time_minutes || 999;
+          const timeB = b.cook_time_minutes || 999;
+          return timeA - timeB;
+        case 'lastCooked':
+          const dateA = a.last_cooked ? new Date(a.last_cooked).getTime() : 0;
+          const dateB = b.last_cooked ? new Date(b.last_cooked).getTime() : 0;
+          return dateB - dateA; // Most recent first
+        default:
+          return 0;
+      }
+    });
+  };
+
+  // Group meals by type, apply filters, and sort
   const mealsByType = {
-    breakfast: filterMeals(meals?.filter(m => m.meal_type === 'breakfast') || []),
-    lunch: filterMeals(meals?.filter(m => m.meal_type === 'lunch') || []),
-    dinner: filterMeals(meals?.filter(m => m.meal_type === 'dinner') || []),
-    snack: filterMeals(meals?.filter(m => m.meal_type === 'snack') || []),
+    breakfast: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'breakfast') || [])),
+    lunch: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'lunch') || [])),
+    dinner: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'dinner') || [])),
+    snack: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'snack') || [])),
   };
 
   return (
@@ -314,6 +374,18 @@ const RecipesPage: React.FC = () => {
                   <SelectItem value="kid-friendly">Kid-friendly</SelectItem>
                   <SelectItem value="bento">Bento-friendly</SelectItem>
                   <SelectItem value="leftovers">Leftover-friendly</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[160px]">
+                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Sort by name</SelectItem>
+                  <SelectItem value="prepTime">Sort by time</SelectItem>
+                  <SelectItem value="lastCooked">Recently cooked</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -412,10 +484,22 @@ const RecipesPage: React.FC = () => {
                           <span>{meal.cook_time_minutes} min</span>
                         )}
                         {meal.difficulty && (
-                          <span className="capitalize">{meal.difficulty}</span>
+                          <span className="capitalize inline-flex items-center gap-1">
+                            {getDifficultyIcon(meal.difficulty)}
+                            {meal.difficulty}
+                          </span>
                         )}
                         {meal.servings && <span>{meal.servings} servings</span>}
                       </div>
+                      {meal.last_cooked && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Last cooked: {new Date(meal.last_cooked).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: new Date(meal.last_cooked).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                          })}
+                        </p>
+                      )}
                     </CardHeader>
                     <CardContent className="flex-1">
                       {meal.tags && (
@@ -429,11 +513,6 @@ const RecipesPage: React.FC = () => {
                             </span>
                           ))}
                         </div>
-                      )}
-                      {meal.last_cooked && (
-                        <p className="text-xs text-muted-foreground">
-                          Last cooked: {new Date(meal.last_cooked).toLocaleDateString()}
-                        </p>
                       )}
                     </CardContent>
                     <div className="px-6 pb-4 flex gap-2 border-t pt-3">
@@ -460,6 +539,17 @@ const RecipesPage: React.FC = () => {
                       >
                         <Pencil className="h-3.5 w-3.5 mr-1.5" />
                         Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedMeal(meal);
+                          setBulkTagDialogOpen(true);
+                        }}
+                      >
+                        <Tags className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -782,6 +872,49 @@ const RecipesPage: React.FC = () => {
               disabled={deleteMeal.isPending}
             >
               {deleteMeal.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Tag Dialog */}
+      <Dialog open={bulkTagDialogOpen} onOpenChange={setBulkTagDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Tags to "{selectedMeal?.name}"</DialogTitle>
+            <DialogDescription>
+              Add tags like kid-friendly, bento, leftovers, etc. (comma-separated)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="bulk-tags">Current tags: {selectedMeal?.tags || 'none'}</Label>
+              <Input
+                id="bulk-tags"
+                placeholder="e.g., kid-friendly, bento, quick"
+                value={bulkTagInput}
+                onChange={(e) => setBulkTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleBulkTag();
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Quick tags: kid-friendly, bento, leftovers, quick, vegetarian, gluten-free
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkTagDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkTag}
+              disabled={!bulkTagInput.trim() || updateMeal.isPending}
+            >
+              {updateMeal.isPending ? 'Adding...' : 'Add Tags'}
             </Button>
           </DialogFooter>
         </DialogContent>

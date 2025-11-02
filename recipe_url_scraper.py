@@ -7,8 +7,6 @@ Supports 100+ recipe websites with image downloading
 import os
 import uuid
 import requests
-import ssl
-import urllib.request
 import json
 import re
 from urllib.parse import urlparse
@@ -24,9 +22,15 @@ try:
 except ImportError:
     HAS_BS4 = False
 
-# Disable SSL verification for macOS certificate issues
-# TODO: Fix SSL certificates for production
-ssl._create_default_https_context = ssl._create_unverified_context
+# Security: Use certifi for proper SSL certificate verification
+try:
+    import certifi
+    # Configure requests to use certifi's certificate bundle
+    VERIFY_SSL = certifi.where()
+except ImportError:
+    # Fall back to default SSL verification if certifi not available
+    VERIFY_SSL = True
+    print("⚠️  certifi not installed. Using default SSL verification.")
 
 
 class RecipeURLScraper:
@@ -49,11 +53,11 @@ class RecipeURLScraper:
         Returns relative path to saved image or None if failed
         """
         try:
-            # Download image
+            # Download image with SSL verification
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
-            response = requests.get(image_url, headers=headers, timeout=10)
+            response = requests.get(image_url, headers=headers, timeout=10, verify=VERIFY_SSL)
             response.raise_for_status()
 
             # Open and validate image
@@ -241,7 +245,7 @@ class RecipeURLScraper:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, timeout=10, verify=VERIFY_SSL)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.content, 'html.parser')

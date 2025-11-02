@@ -7,6 +7,7 @@ Provides validation functions and decorators
 from functools import wraps
 from flask import request, jsonify
 from typing import Dict, List, Any, Callable, Optional
+from contextlib import contextmanager
 import re
 
 
@@ -265,3 +266,105 @@ def sanitize_sql_string(value: str) -> str:
             raise ValidationError('Invalid characters in input')
 
     return value
+
+
+@contextmanager
+def db_connection(db_instance):
+    """
+    Context manager for safe database connections
+    Ensures connections are always closed, even on errors
+
+    Usage:
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+            cursor.execute(...)
+    """
+    conn = None
+    try:
+        conn = db_instance.connect()
+        yield conn
+        conn.commit()
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if conn:
+            conn.close()
+
+
+def error_response(message: str, status_code: int = 500, details: dict = None):
+    """
+    Standardized error response format
+
+    Args:
+        message: Error message for the user
+        status_code: HTTP status code
+        details: Optional additional details (only in debug mode)
+
+    Returns:
+        Flask JSON response tuple
+    """
+    from flask import jsonify, current_app
+
+    response = {
+        'success': False,
+        'error': message
+    }
+
+    # Security: Only include detailed error info in debug mode
+    if details and current_app.debug:
+        response['details'] = details
+
+    return jsonify(response), status_code
+
+
+def sanitize_ai_input(text: str, max_length: int = 50000) -> str:
+    """
+    Sanitize user input before sending to AI to prevent prompt injection
+
+    Args:
+        text: User input text
+        max_length: Maximum allowed length
+
+    Returns:
+        Sanitized text
+
+    Raises:
+        ValidationError: If input is invalid or suspicious
+    """
+    if not text:
+        raise ValidationError('Input text is required')
+
+    # Security: Enforce length limits
+    if len(text) > max_length:
+        raise ValidationError(f'Input text too long (max {max_length} characters)')
+
+    # Security: Detect potential prompt injection patterns
+    suspicious_patterns = [
+        r'ignore\s+previous\s+instructions',
+        r'ignore\s+all\s+previous',
+        r'disregard\s+previous',
+        r'forget\s+previous',
+        r'new\s+instructions:',
+        r'system\s+prompt:',
+        r'you\s+are\s+now',
+        r'act\s+as\s+if',
+        r'pretend\s+you\s+are',
+        r'<\s*system\s*>',
+        r'<\s*\/\s*system\s*>',
+        r'<\s*assistant\s*>',
+        r'<\s*\/\s*assistant\s*>',
+    ]
+
+    text_lower = text.lower()
+    for pattern in suspicious_patterns:
+        if re.search(pattern, text_lower):
+            raise ValidationError('Input contains suspicious content that may be attempting prompt injection')
+
+    # Security: Check for excessive special characters
+    special_char_count = sum(1 for c in text if c in '<>{}[]|\\')
+    if special_char_count > len(text) * 0.2:  # More than 20% special chars
+        raise ValidationError('Input contains excessive special characters')
+
+    return text.strip()

@@ -73,22 +73,44 @@ class MealPlannerDB:
     def initialize_database(self, schema_file: str = "database/sql/schema.sql",
                            seed_file: str = "database/sql/seed_data.sql"):
         """Initialize database with schema and seed data"""
+        from pathlib import Path
+
         conn = self.connect()
         cursor = conn.cursor()
 
+        # Security: Validate paths to prevent path traversal attacks
+        # Define allowed directory for SQL files
+        allowed_base = Path(__file__).parent / "database"
+
         # Read and execute schema
-        if os.path.exists(schema_file):
-            with open(schema_file, 'r') as f:
-                schema = f.read()
-                cursor.executescript(schema)
-            print(f"✓ Database schema created from {schema_file}")
+        if schema_file:
+            schema_path = Path(schema_file).resolve()
+            # Security: Ensure path is within allowed directory
+            try:
+                schema_path.relative_to(allowed_base)
+            except ValueError:
+                raise ValueError(f"Security: Schema file path must be within {allowed_base}")
+
+            if schema_path.exists():
+                with open(schema_path, 'r') as f:
+                    schema = f.read()
+                    cursor.executescript(schema)
+                print(f"✓ Database schema created from {schema_file}")
 
         # Read and execute seed data
-        if os.path.exists(seed_file):
-            with open(seed_file, 'r') as f:
-                seed_data = f.read()
-                cursor.executescript(seed_data)
-            print(f"✓ Sample data loaded from {seed_file}")
+        if seed_file:
+            seed_path = Path(seed_file).resolve()
+            # Security: Ensure path is within allowed directory
+            try:
+                seed_path.relative_to(allowed_base)
+            except ValueError:
+                raise ValueError(f"Security: Seed file path must be within {allowed_base}")
+
+            if seed_path.exists():
+                with open(seed_path, 'r') as f:
+                    seed_data = f.read()
+                    cursor.executescript(seed_data)
+                print(f"✓ Sample data loaded from {seed_file}")
 
         conn.commit()
         print(f"✓ Database initialized at {self.db_path}")
@@ -111,9 +133,44 @@ class MealPlannerDB:
         cursor.execute(query, (meal_type, min_kid_friendly))
         meals = [dict(row) for row in cursor.fetchall()]
 
-        # Get ingredients for each meal
-        for meal in meals:
-            meal['ingredients'] = self.get_meal_ingredients(meal['id'])
+        # Security/Performance: Fix N+1 query - fetch all ingredients at once
+        if meals:
+            meal_ids = [meal['id'] for meal in meals]
+            placeholders = ','.join(['?'] * len(meal_ids))
+
+            cursor.execute(f"""
+                SELECT mi.meal_id, i.name, i.category, mi.component_type,
+                       mi.quantity, mi.is_optional
+                FROM meal_ingredients mi
+                JOIN ingredients i ON mi.ingredient_id = i.id
+                WHERE mi.meal_id IN ({placeholders})
+                ORDER BY mi.meal_id,
+                    CASE mi.component_type
+                        WHEN 'protein' THEN 1
+                        WHEN 'veggie' THEN 2
+                        WHEN 'starch' THEN 3
+                        WHEN 'fruit' THEN 4
+                        ELSE 5
+                    END
+            """, meal_ids)
+
+            # Group ingredients by meal_id
+            ingredients_by_meal = {}
+            for row in cursor.fetchall():
+                meal_id = row['meal_id']
+                if meal_id not in ingredients_by_meal:
+                    ingredients_by_meal[meal_id] = []
+                ingredients_by_meal[meal_id].append({
+                    'name': row['name'],
+                    'category': row['category'],
+                    'component_type': row['component_type'],
+                    'quantity': row['quantity'],
+                    'is_optional': row['is_optional']
+                })
+
+            # Attach ingredients to meals
+            for meal in meals:
+                meal['ingredients'] = ingredients_by_meal.get(meal['id'], [])
 
         return meals
 

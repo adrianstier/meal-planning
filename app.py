@@ -10,6 +10,7 @@ from meal_planner import MealPlannerDB
 from ai_recipe_parser import RecipeParser
 from school_menu_vision_parser import SchoolMenuVisionParser
 from recipe_url_scraper import RecipeURLScraper
+from validation import db_connection, sanitize_ai_input, ValidationError, error_response
 import os
 from dotenv import load_dotenv
 import random
@@ -71,6 +72,46 @@ except Exception as e:
     url_scraper = None
     url_scraper_error = str(e)
     print(f"⚠️  Failed to initialize URL scraper: {e}")
+
+
+# ============================================================================
+# SECURITY HEADERS
+# ============================================================================
+
+@app.after_request
+def add_security_headers(response):
+    """
+    Add security headers to all responses
+    Protects against XSS, clickjacking, and other attacks
+    """
+    # Security: Prevent clickjacking attacks
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+
+    # Security: Prevent MIME type sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+
+    # Security: Enable XSS protection in older browsers
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+
+    # Security: Content Security Policy
+    # Allow self and inline styles/scripts for React app
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self'"
+    )
+
+    # Security: Referrer policy
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+    # Security: Strict Transport Security (HSTS) - only in production
+    if not app.debug:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+
+    return response
 
 
 # ============================================================================
@@ -156,32 +197,66 @@ def get_stats():
 
 @app.route('/api/meals', methods=['GET'])
 def get_meals():
-    """Get all meals with optional filters"""
+    """Get all meals with optional filters and pagination"""
     try:
         meal_type = request.args.get('type')  # dinner, lunch, snack, breakfast
 
-        # Get all meals with new schema
-        conn = db.connect()
-        cursor = conn.cursor()
+        # Performance: Add pagination support
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
 
-        if meal_type:
-            cursor.execute("""
-                SELECT *
-                FROM meals
-                WHERE meal_type = ?
-                ORDER BY name
-            """, (meal_type,))
-        else:
-            cursor.execute("""
-                SELECT *
-                FROM meals
-                ORDER BY name
-            """)
+        # Security: Limit per_page to prevent abuse
+        per_page = min(per_page, 100)
+        page = max(page, 1)
 
-        meals = [dict(row) for row in cursor.fetchall()]
-        conn.close()
+        offset = (page - 1) * per_page
 
-        return jsonify({'success': True, 'data': meals})
+        # Security: Use context manager to ensure connection is closed
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+
+            # Get total count for pagination metadata
+            if meal_type:
+                cursor.execute("SELECT COUNT(*) as total FROM meals WHERE meal_type = ?", (meal_type,))
+            else:
+                cursor.execute("SELECT COUNT(*) as total FROM meals")
+
+            total_count = cursor.fetchone()['total']
+
+            # Get paginated results
+            if meal_type:
+                cursor.execute("""
+                    SELECT *
+                    FROM meals
+                    WHERE meal_type = ?
+                    ORDER BY name
+                    LIMIT ? OFFSET ?
+                """, (meal_type, per_page, offset))
+            else:
+                cursor.execute("""
+                    SELECT *
+                    FROM meals
+                    ORDER BY name
+                    LIMIT ? OFFSET ?
+                """, (per_page, offset))
+
+            meals = [dict(row) for row in cursor.fetchall()]
+
+        # Calculate pagination metadata
+        total_pages = (total_count + per_page - 1) // per_page  # Ceiling division
+
+        return jsonify({
+            'success': True,
+            'data': meals,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total_count': total_count,
+                'total_pages': total_pages,
+                'has_next': page < total_pages,
+                'has_prev': page > 1
+            }
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -203,18 +278,19 @@ def search_meals():
 def get_meal(meal_id):
     """Get a single meal by ID"""
     try:
-        conn = db.connect()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
-        meal = cursor.fetchone()
-        conn.close()
+        # Security: Use context manager to ensure connection is closed
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
+            meal = cursor.fetchone()
 
-        if not meal:
-            return jsonify({'success': False, 'error': 'Meal not found'}), 404
+            if not meal:
+                return error_response('Meal not found', 404)
 
-        return jsonify({'success': True, 'data': dict(meal)})
+            return jsonify({'success': True, 'data': dict(meal)})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        # Security: Use standardized error response (hides internal details in production)
+        return error_response('Failed to retrieve meal', 500, {'exception': str(e)})
 
 
 @app.route('/api/meals', methods=['POST'])
@@ -222,47 +298,47 @@ def create_meal():
     """Create a new meal"""
     try:
         data = request.json
-        conn = db.connect()
-        cursor = conn.cursor()
 
-        # Map meal_type to meal_type_id
-        meal_type = data.get('meal_type', 'dinner')
-        meal_type_map = {'dinner': 1, 'lunch': 2, 'snack': 3, 'breakfast': 4}
-        meal_type_id = meal_type_map.get(meal_type, 1)
+        # Security: Use context manager to ensure connection is closed
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
 
-        cursor.execute("""
-            INSERT INTO meals (
-                name, meal_type, meal_type_id, cook_time_minutes, servings, difficulty,
-                tags, ingredients, instructions, is_favorite, makes_leftovers,
-                leftover_servings, leftover_days, image_url, source_url, cuisine, top_comments
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            data.get('name'),
-            meal_type,
-            meal_type_id,
-            data.get('cook_time_minutes'),
-            data.get('servings'),
-            data.get('difficulty', 'medium'),
-            data.get('tags'),
-            data.get('ingredients'),
-            data.get('instructions'),
-            data.get('is_favorite', False),
-            data.get('makes_leftovers', False),
-            data.get('leftover_servings'),
-            data.get('leftover_days'),
-            data.get('image_url'),
-            data.get('source_url'),
-            data.get('cuisine'),
-            data.get('top_comments')
-        ))
+            # Map meal_type to meal_type_id
+            meal_type = data.get('meal_type', 'dinner')
+            meal_type_map = {'dinner': 1, 'lunch': 2, 'snack': 3, 'breakfast': 4}
+            meal_type_id = meal_type_map.get(meal_type, 1)
 
-        meal_id = cursor.lastrowid
-        conn.commit()
+            cursor.execute("""
+                INSERT INTO meals (
+                    name, meal_type, meal_type_id, cook_time_minutes, servings, difficulty,
+                    tags, ingredients, instructions, is_favorite, makes_leftovers,
+                    leftover_servings, leftover_days, image_url, source_url, cuisine, top_comments
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                data.get('name'),
+                meal_type,
+                meal_type_id,
+                data.get('cook_time_minutes'),
+                data.get('servings'),
+                data.get('difficulty', 'medium'),
+                data.get('tags'),
+                data.get('ingredients'),
+                data.get('instructions'),
+                data.get('is_favorite', False),
+                data.get('makes_leftovers', False),
+                data.get('leftover_servings'),
+                data.get('leftover_days'),
+                data.get('image_url'),
+                data.get('source_url'),
+                data.get('cuisine'),
+                data.get('top_comments')
+            ))
 
-        # Return the created meal
-        cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
-        meal = dict(cursor.fetchone())
-        conn.close()
+            meal_id = cursor.lastrowid
+
+            # Return the created meal
+            cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
+            meal = dict(cursor.fetchone())
 
         return jsonify({'success': True, 'data': meal}), 201
     except Exception as e:
@@ -274,46 +350,52 @@ def update_meal(meal_id):
     """Update an existing meal"""
     try:
         data = request.json
-        conn = db.connect()
-        cursor = conn.cursor()
 
-        # Build update query dynamically based on provided fields
-        update_fields = []
-        update_values = []
+        # Security: Whitelist allowed fields to prevent SQL injection
+        ALLOWED_FIELDS = {
+            'name', 'meal_type', 'cook_time_minutes', 'servings', 'difficulty',
+            'tags', 'ingredients', 'instructions', 'is_favorite', 'makes_leftovers',
+            'leftover_servings', 'leftover_days', 'kid_rating', 'image_url', 'cuisine',
+            'source_url', 'top_comments'
+        }
 
-        for field in ['name', 'meal_type', 'cook_time_minutes', 'servings', 'difficulty',
-                      'tags', 'ingredients', 'instructions', 'is_favorite', 'makes_leftovers',
-                      'leftover_servings', 'leftover_days', 'kid_rating', 'image_url', 'cuisine',
-                      'source_url', 'top_comments']:
-            if field in data:
-                update_fields.append(f"{field} = ?")
-                update_values.append(data[field])
+        # Security: Use context manager to ensure connection is closed
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
 
-        # If meal_type is being updated, also update meal_type_id
-        if 'meal_type' in data:
-            meal_type_map = {'dinner': 1, 'lunch': 2, 'snack': 3, 'breakfast': 4}
-            meal_type_id = meal_type_map.get(data['meal_type'], 1)
-            update_fields.append("meal_type_id = ?")
-            update_values.append(meal_type_id)
+            # Build update query dynamically based on provided fields
+            update_fields = []
+            update_values = []
 
-        if not update_fields:
-            return jsonify({'success': False, 'error': 'No fields to update'}), 400
+            for field in data.keys():
+                # Security: Only allow whitelisted fields
+                if field in ALLOWED_FIELDS:
+                    update_fields.append(f"{field} = ?")
+                    update_values.append(data[field])
 
-        update_values.append(meal_id)
-        query = f"UPDATE meals SET {', '.join(update_fields)} WHERE id = ?"
+            # If meal_type is being updated, also update meal_type_id
+            if 'meal_type' in data:
+                meal_type_map = {'dinner': 1, 'lunch': 2, 'snack': 3, 'breakfast': 4}
+                meal_type_id = meal_type_map.get(data['meal_type'], 1)
+                update_fields.append("meal_type_id = ?")
+                update_values.append(meal_type_id)
 
-        cursor.execute(query, update_values)
-        conn.commit()
+            if not update_fields:
+                return jsonify({'success': False, 'error': 'No fields to update'}), 400
 
-        # Return the updated meal
-        cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
-        meal = cursor.fetchone()
-        conn.close()
+            update_values.append(meal_id)
+            query = f"UPDATE meals SET {', '.join(update_fields)} WHERE id = ?"
 
-        if not meal:
-            return jsonify({'success': False, 'error': 'Meal not found'}), 404
+            cursor.execute(query, update_values)
 
-        return jsonify({'success': True, 'data': dict(meal)})
+            # Return the updated meal
+            cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
+            meal = cursor.fetchone()
+
+            if not meal:
+                return jsonify({'success': False, 'error': 'Meal not found'}), 404
+
+            return jsonify({'success': True, 'data': dict(meal)})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -705,10 +787,25 @@ def generate_shopping_from_plan():
         for meal in meals:
             ingredients_text = meal['ingredients']
             if ingredients_text:
-                for line in ingredients_text.split('\n'):
-                    line = line.strip()
-                    if line:
-                        all_ingredients.append(line)
+                # Security: Sanitize each ingredient line
+                try:
+                    sanitized_ingredients = sanitize_ai_input(ingredients_text, max_length=5000)
+                    for line in sanitized_ingredients.split('\n'):
+                        line = line.strip()
+                        if line and len(line) < 200:  # Security: Limit individual line length
+                            all_ingredients.append(line)
+                except ValidationError as e:
+                    # Skip ingredients with suspicious content
+                    print(f"Skipping suspicious ingredients: {e.message}")
+                    continue
+
+        if not all_ingredients:
+            conn.close()
+            return jsonify({'success': True, 'data': [], 'message': 'No valid ingredients found'})
+
+        # Security: Limit total ingredients to prevent abuse
+        if len(all_ingredients) > 200:
+            all_ingredients = all_ingredients[:200]
 
         # Use AI to parse, combine, and categorize ingredients
         ai_prompt = f"""You are a smart grocery list assistant. Parse and organize these ingredients from multiple recipes:
@@ -978,15 +1075,18 @@ def update_plan_entry(plan_id):
         conn = db.connect()
         cursor = conn.cursor()
 
+        # Security: Whitelist allowed fields
+        ALLOWED_FIELDS = {'meal_id', 'meal_type', 'plan_date', 'notes'}
+
         # Build update query
         update_fields = []
         update_values = []
 
-        if 'meal_id' in data:
+        if 'meal_id' in data and 'meal_id' in ALLOWED_FIELDS:
             update_fields.append('meal_id = ?')
             update_values.append(data['meal_id'])
 
-        if 'meal_type' in data:
+        if 'meal_type' in data and 'meal_type' in ALLOWED_FIELDS:
             # Convert meal_type name to meal_type_id
             cursor.execute("SELECT id FROM meal_types WHERE name = ?", (data['meal_type'],))
             meal_type_row = cursor.fetchone()
@@ -994,7 +1094,7 @@ def update_plan_entry(plan_id):
                 update_fields.append('meal_type_id = ?')
                 update_values.append(meal_type_row['id'])
 
-        if 'plan_date' in data:
+        if 'plan_date' in data and 'plan_date' in ALLOWED_FIELDS:
             update_fields.append('meal_date = ?')
             update_values.append(data['plan_date'])
             # Update day_of_week too
@@ -1002,7 +1102,7 @@ def update_plan_entry(plan_id):
             update_fields.append('day_of_week = ?')
             update_values.append(date_obj.strftime('%A'))
 
-        if 'notes' in data:
+        if 'notes' in data and 'notes' in ALLOWED_FIELDS:
             update_fields.append('notes = ?')
             update_values.append(data['notes'])
 

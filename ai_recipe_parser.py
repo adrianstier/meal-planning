@@ -15,8 +15,8 @@ class RecipeParser:
 
     def __init__(self, api_key: str):
         self.client = anthropic.Anthropic(api_key=api_key)
-        # Use Claude 3 Haiku - fast and cost-effective for recipe parsing
-        self.model = "claude-3-haiku-20240307"
+        # Use Claude 3.5 Haiku - faster and more accurate than 3.0
+        self.model = "claude-3-5-haiku-20241022"
 
     def parse_recipe(self, recipe_input: str) -> Dict:
         """
@@ -70,6 +70,7 @@ Return ONLY valid JSON, no other text."""
             message = self.client.messages.create(
                 model=self.model,
                 max_tokens=2000,
+                timeout=30.0,  # Add 30 second timeout
                 messages=[{
                     "role": "user",
                     "content": prompt
@@ -87,6 +88,16 @@ Return ONLY valid JSON, no other text."""
             else:
                 raise ValueError("No JSON found in AI response")
 
+        except anthropic.APITimeoutError as e:
+            raise Exception(f"AI request timed out after 30 seconds: {str(e)}")
+        except anthropic.APIConnectionError as e:
+            raise Exception(f"Failed to connect to AI service: {str(e)}")
+        except anthropic.RateLimitError as e:
+            raise Exception(f"AI rate limit exceeded. Please try again later: {str(e)}")
+        except anthropic.APIError as e:
+            raise Exception(f"AI service error: {str(e)}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"Failed to parse AI response as JSON: {str(e)}")
         except Exception as e:
             raise Exception(f"Failed to parse recipe: {str(e)}")
 

@@ -13,7 +13,8 @@ from datetime import datetime
 class SchoolMenuVisionParser:
     def __init__(self, api_key: str):
         self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = "claude-3-haiku-20240307"  # Claude 3 Haiku with vision (only available model)
+        # Use Claude 3.5 Sonnet for better vision accuracy
+        self.model = "claude-3-5-sonnet-20241022"
 
     def parse_menu_from_image(self, image_data: bytes, image_type: str = "image/jpeg") -> List[Dict]:
         """

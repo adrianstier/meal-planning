@@ -234,7 +234,8 @@ def update_meal(meal_id):
 
         for field in ['name', 'meal_type', 'cook_time_minutes', 'servings', 'difficulty',
                       'tags', 'ingredients', 'instructions', 'is_favorite', 'makes_leftovers',
-                      'leftover_servings', 'leftover_days', 'kid_rating', 'image_url', 'cuisine']:
+                      'leftover_servings', 'leftover_days', 'kid_rating', 'image_url', 'cuisine',
+                      'source_url', 'top_comments']:
             if field in data:
                 update_fields.append(f"{field} = ?")
                 update_values.append(data[field])

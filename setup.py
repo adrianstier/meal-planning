@@ -105,6 +105,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not run cuisine migration: {e}")
 
+    # Run recipe metadata migration (source_url, top_comments)
+    print("\n🔄 Running recipe metadata migration...")
+    try:
+        from database.migrations.add_recipe_metadata import migrate
+        migrate(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run recipe metadata migration: {e}")
+
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")
     print("=" * 60)

@@ -173,7 +173,9 @@ class RecipeParser:
 
         # Check if input is a URL and try to extract image
         image_url = None
+        source_url = None
         if self._is_url(recipe_input):
+            source_url = recipe_input
             image_url = self._extract_image_from_url(recipe_input)
 
         prompt = f"""Parse the following recipe and extract structured information.
@@ -241,6 +243,10 @@ Return ONLY valid JSON, no other text."""
                 # Add image URL if we extracted one
                 if image_url:
                     cleaned_data['image_url'] = image_url
+
+                # Add source URL if this was from a URL
+                if source_url:
+                    cleaned_data['source_url'] = source_url
 
                 return cleaned_data
             else:

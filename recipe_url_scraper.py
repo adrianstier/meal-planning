@@ -9,11 +9,20 @@ import uuid
 import requests
 import ssl
 import urllib.request
+import json
+import re
 from urllib.parse import urlparse
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from recipe_scrapers import scrape_me
 from PIL import Image
 from io import BytesIO
+
+# Optional BeautifulSoup for comment extraction
+try:
+    from bs4 import BeautifulSoup
+    HAS_BS4 = True
+except ImportError:
+    HAS_BS4 = False
 
 # Disable SSL verification for macOS certificate issues
 # TODO: Fix SSL certificates for production
@@ -96,6 +105,7 @@ class RecipeURLScraper:
                 'instructions': self._format_instructions(scraper.instructions()),
                 'cook_time_minutes': self._parse_time(scraper.total_time()),
                 'servings': self._parse_yields(scraper.yields()),
+                'source_url': url,  # Save the original recipe URL
             }
 
             # Optional fields
@@ -128,6 +138,14 @@ class RecipeURLScraper:
                         recipe_data['image_url'] = image_path
             except Exception as e:
                 print(f"⚠️  Could not extract/download image: {e}")
+
+            # Extract top comments from recipe page
+            try:
+                comments = self._extract_comments(url)
+                if comments:
+                    recipe_data['top_comments'] = json.dumps(comments)
+            except Exception as e:
+                print(f"⚠️  Could not extract comments: {e}")
 
             return recipe_data
 
@@ -210,6 +228,75 @@ class RecipeURLScraper:
         # Return capitalized original if no match found
         return cuisine_str.title()
 
+    def _extract_comments(self, url: str) -> List[Dict]:
+        """
+        Extract top 3 upvoted comments from recipe page
+        Returns list of comment dicts with text and upvotes
+        """
+        if not HAS_BS4:
+            print("⚠️  BeautifulSoup not available - skipping comment extraction")
+            return []
+
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            comments = []
+
+            # Try different comment extraction strategies based on site
+
+            # Strategy 1: AllRecipes-style comments (most common)
+            comment_sections = soup.find_all(['div', 'article', 'li'],
+                class_=re.compile(r'comment|review|user-comment', re.I))
+
+            for section in comment_sections[:10]:  # Check first 10 potential comments
+                # Extract comment text
+                text_elem = section.find(['p', 'div', 'span'],
+                    class_=re.compile(r'comment.*text|review.*text|user.*text|body', re.I))
+
+                if not text_elem:
+                    # Fallback: get all text from section
+                    text_elem = section
+
+                comment_text = text_elem.get_text(strip=True) if text_elem else ''
+
+                # Filter out short/empty comments
+                if len(comment_text) < 20 or len(comment_text) > 500:
+                    continue
+
+                # Try to extract upvote/like count
+                upvotes = 0
+                upvote_elem = section.find(['span', 'div', 'button'],
+                    class_=re.compile(r'helpful|upvote|like|vote|rating', re.I))
+
+                if upvote_elem:
+                    upvote_text = upvote_elem.get_text(strip=True)
+                    # Extract number from text like "42 helpful" or "Helpful (15)"
+                    numbers = re.findall(r'\d+', upvote_text)
+                    if numbers:
+                        upvotes = int(numbers[0])
+
+                comments.append({
+                    'text': comment_text,
+                    'upvotes': upvotes
+                })
+
+            # Sort by upvotes (descending) and take top 3
+            comments = sorted(comments, key=lambda x: x['upvotes'], reverse=True)[:3]
+
+            if comments:
+                print(f"✅ Extracted {len(comments)} top comments")
+
+            return comments
+
+        except Exception as e:
+            print(f"⚠️  Failed to extract comments: {e}")
+            return []
+
 
 # Supported sites (just a sample - recipe-scrapers supports 100+)
 SUPPORTED_SITES = [
@@ -235,7 +322,7 @@ if __name__ == '__main__':
     # Test with a sample recipe
     scraper = RecipeURLScraper()
 
-    test_url = "https://www.allrecipes.com/recipe/12151/banana-banana-bread/"
+    test_url = "https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/"
 
     print(f"Testing with: {test_url}")
     try:

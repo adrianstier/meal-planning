@@ -9,6 +9,7 @@ from flask_cors import CORS
 from meal_planner import MealPlannerDB
 from ai_recipe_parser import RecipeParser
 from school_menu_vision_parser import SchoolMenuVisionParser
+from recipe_url_scraper import RecipeURLScraper
 import os
 from dotenv import load_dotenv
 import random
@@ -29,6 +30,7 @@ db = MealPlannerDB()
 # Track initialization errors for diagnostics
 recipe_parser_error = None
 vision_parser_error = None
+url_scraper_error = None
 
 # Initialize AI recipe parser
 try:
@@ -57,6 +59,15 @@ except Exception as e:
     vision_parser = None
     vision_parser_error = str(e)
     print(f"⚠️  Failed to initialize vision parser: {e}")
+
+# Initialize URL scraper (always available)
+try:
+    url_scraper = RecipeURLScraper()
+    print("✅ Recipe URL scraper initialized (supports 100+ sites)")
+except Exception as e:
+    url_scraper = None
+    url_scraper_error = str(e)
+    print(f"⚠️  Failed to initialize URL scraper: {e}")
 
 
 # ============================================================================
@@ -222,7 +233,7 @@ def update_meal(meal_id):
 
         for field in ['name', 'meal_type', 'cook_time_minutes', 'servings', 'difficulty',
                       'tags', 'ingredients', 'instructions', 'is_favorite', 'makes_leftovers',
-                      'leftover_servings', 'leftover_days']:
+                      'leftover_servings', 'leftover_days', 'kid_rating', 'image_url', 'cuisine']:
             if field in data:
                 update_fields.append(f"{field} = ?")
                 update_values.append(data[field])
@@ -303,20 +314,36 @@ def unfavorite_meal(meal_id):
 
 @app.route('/api/meals/parse', methods=['POST'])
 def parse_recipe():
-    """Parse a recipe using AI"""
+    """Parse a recipe using AI or URL scraper"""
     try:
-        if not recipe_parser:
-            return jsonify({'success': False, 'error': 'AI parser not available'}), 503
-
         data = request.json
         recipe_text = data.get('recipe_text', '')
 
         if not recipe_text:
             return jsonify({'success': False, 'error': 'No recipe text provided'}), 400
 
+        # Check if it's a URL
+        if recipe_text.strip().startswith(('http://', 'https://')):
+            # Try URL scraper first (supports 100+ sites)
+            if url_scraper:
+                try:
+                    parsed = url_scraper.scrape_recipe(recipe_text.strip())
+                    return jsonify({'success': True, 'data': parsed, 'source': 'url_scraper'})
+                except Exception as url_error:
+                    print(f"URL scraper failed: {url_error}")
+                    # Fall back to AI parser if URL scraper fails
+                    if not recipe_parser:
+                        return jsonify({'success': False, 'error': f'URL scraper failed: {str(url_error)}'}), 500
+            elif not recipe_parser:
+                return jsonify({'success': False, 'error': 'Neither URL scraper nor AI parser available'}), 503
+
+        # Use AI parser for text or as fallback
+        if not recipe_parser:
+            return jsonify({'success': False, 'error': 'AI parser not available'}), 503
+
         parsed = recipe_parser.parse_recipe(recipe_text)
 
-        return jsonify({'success': True, 'data': parsed})
+        return jsonify({'success': True, 'data': parsed, 'source': 'ai_parser'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -339,6 +366,7 @@ def randomize_meals():
     - dietary_preference: 'all', 'vegetarian', 'pescatarian'
     - time_constraint: 'all', 'quick' (30 min or less), 'weekend' (longer, fun meals)
     - kid_friendly_min: minimum kid-friendly level
+    - cuisines: list of cuisines to include (e.g., ['Italian', 'Mexican']) or 'all'
     - days: number of days to plan (default 7)
     """
     try:
@@ -346,6 +374,7 @@ def randomize_meals():
         dietary_pref = data.get('dietary_preference', 'all')
         time_constraint = data.get('time_constraint', 'all')
         kid_friendly_min = int(data.get('kid_friendly_min', 5))
+        cuisines = data.get('cuisines', 'all')  # Can be 'all' or list like ['Italian', 'Mexican']
         num_days = int(data.get('days', 7))
         start_date = data.get('start_date', datetime.now().strftime('%Y-%m-%d'))
 
@@ -387,6 +416,13 @@ def randomize_meals():
             query += " AND (m.prep_time_minutes + m.cook_time_minutes) <= 30"
         elif time_constraint == 'weekend':
             query += " AND (m.prep_time_minutes + m.cook_time_minutes) > 30"
+
+        # Cuisine filters
+        if cuisines != 'all' and cuisines and len(cuisines) > 0:
+            # Build OR condition for multiple cuisines
+            cuisine_placeholders = ','.join(['?' for _ in cuisines])
+            query += f" AND m.cuisine IN ({cuisine_placeholders})"
+            params.extend(cuisines)
 
         cursor.execute(query, params)
         available_meals = [dict(row) for row in cursor.fetchall()]
@@ -1045,13 +1081,14 @@ def suggest_meals():
 
 @app.route('/api/plan/generate-week', methods=['POST'])
 def generate_week_plan():
-    """Generate a weekly meal plan with smart scheduling"""
+    """Generate a weekly meal plan with smart scheduling and cuisine filtering"""
     try:
         data = request.json
         start_date = data.get('start_date')
         num_days = data.get('num_days', 7)
         meal_types = data.get('meal_types', ['dinner'])  # Default to dinners only
         avoid_school_duplicates = data.get('avoid_school_duplicates', True)
+        cuisines = data.get('cuisines', 'all')  # Can be 'all' or list like ['Italian', 'Mexican']
 
         if not start_date:
             return jsonify({'success': False, 'error': 'start_date is required'}), 400
@@ -1059,13 +1096,23 @@ def generate_week_plan():
         conn = db.connect()
         cursor = conn.cursor()
 
-        # Get all available meals
-        cursor.execute("""
-            SELECT id, name, meal_type, tags, kid_friendly_level
+        # Get all available meals with optional cuisine filtering
+        query = """
+            SELECT id, name, meal_type, tags, kid_friendly_level, cuisine
             FROM meals
             WHERE meal_type IN ({})
-            ORDER BY RANDOM()
-        """.format(','.join('?' * len(meal_types))), meal_types)
+        """.format(','.join('?' * len(meal_types)))
+        params = list(meal_types)
+
+        # Add cuisine filter if specified
+        if cuisines != 'all' and cuisines and len(cuisines) > 0:
+            cuisine_placeholders = ','.join(['?' for _ in cuisines])
+            query += f" AND cuisine IN ({cuisine_placeholders})"
+            params.extend(cuisines)
+
+        query += " ORDER BY RANDOM()"
+
+        cursor.execute(query, params)
         available_meals = [dict(row) for row in cursor.fetchall()]
 
         if not available_meals:
@@ -1085,9 +1132,13 @@ def generate_week_plan():
             except:
                 pass  # If school menu doesn't exist, just skip
 
-        # Generate meal plan
+        # Generate meal plan with cuisine balancing
         generated_plan = []
         used_meals = set()
+        used_cuisines_count = {}  # Track cuisine usage for variety
+
+        # If multiple cuisines selected, try to balance them
+        balance_cuisines = cuisines != 'all' and isinstance(cuisines, list) and len(cuisines) > 1
 
         for day_offset in range(num_days):
             current_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=day_offset)).strftime('%Y-%m-%d')
@@ -1097,43 +1148,81 @@ def generate_week_plan():
                 # Find a suitable meal
                 suitable_meal = None
 
-                for meal in available_meals:
-                    # Skip if already used this week
-                    if meal['id'] in used_meals:
-                        continue
+                # If balancing cuisines, find the least-used cuisine
+                target_cuisine = None
+                if balance_cuisines:
+                    # Find cuisine with lowest count
+                    min_count = min([used_cuisines_count.get(c, 0) for c in cuisines], default=0)
+                    available_cuisines = [c for c in cuisines if used_cuisines_count.get(c, 0) == min_count]
+                    if available_cuisines:
+                        # Randomly pick from least-used cuisines for variety
+                        import random
+                        target_cuisine = random.choice(available_cuisines)
 
-                    # Skip if meal type doesn't match
-                    if meal['meal_type'] != meal_type:
-                        continue
+                # First pass: try to find meal matching target cuisine (if balancing)
+                if target_cuisine:
+                    for meal in available_meals:
+                        if meal['id'] in used_meals or meal['meal_type'] != meal_type:
+                            continue
 
-                    # Check for similarity with school meals
-                    is_similar = False
-                    if avoid_school_duplicates and school_meals_today:
-                        meal_name_lower = meal['name'].lower()
-                        for school_meal in school_meals_today:
-                            # Simple fuzzy matching: check for common words
-                            meal_words = set(meal_name_lower.split())
-                            school_words = set(school_meal.split())
-                            common_words = meal_words.intersection(school_words)
+                        # Check if this meal matches our target cuisine
+                        if meal.get('cuisine') != target_cuisine:
+                            continue
 
-                            # If they share significant words, consider them similar
-                            significant_words = common_words - {'with', 'and', 'or', 'the', 'a', 'an'}
-                            if len(significant_words) >= 1:
-                                is_similar = True
-                                break
+                        # Check for school menu similarity
+                        is_similar = False
+                        if avoid_school_duplicates and school_meals_today:
+                            meal_name_lower = meal['name'].lower()
+                            for school_meal in school_meals_today:
+                                meal_words = set(meal_name_lower.split())
+                                school_words = set(school_meal.split())
+                                common_words = meal_words.intersection(school_words)
+                                significant_words = common_words - {'with', 'and', 'or', 'the', 'a', 'an'}
+                                if len(significant_words) >= 1:
+                                    is_similar = True
+                                    break
 
-                    if not is_similar:
-                        suitable_meal = meal
-                        break
+                        if not is_similar:
+                            suitable_meal = meal
+                            break
+
+                # Second pass: if no target cuisine meal found, take any suitable meal
+                if not suitable_meal:
+                    for meal in available_meals:
+                        if meal['id'] in used_meals or meal['meal_type'] != meal_type:
+                            continue
+
+                        # Check for school menu similarity
+                        is_similar = False
+                        if avoid_school_duplicates and school_meals_today:
+                            meal_name_lower = meal['name'].lower()
+                            for school_meal in school_meals_today:
+                                meal_words = set(meal_name_lower.split())
+                                school_words = set(school_meal.split())
+                                common_words = meal_words.intersection(school_words)
+                                significant_words = common_words - {'with', 'and', 'or', 'the', 'a', 'an'}
+                                if len(significant_words) >= 1:
+                                    is_similar = True
+                                    break
+
+                        if not is_similar:
+                            suitable_meal = meal
+                            break
 
                 if suitable_meal:
                     generated_plan.append({
                         'date': current_date,
                         'meal_type': meal_type,
                         'meal_id': suitable_meal['id'],
-                        'meal_name': suitable_meal['name']
+                        'meal_name': suitable_meal['name'],
+                        'cuisine': suitable_meal.get('cuisine')
                     })
                     used_meals.add(suitable_meal['id'])
+
+                    # Track cuisine usage for balancing
+                    meal_cuisine = suitable_meal.get('cuisine')
+                    if meal_cuisine:
+                        used_cuisines_count[meal_cuisine] = used_cuisines_count.get(meal_cuisine, 0) + 1
 
         conn.close()
 

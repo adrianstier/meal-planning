@@ -33,6 +33,7 @@ Please analyze this recipe and provide a JSON response with the following struct
 {{
     "name": "Recipe name",
     "meal_type": "dinner|lunch|snack|breakfast",
+    "cuisine": "Italian|Mexican|Chinese|Japanese|Thai|Indian|French|Greek|Spanish|Korean|Vietnamese|American|Mediterranean|Middle Eastern|Caribbean|German|British|Asian|Other",
     "kid_friendly_level": 1-10 (how kid-friendly is this meal),
     "prep_time_minutes": estimated prep time in minutes,
     "cook_time_minutes": estimated cook time in minutes,
@@ -53,6 +54,7 @@ Please analyze this recipe and provide a JSON response with the following struct
 Guidelines:
 - kid_friendly_level: Consider whether kids aged 4-7 would typically enjoy this
 - meal_type: What meal this would typically be served as
+- cuisine: Identify the cuisine type based on ingredients, cooking methods, and dish origin. Be specific (e.g., Italian for pasta, Mexican for tacos, Japanese for sushi)
 - instructions: Extract and format cooking steps as a clear, numbered list. If no instructions are provided, write brief but complete step-by-step instructions based on typical cooking methods for this recipe.
 - component_type: Classify each ingredient appropriately
   - protein: meat, fish, beans, eggs, cheese

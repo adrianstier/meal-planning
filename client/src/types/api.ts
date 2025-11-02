@@ -15,6 +15,9 @@ export interface Meal {
   makes_leftovers?: boolean;
   leftover_servings?: number;
   leftover_days?: number;
+  kid_rating?: number;
+  image_url?: string;
+  cuisine?: string;
 }
 
 export interface MealPlan {

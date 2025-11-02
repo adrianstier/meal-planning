@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, Star } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -29,6 +29,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
+import StarRating from '../components/StarRating';
 
 const RecipesPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -48,6 +49,7 @@ const RecipesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [prepTimeFilter, setPrepTimeFilter] = useState<string>('all');
   const [tagFilter, setTagFilter] = useState<string>('all');
+  const [cuisineFilter, setCuisineFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
 
   const [formData, setFormData] = useState<Partial<Meal>>({
@@ -206,6 +208,13 @@ const RecipesPage: React.FC = () => {
     await toggleFavorite.mutateAsync({ id: meal.id, isFavorite: meal.is_favorite || false });
   };
 
+  const handleRatingChange = async (meal: Meal, rating: number) => {
+    await updateMeal.mutateAsync({
+      id: meal.id,
+      meal: { kid_rating: rating }
+    });
+  };
+
   const handleDeleteMeal = async () => {
     if (selectedMeal) {
       await deleteMeal.mutateAsync(selectedMeal.id);
@@ -251,11 +260,19 @@ const RecipesPage: React.FC = () => {
       const matchesPrepTime = prepTimeFilter === 'all' ||
         (prepTimeFilter === '30' && meal.cook_time_minutes && meal.cook_time_minutes <= 30);
 
-      // Tag filter
-      const matchesTag = tagFilter === 'all' ||
-        meal.tags?.toLowerCase().includes(tagFilter.toLowerCase());
+      // Tag filter (includes kid favorites rating filter)
+      let matchesTag = true;
+      if (tagFilter === 'kid-favorites') {
+        matchesTag = meal.kid_rating !== undefined && meal.kid_rating >= 4;
+      } else if (tagFilter !== 'all') {
+        matchesTag = meal.tags?.toLowerCase().includes(tagFilter.toLowerCase()) || false;
+      }
 
-      return matchesSearch && matchesPrepTime && matchesTag;
+      // Cuisine filter
+      const matchesCuisine = cuisineFilter === 'all' ||
+        meal.cuisine?.toLowerCase() === cuisineFilter.toLowerCase();
+
+      return matchesSearch && matchesPrepTime && matchesTag && matchesCuisine;
     });
   };
 
@@ -292,11 +309,20 @@ const RecipesPage: React.FC = () => {
           const dateA = a.last_cooked ? new Date(a.last_cooked).getTime() : 0;
           const dateB = b.last_cooked ? new Date(b.last_cooked).getTime() : 0;
           return dateB - dateA; // Most recent first
+        case 'rating':
+          const ratingA = a.kid_rating || 0;
+          const ratingB = b.kid_rating || 0;
+          return ratingB - ratingA; // Highest rating first
         default:
           return 0;
       }
     });
   };
+
+  // Get unique cuisines for filter dropdown
+  const uniqueCuisines = Array.from(
+    new Set(meals?.map(m => m.cuisine).filter(Boolean) || [])
+  ).sort();
 
   // Group meals by type, apply filters, and sort
   const mealsByType = {
@@ -353,7 +379,7 @@ const RecipesPage: React.FC = () => {
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Select value={prepTimeFilter} onValueChange={setPrepTimeFilter}>
                 <SelectTrigger className="w-[140px]">
                   <Clock className="mr-2 h-4 w-4" />
@@ -371,9 +397,24 @@ const RecipesPage: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All recipes</SelectItem>
+                  <SelectItem value="kid-favorites">Kid Favorites ⭐</SelectItem>
                   <SelectItem value="kid-friendly">Kid-friendly</SelectItem>
                   <SelectItem value="bento">Bento-friendly</SelectItem>
                   <SelectItem value="leftovers">Leftover-friendly</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={cuisineFilter} onValueChange={setCuisineFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="All cuisines" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All cuisines</SelectItem>
+                  {uniqueCuisines.map((cuisine) => (
+                    <SelectItem key={cuisine} value={cuisine?.toLowerCase() || ''}>
+                      {cuisine}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -384,6 +425,7 @@ const RecipesPage: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name">Sort by name</SelectItem>
+                  <SelectItem value="rating">Sort by rating</SelectItem>
                   <SelectItem value="prepTime">Sort by time</SelectItem>
                   <SelectItem value="lastCooked">Recently cooked</SelectItem>
                 </SelectContent>
@@ -425,15 +467,33 @@ const RecipesPage: React.FC = () => {
                 {mealsByType[type].map((meal) => (
                   <Card
                     key={meal.id}
-                    className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
+                    className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow overflow-hidden"
                     onClick={() => {
                       setSelectedMeal(meal);
                       setViewDialogOpen(true);
                     }}
                   >
+                    {meal.image_url && (
+                      <div className="aspect-video w-full overflow-hidden">
+                        <img
+                          src={meal.image_url}
+                          alt={meal.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
                     <CardHeader>
                       <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg">{meal.name}</CardTitle>
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{meal.name}</CardTitle>
+                          <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                            <StarRating
+                              rating={meal.kid_rating || 0}
+                              onChange={(rating) => handleRatingChange(meal, rating)}
+                              size="sm"
+                            />
+                          </div>
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -453,6 +513,11 @@ const RecipesPage: React.FC = () => {
 
                       {/* Visual Badges */}
                       <div className="flex flex-wrap gap-1.5 my-2">
+                        {meal.cuisine && (
+                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-indigo-100 text-indigo-800">
+                            🌍 {meal.cuisine}
+                          </span>
+                        )}
                         {hasTag(meal, 'kid-friendly') && (
                           <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-800">
                             <Baby className="h-3 w-3 mr-1" />
@@ -811,6 +876,31 @@ const RecipesPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
+            {/* Recipe Image */}
+            {selectedMeal?.image_url && (
+              <div className="aspect-video w-full overflow-hidden rounded-lg">
+                <img
+                  src={selectedMeal.image_url}
+                  alt={selectedMeal.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            {/* Kid Rating */}
+            <div>
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                Kid Rating
+              </h3>
+              {selectedMeal && (
+                <StarRating
+                  rating={selectedMeal.kid_rating || 0}
+                  onChange={(rating) => handleRatingChange(selectedMeal, rating)}
+                  size="lg"
+                  showNumber={true}
+                />
+              )}
+            </div>
             {selectedMeal?.tags && (
               <div>
                 <h3 className="font-semibold mb-2">Tags</h3>

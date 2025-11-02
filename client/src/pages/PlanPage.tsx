@@ -13,6 +13,7 @@ import {
 } from '../components/ui/dialog';
 import { useWeekPlan, useGenerateWeekPlan, useApplyGeneratedPlan } from '../hooks/usePlan';
 import { useGenerateShoppingList } from '../hooks/useShopping';
+import { useMeals } from '../hooks/useMeals';
 import AddMealDialog from '../components/features/plan/AddMealDialog';
 import type { MealPlan } from '../types/api';
 
@@ -31,8 +32,10 @@ const PlanPage: React.FC = () => {
     date: string;
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   } | null>(null);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
 
   const { data: weekPlan, isLoading, error } = useWeekPlan(currentWeekStart);
+  const { data: meals } = useMeals();
   const generateWeekPlan = useGenerateWeekPlan();
   const applyGeneratedPlan = useApplyGeneratedPlan();
   const generateShoppingList = useGenerateShoppingList();
@@ -72,6 +75,23 @@ const PlanPage: React.FC = () => {
 
     return organized;
   }, [weekPlan]);
+
+  // Get unique cuisines from all meals
+  const uniqueCuisines = useMemo(() => {
+    if (!meals) return [];
+    return Array.from(
+      new Set(meals.map(m => m.cuisine).filter(Boolean))
+    ).sort();
+  }, [meals]);
+
+  // Toggle cuisine selection
+  const toggleCuisine = (cuisine: string) => {
+    setSelectedCuisines(prev =>
+      prev.includes(cuisine)
+        ? prev.filter(c => c !== cuisine)
+        : [...prev, cuisine]
+    );
+  };
 
   const goToPreviousWeek = () => {
     const prevWeek = addDays(parseISO(currentWeekStart), -7);
@@ -144,7 +164,8 @@ const PlanPage: React.FC = () => {
         startDate: currentWeekStart,
         numDays: 7,
         mealTypes: ['dinner'],
-        avoidSchoolDuplicates: true
+        avoidSchoolDuplicates: true,
+        cuisines: selectedCuisines.length > 0 ? selectedCuisines : 'all'
       });
       setGeneratedPlan(result.data);
       setGenerateDialogOpen(true);
@@ -256,6 +277,44 @@ const PlanPage: React.FC = () => {
               </Button>
             </div>
           </div>
+          {/* Cuisine Filter */}
+          {uniqueCuisines.length > 0 && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex items-start gap-3">
+                <div className="text-sm font-medium text-muted-foreground min-w-[80px] pt-1.5">
+                  Cuisines:
+                </div>
+                <div className="flex flex-wrap gap-2 flex-1">
+                  {uniqueCuisines.map((cuisine) => (
+                    <Button
+                      key={cuisine}
+                      variant={selectedCuisines.includes(cuisine || '') ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => toggleCuisine(cuisine || '')}
+                      className="h-7 text-xs"
+                    >
+                      {cuisine}
+                    </Button>
+                  ))}
+                  {selectedCuisines.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedCuisines([])}
+                      className="h-7 text-xs text-muted-foreground"
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {selectedCuisines.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-2 ml-[92px]">
+                  Generating meals from: {selectedCuisines.join(', ')}
+                </p>
+              )}
+            </div>
+          )}
         </CardHeader>
       </Card>
 
@@ -510,7 +569,8 @@ const PlanPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Generated Meal Plan</DialogTitle>
             <DialogDescription>
-              Review the generated meal plan below. Meals are automatically selected to avoid duplicates with school lunch.
+              Review the generated meal plan below. Meals are automatically selected to avoid duplicates with school lunch
+              {selectedCuisines.length > 0 && ` and balanced across ${selectedCuisines.join(', ')} cuisines`}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -519,12 +579,17 @@ const PlanPage: React.FC = () => {
                 key={index}
                 className="flex items-center justify-between p-3 border rounded-lg"
               >
-                <div>
+                <div className="flex-1">
                   <p className="font-medium">{item.meal_name}</p>
                   <p className="text-sm text-muted-foreground">
                     {format(parseISO(item.date), 'EEEE, MMM d')} - {item.meal_type}
                   </p>
                 </div>
+                {item.cuisine && (
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-indigo-100 text-indigo-800">
+                    🌍 {item.cuisine}
+                  </span>
+                )}
               </div>
             ))}
             {generatedPlan.length === 0 && (

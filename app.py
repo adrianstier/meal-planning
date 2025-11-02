@@ -444,6 +444,192 @@ def get_shopping_list():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ============================================================================
+# SHOPPING LIST ENDPOINTS
+# ============================================================================
+
+@app.route('/api/shopping', methods=['GET'])
+def get_shopping_items():
+    """Get all shopping list items"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, item_name, category, quantity, is_purchased, created_at
+            FROM shopping_items
+            ORDER BY is_purchased ASC, category ASC, item_name ASC
+        """)
+        items = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return jsonify({'success': True, 'data': items})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/shopping', methods=['POST'])
+def add_shopping_item():
+    """Add a new shopping list item"""
+    try:
+        data = request.json
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO shopping_items (item_name, category, quantity, is_purchased)
+            VALUES (?, ?, ?, ?)
+        """, (
+            data.get('item_name'),
+            data.get('category'),
+            data.get('quantity'),
+            data.get('is_purchased', False)
+        ))
+
+        item_id = cursor.lastrowid
+        conn.commit()
+
+        # Fetch the created item
+        cursor.execute("SELECT * FROM shopping_items WHERE id = ?", (item_id,))
+        item = dict(cursor.fetchone())
+        conn.close()
+
+        return jsonify({'success': True, 'data': item}), 201
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/shopping/<int:item_id>', methods=['PUT'])
+def update_shopping_item(item_id):
+    """Update a shopping list item"""
+    try:
+        data = request.json
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE shopping_items
+            SET item_name = ?, category = ?, quantity = ?, is_purchased = ?
+            WHERE id = ?
+        """, (
+            data.get('item_name'),
+            data.get('category'),
+            data.get('quantity'),
+            data.get('is_purchased'),
+            item_id
+        ))
+
+        conn.commit()
+
+        # Fetch the updated item
+        cursor.execute("SELECT * FROM shopping_items WHERE id = ?", (item_id,))
+        item = dict(cursor.fetchone())
+        conn.close()
+
+        return jsonify({'success': True, 'data': item})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/shopping/<int:item_id>', methods=['DELETE'])
+def delete_shopping_item(item_id):
+    """Delete a shopping list item"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM shopping_items WHERE id = ?", (item_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Item deleted'})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/shopping/<int:item_id>/toggle', methods=['POST'])
+def toggle_shopping_item(item_id):
+    """Toggle the purchased status of a shopping item"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE shopping_items
+            SET is_purchased = NOT is_purchased
+            WHERE id = ?
+        """, (item_id,))
+        conn.commit()
+
+        # Fetch the updated item
+        cursor.execute("SELECT * FROM shopping_items WHERE id = ?", (item_id,))
+        item = dict(cursor.fetchone())
+        conn.close()
+
+        return jsonify({'success': True, 'data': item})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/shopping/purchased', methods=['DELETE'])
+def clear_purchased_items():
+    """Delete all purchased items"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM shopping_items WHERE is_purchased = 1")
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Purchased items cleared'})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/shopping/generate', methods=['POST'])
+def generate_shopping_from_plan():
+    """Generate shopping list from meal plan"""
+    try:
+        data = request.json
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Get all meals in the date range
+        cursor.execute("""
+            SELECT DISTINCT m.ingredients
+            FROM scheduled_meals sm
+            JOIN meals m ON sm.meal_id = m.id
+            WHERE sm.meal_date BETWEEN ? AND ?
+            AND m.ingredients IS NOT NULL
+        """, (start_date, end_date))
+
+        # Parse ingredients and add to shopping list
+        items_added = []
+        for row in cursor.fetchall():
+            ingredients = row['ingredients']
+            if ingredients:
+                # Split by newline and add each as a shopping item
+                for line in ingredients.split('\n'):
+                    line = line.strip()
+                    if line:
+                        cursor.execute("""
+                            INSERT INTO shopping_items (item_name, is_purchased)
+                            VALUES (?, 0)
+                        """, (line,))
+                        items_added.append({'id': cursor.lastrowid, 'item_name': line})
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'data': items_added})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/init-db', methods=['POST'])
 def init_database():
     """Initialize database with schema and seed data"""
@@ -735,14 +921,18 @@ def suggest_meals():
             query += " AND m.difficulty = ?"
             params.append(difficulty)
 
-        # Exclude recently cooked meals
+        # Exclude recently cooked meals (if meal_history table exists)
         if avoid_recent_days and date:
             cutoff_date = (datetime.strptime(date, '%Y-%m-%d') - timedelta(days=avoid_recent_days)).strftime('%Y-%m-%d')
-            query += """ AND m.id NOT IN (
-                SELECT DISTINCT meal_id FROM meal_history
-                WHERE cooked_date >= ?
-            )"""
-            params.append(cutoff_date)
+
+            # Check if meal_history table exists
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='meal_history'")
+            if cursor.fetchone():
+                query += """ AND m.id NOT IN (
+                    SELECT DISTINCT meal_id FROM meal_history
+                    WHERE cooked_date >= ?
+                )"""
+                params.append(cutoff_date)
 
             # Also exclude recently scheduled meals
             query += """ AND m.id NOT IN (
@@ -1477,6 +1667,20 @@ if __name__ == '__main__':
         print(f"⚠️  React schema migration check: {e}")
         import traceback
         traceback.print_exc()
+
+    # Run migration for shopping_items table if needed
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='shopping_items'")
+        if not cursor.fetchone():
+            print("🔄 Running shopping items migration...")
+            from database.migrations.add_shopping_items_table import migrate_add_shopping_items
+            migrate_add_shopping_items(db.db_name)
+            print("✅ Shopping items table added!")
+        conn.close()
+    except Exception as e:
+        print(f"⚠️  Shopping items migration check: {e}")
 
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', '1') == '1'

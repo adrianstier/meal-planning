@@ -4,24 +4,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
-// Note: Shopping hooks would go here, using placeholder data for now
-// import { useShoppingItems, useAddShoppingItem, useToggleShoppingItem, useDeleteShoppingItem } from '../hooks/useShopping';
+import { useShoppingItems, useAddShoppingItem, useToggleShoppingItem, useDeleteShoppingItem, useClearPurchased } from '../hooks/useShopping';
 
 const ListsPage: React.FC = () => {
   const [newItem, setNewItem] = useState('');
   const [newQuantity, setNewQuantity] = useState('');
 
-  // Placeholder - replace with real hooks
-  const shoppingItems: any[] = [];
-  const isLoading = false;
+  // Shopping hooks
+  const { data: shoppingItems, isLoading } = useShoppingItems();
+  const addShoppingItem = useAddShoppingItem();
+  const toggleItem = useToggleShoppingItem();
+  const deleteItem = useDeleteShoppingItem();
+  const clearPurchased = useClearPurchased();
 
   const handleAddItem = async () => {
     if (!newItem.trim()) return;
 
-    // await addShoppingItem.mutateAsync({
-    //   item_name: newItem,
-    //   quantity: newQuantity || undefined,
-    // });
+    await addShoppingItem.mutateAsync({
+      item_name: newItem,
+      quantity: newQuantity || undefined,
+    });
 
     setNewItem('');
     setNewQuantity('');
@@ -102,7 +104,7 @@ const ListsPage: React.FC = () => {
                       className="flex items-center gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors"
                     >
                       <button
-                        // onClick={() => toggleItem.mutateAsync(item.id)}
+                        onClick={() => toggleItem.mutateAsync(item.id)}
                         className="flex-shrink-0 h-5 w-5 rounded border-2 border-primary hover:bg-primary/10 transition-colors"
                       />
                       <div className="flex-1">
@@ -115,7 +117,7 @@ const ListsPage: React.FC = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        // onClick={() => deleteItem.mutateAsync(item.id)}
+                        onClick={() => deleteItem.mutateAsync(item.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -137,7 +139,7 @@ const ListsPage: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    // onClick={() => clearPurchased.mutateAsync()}
+                    onClick={() => clearPurchased.mutateAsync()}
                   >
                     <X className="h-3 w-3 mr-1" />
                     Clear
@@ -152,7 +154,7 @@ const ListsPage: React.FC = () => {
                       className="flex items-center gap-3 p-3 rounded-md border bg-card"
                     >
                       <button
-                        // onClick={() => toggleItem.mutateAsync(item.id)}
+                        onClick={() => toggleItem.mutateAsync(item.id)}
                         className="flex-shrink-0 h-5 w-5 rounded border-2 border-primary bg-primary flex items-center justify-center"
                       >
                         <Check className="h-3 w-3 text-primary-foreground" />
@@ -169,7 +171,7 @@ const ListsPage: React.FC = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        // onClick={() => deleteItem.mutateAsync(item.id)}
+                        onClick={() => deleteItem.mutateAsync(item.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

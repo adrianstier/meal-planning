@@ -18,6 +18,8 @@ from typing import List, Dict, Optional
 import traceback
 import base64
 import sqlite3
+import json
+import anthropic
 
 # Load environment variables
 load_dotenv()
@@ -1294,13 +1296,33 @@ def apply_generated_plan():
         conn = db.connect()
         cursor = conn.cursor()
 
+        # Get or create current meal plan
+        cursor.execute("SELECT id FROM meal_plans ORDER BY id DESC LIMIT 1")
+        result = cursor.fetchone()
+        if result:
+            meal_plan_id = result[0]
+        else:
+            cursor.execute("INSERT INTO meal_plans (name) VALUES (?)", ("Generated Plan",))
+            meal_plan_id = cursor.lastrowid
+
+        # Meal type mapping
+        meal_type_map = {'breakfast': 4, 'lunch': 2, 'dinner': 1, 'snack': 3}
+
         added_count = 0
         for item in plan:
             try:
+                # Convert date to day of week
+                date_obj = datetime.strptime(item['date'], '%Y-%m-%d')
+                day_of_week = date_obj.strftime('%A')
+
+                # Get meal_type_id from meal_type string
+                meal_type_id = meal_type_map.get(item['meal_type'], 1)
+
                 cursor.execute("""
-                    INSERT INTO scheduled_meals (meal_date, meal_type, meal_id)
-                    VALUES (?, ?, ?)
-                """, (item['date'], item['meal_type'], item['meal_id']))
+                    INSERT INTO scheduled_meals (
+                        meal_plan_id, meal_id, day_of_week, meal_date, meal_type_id
+                    ) VALUES (?, ?, ?, ?, ?)
+                """, (meal_plan_id, item['meal_id'], day_of_week, item['date'], meal_type_id))
                 added_count += 1
             except sqlite3.IntegrityError:
                 # Slot already filled, skip

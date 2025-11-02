@@ -8,21 +8,161 @@ import anthropic
 import json
 from typing import Dict, List, Optional
 import re
+import requests
+from bs4 import BeautifulSoup
+import os
+import uuid
+from urllib.parse import urlparse, urljoin
+from PIL import Image
+from io import BytesIO
 
 
 class RecipeParser:
     """Parse recipes using Claude AI"""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, image_folder='static/recipe_images'):
         self.client = anthropic.Anthropic(api_key=api_key)
         # Use Claude 3.5 Haiku - faster and more accurate than 3.0
         self.model = "claude-3-5-haiku-20241022"
+        self.image_folder = image_folder
+        os.makedirs(image_folder, exist_ok=True)
+
+    def _is_url(self, text: str) -> bool:
+        """Check if text is a URL"""
+        return text.strip().startswith(('http://', 'https://'))
+
+    def _extract_image_from_url(self, url: str) -> Optional[str]:
+        """
+        Extract and download the main recipe image from a URL
+        Returns relative path to saved image or None
+        """
+        try:
+            # Fetch the webpage
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            # Parse HTML
+            soup = BeautifulSoup(response.content, 'html.parser')
+
+            # Try to find recipe image using common patterns
+            image_url = None
+
+            # Method 1: Look for og:image meta tag (most reliable)
+            og_image = soup.find('meta', property='og:image')
+            if og_image and og_image.get('content'):
+                image_url = og_image['content']
+
+            # Method 2: Look for schema.org Recipe image
+            if not image_url:
+                recipe_schema = soup.find('script', type='application/ld+json')
+                if recipe_schema:
+                    try:
+                        schema_data = json.loads(recipe_schema.string)
+                        if isinstance(schema_data, dict) and 'image' in schema_data:
+                            img_data = schema_data['image']
+                            if isinstance(img_data, str):
+                                image_url = img_data
+                            elif isinstance(img_data, list) and len(img_data) > 0:
+                                image_url = img_data[0]
+                            elif isinstance(img_data, dict) and 'url' in img_data:
+                                image_url = img_data['url']
+                    except:
+                        pass
+
+            # Method 3: Look for largest image in article/recipe content
+            if not image_url:
+                article = soup.find('article') or soup.find('div', class_=re.compile(r'recipe|content'))
+                if article:
+                    images = article.find_all('img')
+                    if images:
+                        # Get first image with reasonable size
+                        for img in images:
+                            src = img.get('src') or img.get('data-src')
+                            if src and not any(x in src.lower() for x in ['icon', 'logo', 'avatar', 'ad']):
+                                image_url = src
+                                break
+
+            if not image_url:
+                print("⚠️  No recipe image found in URL")
+                return None
+
+            # Make URL absolute if relative
+            if image_url.startswith('//'):
+                image_url = 'https:' + image_url
+            elif image_url.startswith('/'):
+                parsed = urlparse(url)
+                image_url = f"{parsed.scheme}://{parsed.netloc}{image_url}"
+            elif not image_url.startswith('http'):
+                image_url = urljoin(url, image_url)
+
+            # Download and save the image
+            return self._download_and_save_image(image_url)
+
+        except Exception as e:
+            print(f"⚠️  Failed to extract image from URL: {e}")
+            return None
+
+    def _download_and_save_image(self, image_url: str) -> Optional[str]:
+        """
+        Download image and save to local storage
+        Returns relative path to saved image
+        """
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(image_url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            # Open and validate image
+            img = Image.open(BytesIO(response.content))
+
+            # Generate unique filename
+            ext = os.path.splitext(urlparse(image_url).path)[1] or '.jpg'
+            if ext.lower() not in ['.jpg', '.jpeg', '.png', '.webp']:
+                ext = '.jpg'
+
+            filename = f"{uuid.uuid4()}{ext}"
+            filepath = os.path.join(self.image_folder, filename)
+
+            # Convert RGBA to RGB if needed (for JPEG)
+            if img.mode == 'RGBA' and ext.lower() in ['.jpg', '.jpeg']:
+                rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                rgb_img.paste(img, mask=img.split()[3])
+                img = rgb_img
+
+            # Resize if too large (max 1200px width)
+            max_width = 1200
+            if img.width > max_width:
+                ratio = max_width / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+            # Save image
+            img.save(filepath, optimize=True, quality=85)
+
+            print(f"✅ Downloaded recipe image: {filename} ({img.width}x{img.height})")
+
+            # Return relative path for web access
+            return f"/static/recipe_images/{filename}"
+
+        except Exception as e:
+            print(f"⚠️  Failed to download image: {e}")
+            return None
 
     def parse_recipe(self, recipe_input: str) -> Dict:
         """
         Parse a recipe from text or URL
-        Returns structured meal data
+        Returns structured meal data with image if URL provided
         """
+
+        # Check if input is a URL and try to extract image
+        image_url = None
+        if self._is_url(recipe_input):
+            image_url = self._extract_image_from_url(recipe_input)
 
         prompt = f"""Parse the following recipe and extract structured information.
 
@@ -84,7 +224,13 @@ Return ONLY valid JSON, no other text."""
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
                 parsed_data = json.loads(json_match.group())
-                return self._validate_and_clean(parsed_data)
+                cleaned_data = self._validate_and_clean(parsed_data)
+
+                # Add image URL if we extracted one
+                if image_url:
+                    cleaned_data['image_url'] = image_url
+
+                return cleaned_data
             else:
                 raise ValueError("No JSON found in AI response")
 

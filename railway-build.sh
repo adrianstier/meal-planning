@@ -19,4 +19,10 @@ cp client/build/manifest.json templates/manifest.json 2>/dev/null || true
 echo "🔄 Running database migrations..."
 python3 setup.py || echo "⚠️  Setup script encountered issues (may be normal if DB already initialized)"
 
+echo "🔄 Running additional migrations..."
+python3 database/migrations/migrate_to_react_schema.py || echo "⚠️  React schema migration skipped (may already be applied)"
+python3 database/migrations/add_recipe_metadata.py || echo "⚠️  Recipe metadata migration skipped"
+python3 database/migrations/add_cuisine.py || echo "⚠️  Cuisine migration skipped"
+python3 database/migrations/add_bento_tables.py || echo "⚠️  Bento tables migration skipped"
+
 echo "✅ Build complete!"

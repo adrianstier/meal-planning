@@ -29,9 +29,23 @@ const ListsPage: React.FC = () => {
     setNewQuantity('');
   };
 
-  // Group items by purchased status
+  // Group items by purchased status and category
   const activeItems = shoppingItems?.filter(item => !item.is_purchased) || [];
   const purchasedItems = shoppingItems?.filter(item => item.is_purchased) || [];
+
+  // Group active items by category
+  const itemsByCategory = activeItems.reduce((acc, item) => {
+    const category = item.category || 'Other';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(item);
+    return acc;
+  }, {} as Record<string, typeof activeItems>);
+
+  // Define category order for grocery stores
+  const categoryOrder = ['Produce', 'Meat & Seafood', 'Dairy & Eggs', 'Bakery', 'Pantry', 'Frozen', 'Beverages', 'Other'];
+  const sortedCategories = categoryOrder.filter(cat => itemsByCategory[cat] && itemsByCategory[cat].length > 0);
 
   return (
     <div className="space-y-6">
@@ -88,44 +102,48 @@ const ListsPage: React.FC = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {/* Active Items */}
+          {/* Active Items - Organized by Category */}
           {activeItems.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  To Buy ({activeItems.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {activeItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors"
-                    >
-                      <button
-                        onClick={() => toggleItem.mutateAsync(item.id)}
-                        className="flex-shrink-0 h-5 w-5 rounded border-2 border-primary hover:bg-primary/10 transition-colors"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium">{item.item_name}</p>
-                        {item.quantity && (
-                          <p className="text-sm text-muted-foreground">{item.quantity}</p>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => deleteItem.mutateAsync(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+            <div className="space-y-3">
+              {sortedCategories.map((category) => (
+                <Card key={category}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">
+                      {category} ({itemsByCategory[category].length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {itemsByCategory[category].map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors"
+                        >
+                          <button
+                            onClick={() => toggleItem.mutateAsync(item.id)}
+                            className="flex-shrink-0 h-5 w-5 rounded border-2 border-primary hover:bg-primary/10 transition-colors"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium">{item.item_name}</p>
+                            {item.quantity && (
+                              <p className="text-sm text-muted-foreground">{item.quantity}</p>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => deleteItem.mutateAsync(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
 
           {/* Purchased Items */}
@@ -184,22 +202,18 @@ const ListsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Info */}
-      <Card className="border-blue-500 bg-blue-50 dark:bg-blue-950/20">
+      {/* Tips */}
+      <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
-          <CardTitle className="text-blue-900 dark:text-blue-100 text-base">
-            Coming Soon
-          </CardTitle>
+          <CardTitle className="text-base">Shopping List Tips</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
-          <p>
-            Full shopping list features are coming soon:
-          </p>
+        <CardContent className="text-sm space-y-2">
+          <p>Get the most out of your shopping list:</p>
           <ul className="space-y-1 ml-4 list-disc">
-            <li>Check off items as you shop</li>
-            <li>Organize by category (produce, dairy, etc.)</li>
-            <li>Generate list from your meal plan</li>
-            <li>Save frequently bought items</li>
+            <li><strong>Auto-generate:</strong> Go to the Plan page and click "Shopping List" to automatically generate from your meal plan</li>
+            <li><strong>AI-organized:</strong> Items are automatically organized by store category (Produce, Dairy, Meat, etc.)</li>
+            <li><strong>Smart combining:</strong> Duplicate ingredients are combined (e.g., "2 cups flour" + "1 cup flour" = "3 cups flour")</li>
+            <li><strong>Check off as you shop:</strong> Tap the checkbox to mark items as purchased</li>
           </ul>
         </CardContent>
       </Card>

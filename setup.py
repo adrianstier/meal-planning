@@ -129,6 +129,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not fix image URLs: {e}")
 
+    # Add bento box tables
+    print("\n🔄 Running bento box tables migration...")
+    try:
+        from database.migrations.add_bento_tables import migrate
+        migrate(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run bento tables migration: {e}")
+
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")
     print("=" * 60)

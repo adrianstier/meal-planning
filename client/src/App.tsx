@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/Layout';
 import PlanPage from './pages/PlanPage';
 import RecipesPage from './pages/RecipesPage';
+import BentoPage from './pages/BentoPage';
 import LeftoversPage from './pages/LeftoversPage';
 import SchoolMenuPage from './pages/SchoolMenuPage';
 import ListsPage from './pages/ListsPage';
@@ -28,6 +29,7 @@ function App() {
             <Route path="/" element={<Navigate to="/plan" replace />} />
             <Route path="/plan" element={<PlanPage />} />
             <Route path="/recipes" element={<RecipesPage />} />
+            <Route path="/bento" element={<BentoPage />} />
             <Route path="/browse" element={<Navigate to="/recipes" replace />} />
             <Route path="/leftovers" element={<LeftoversPage />} />
             <Route path="/school-menu" element={<SchoolMenuPage />} />

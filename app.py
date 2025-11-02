@@ -1928,6 +1928,384 @@ def serve_service_worker():
     """Serve service-worker.js with correct MIME type"""
     return send_from_directory('templates', 'service-worker.js', mimetype='application/javascript')
 
+# ============================================================================
+# BENTO BOX API ENDPOINTS
+# ============================================================================
+
+@app.route('/api/bento-items', methods=['GET'])
+def get_bento_items():
+    """Get all bento items"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, name, category, is_favorite, allergens, notes, prep_time_minutes, created_at
+            FROM bento_items
+            ORDER BY category, name
+        """)
+
+        items = []
+        for row in cursor.fetchall():
+            items.append({
+                'id': row[0],
+                'name': row[1],
+                'category': row[2],
+                'is_favorite': bool(row[3]),
+                'allergens': row[4],
+                'notes': row[5],
+                'prep_time_minutes': row[6],
+                'created_at': row[7]
+            })
+
+        conn.close()
+        return jsonify({'success': True, 'items': items})
+    except Exception as e:
+        print(f"Error getting bento items: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bento-items', methods=['POST'])
+def create_bento_item():
+    """Create a new bento item"""
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        if not data.get('name'):
+            return jsonify({'success': False, 'error': 'Item name is required'}), 400
+        if not data.get('category'):
+            return jsonify({'success': False, 'error': 'Category is required'}), 400
+
+        # Validate category
+        valid_categories = ['protein', 'fruit', 'vegetable', 'grain', 'dairy', 'snack']
+        if data.get('category') not in valid_categories:
+            return jsonify({'success': False, 'error': f'Invalid category. Must be one of: {", ".join(valid_categories)}'}), 400
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO bento_items (name, category, is_favorite, allergens, notes, prep_time_minutes)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            data['name'].strip(),
+            data['category'],
+            data.get('is_favorite', False),
+            data.get('allergens', '').strip() if data.get('allergens') else None,
+            data.get('notes', '').strip() if data.get('notes') else None,
+            data.get('prep_time_minutes')
+        ))
+
+        item_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'id': item_id})
+    except KeyError as e:
+        return jsonify({'success': False, 'error': f'Missing required field: {str(e)}'}), 400
+    except Exception as e:
+        print(f"Error creating bento item: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Failed to create bento item. Please try again.'}), 500
+
+@app.route('/api/bento-items/<int:item_id>', methods=['PUT'])
+def update_bento_item(item_id):
+    """Update a bento item"""
+    try:
+        data = request.get_json()
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE bento_items
+            SET name = ?, category = ?, is_favorite = ?, allergens = ?, notes = ?, prep_time_minutes = ?
+            WHERE id = ?
+        """, (
+            data['name'],
+            data['category'],
+            data.get('is_favorite', False),
+            data.get('allergens'),
+            data.get('notes'),
+            data.get('prep_time_minutes'),
+            item_id
+        ))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error updating bento item: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bento-items/<int:item_id>', methods=['DELETE'])
+def delete_bento_item(item_id):
+    """Delete a bento item"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM bento_items WHERE id = ?", (item_id,))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error deleting bento item: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bento-plans', methods=['GET'])
+def get_bento_plans():
+    """Get bento plans for a date range"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT bp.id, bp.date, bp.child_name, bp.notes,
+                   bi1.id, bi1.name, bi1.category,
+                   bi2.id, bi2.name, bi2.category,
+                   bi3.id, bi3.name, bi3.category,
+                   bi4.id, bi4.name, bi4.category
+            FROM bento_plans bp
+            LEFT JOIN bento_items bi1 ON bp.compartment1_item_id = bi1.id
+            LEFT JOIN bento_items bi2 ON bp.compartment2_item_id = bi2.id
+            LEFT JOIN bento_items bi3 ON bp.compartment3_item_id = bi3.id
+            LEFT JOIN bento_items bi4 ON bp.compartment4_item_id = bi4.id
+        """
+
+        params = []
+        if start_date and end_date:
+            query += " WHERE bp.date BETWEEN ? AND ?"
+            params = [start_date, end_date]
+
+        query += " ORDER BY bp.date"
+
+        cursor.execute(query, params)
+
+        plans = []
+        for row in cursor.fetchall():
+            plans.append({
+                'id': row[0],
+                'date': row[1],
+                'child_name': row[2],
+                'notes': row[3],
+                'compartment1': {'id': row[4], 'name': row[5], 'category': row[6]} if row[4] else None,
+                'compartment2': {'id': row[7], 'name': row[8], 'category': row[9]} if row[7] else None,
+                'compartment3': {'id': row[10], 'name': row[11], 'category': row[12]} if row[10] else None,
+                'compartment4': {'id': row[13], 'name': row[14], 'category': row[15]} if row[13] else None
+            })
+
+        conn.close()
+        return jsonify({'success': True, 'plans': plans})
+    except Exception as e:
+        print(f"Error getting bento plans: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bento-plans', methods=['POST'])
+def create_bento_plan():
+    """Create a new bento plan"""
+    try:
+        data = request.get_json()
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO bento_plans (date, child_name, compartment1_item_id, compartment2_item_id,
+                                   compartment3_item_id, compartment4_item_id, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data['date'],
+            data.get('child_name'),
+            data.get('compartment1_item_id'),
+            data.get('compartment2_item_id'),
+            data.get('compartment3_item_id'),
+            data.get('compartment4_item_id'),
+            data.get('notes')
+        ))
+
+        plan_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'id': plan_id})
+    except Exception as e:
+        print(f"Error creating bento plan: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bento-plans/<int:plan_id>', methods=['PUT'])
+def update_bento_plan(plan_id):
+    """Update a bento plan"""
+    try:
+        data = request.get_json()
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE bento_plans
+            SET child_name = ?, compartment1_item_id = ?, compartment2_item_id = ?,
+                compartment3_item_id = ?, compartment4_item_id = ?, notes = ?
+            WHERE id = ?
+        """, (
+            data.get('child_name'),
+            data.get('compartment1_item_id'),
+            data.get('compartment2_item_id'),
+            data.get('compartment3_item_id'),
+            data.get('compartment4_item_id'),
+            data.get('notes'),
+            plan_id
+        ))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error updating bento plan: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bento-plans/<int:plan_id>', methods=['DELETE'])
+def delete_bento_plan(plan_id):
+    """Delete a bento plan"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM bento_plans WHERE id = ?", (plan_id,))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error deleting bento plan: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/bento-plans/generate-week', methods=['POST'])
+def generate_weekly_bento_plans():
+    """Generate bento plans for a week with variety"""
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        if not data.get('start_date'):
+            return jsonify({'success': False, 'error': 'Start date is required'}), 400
+
+        start_date = data['start_date']
+        child_name = data.get('child_name', '')
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Get all available bento items grouped by category
+        cursor.execute("""
+            SELECT id, name, category
+            FROM bento_items
+            ORDER BY is_favorite DESC, RANDOM()
+        """)
+
+        items_by_category = {}
+        total_items = 0
+        for row in cursor.fetchall():
+            total_items += 1
+            category = row[2]
+            if category not in items_by_category:
+                items_by_category[category] = []
+            items_by_category[category].append({'id': row[0], 'name': row[1]})
+
+        # Check if we have enough items
+        if total_items < 4:
+            conn.close()
+            return jsonify({'success': False, 'error': f'Need at least 4 bento items to generate a week. You currently have {total_items}. Please add more items first.'}), 400
+
+        if len(items_by_category) < 2:
+            conn.close()
+            return jsonify({'success': False, 'error': f'Need items from at least 2 different categories. You currently have items from {len(items_by_category)} category. Please add variety.'}), 400
+
+        # Generate 5 days of bento boxes (Monday-Friday)
+        from datetime import datetime, timedelta
+        start = datetime.strptime(start_date, '%Y-%m-%d')
+
+        plans_created = []
+        used_items = set()  # Track used items to maximize variety
+
+        for day_offset in range(5):
+            current_date = start + timedelta(days=day_offset)
+            date_str = current_date.strftime('%Y-%m-%d')
+
+            # Select 4 different items from different categories
+            compartments = [None, None, None, None]
+            categories_used = set()
+
+            for i in range(4):
+                # Find a category we haven't used yet for this bento
+                available_categories = [c for c in items_by_category.keys() if c not in categories_used]
+
+                if available_categories:
+                    # Pick a category
+                    category = random.choice(available_categories)
+                    categories_used.add(category)
+
+                    # Pick an item from this category, preferring ones we haven't used recently
+                    available_items = [item for item in items_by_category[category] if item['id'] not in used_items]
+                    if not available_items:
+                        available_items = items_by_category[category]  # Use any if all have been used
+
+                    if available_items:
+                        item = random.choice(available_items)
+                        compartments[i] = item['id']
+                        used_items.add(item['id'])
+
+                        # Clear used_items tracking after 10 items to allow reuse
+                        if len(used_items) > 10:
+                            used_items = set()
+
+            # Create the bento plan
+            cursor.execute("""
+                INSERT INTO bento_plans (date, child_name, compartment1_item_id, compartment2_item_id,
+                                       compartment3_item_id, compartment4_item_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (date_str, child_name, compartments[0], compartments[1], compartments[2], compartments[3]))
+
+            plans_created.append({
+                'id': cursor.lastrowid,
+                'date': date_str
+            })
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'plans': plans_created, 'message': f'Successfully created {len(plans_created)} bento plans for the week!'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': f'Invalid date format. Please use YYYY-MM-DD format. Error: {str(e)}'}), 400
+    except Exception as e:
+        print(f"Error generating weekly bento plans: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Failed to generate weekly bento plans. Please check your items and try again.'}), 500
+
+
+# ============================================================================
+# CATCH-ALL ROUTE FOR REACT ROUTER
+# ============================================================================
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react(path):

@@ -136,3 +136,32 @@ export interface PlanConstraints {
   prefer_favorites?: boolean;
   use_leftovers?: boolean;
 }
+
+// Bento box types
+export interface BentoItem {
+  id: number;
+  name: string;
+  category: string;
+  is_favorite: boolean;
+  allergens?: string;
+  notes?: string;
+  prep_time_minutes?: number;
+  created_at: string;
+}
+
+export interface BentoCompartment {
+  id: number;
+  name: string;
+  category: string;
+}
+
+export interface BentoPlan {
+  id: number;
+  date: string;
+  child_name?: string;
+  compartment1?: BentoCompartment | null;
+  compartment2?: BentoCompartment | null;
+  compartment3?: BentoCompartment | null;
+  compartment4?: BentoCompartment | null;
+  notes?: string;
+}

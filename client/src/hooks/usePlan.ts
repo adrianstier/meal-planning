@@ -52,3 +52,25 @@ export const useSuggestMeal = () => {
       planApi.suggest(date, mealType, constraints),
   });
 };
+
+export const useGenerateWeekPlan = () => {
+  return useMutation({
+    mutationFn: ({ startDate, numDays, mealTypes, avoidSchoolDuplicates }: {
+      startDate: string;
+      numDays?: number;
+      mealTypes?: string[];
+      avoidSchoolDuplicates?: boolean;
+    }) => planApi.generateWeek(startDate, numDays, mealTypes, avoidSchoolDuplicates),
+  });
+};
+
+export const useApplyGeneratedPlan = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (plan: any[]) => planApi.applyGenerated(plan),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plan'] });
+    },
+  });
+};

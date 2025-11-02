@@ -959,6 +959,140 @@ def suggest_meals():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/plan/generate-week', methods=['POST'])
+def generate_week_plan():
+    """Generate a weekly meal plan with smart scheduling"""
+    try:
+        data = request.json
+        start_date = data.get('start_date')
+        num_days = data.get('num_days', 7)
+        meal_types = data.get('meal_types', ['dinner'])  # Default to dinners only
+        avoid_school_duplicates = data.get('avoid_school_duplicates', True)
+
+        if not start_date:
+            return jsonify({'success': False, 'error': 'start_date is required'}), 400
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Get all available meals
+        cursor.execute("""
+            SELECT id, name, meal_type, tags, kid_friendly_level
+            FROM meals
+            WHERE meal_type IN ({})
+            ORDER BY RANDOM()
+        """.format(','.join('?' * len(meal_types))), meal_types)
+        available_meals = [dict(row) for row in cursor.fetchall()]
+
+        if not available_meals:
+            return jsonify({'success': False, 'error': 'No meals available'}), 400
+
+        # Get school menu for the date range if we need to avoid duplicates
+        school_menu = {}
+        if avoid_school_duplicates:
+            end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=num_days-1)).strftime('%Y-%m-%d')
+            try:
+                menu_items = db.get_school_menu_range(start_date, end_date)
+                for item in menu_items:
+                    date = item['menu_date']
+                    if date not in school_menu:
+                        school_menu[date] = []
+                    school_menu[date].append(item['meal_name'].lower())
+            except:
+                pass  # If school menu doesn't exist, just skip
+
+        # Generate meal plan
+        generated_plan = []
+        used_meals = set()
+
+        for day_offset in range(num_days):
+            current_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=day_offset)).strftime('%Y-%m-%d')
+            school_meals_today = school_menu.get(current_date, [])
+
+            for meal_type in meal_types:
+                # Find a suitable meal
+                suitable_meal = None
+
+                for meal in available_meals:
+                    # Skip if already used this week
+                    if meal['id'] in used_meals:
+                        continue
+
+                    # Skip if meal type doesn't match
+                    if meal['meal_type'] != meal_type:
+                        continue
+
+                    # Check for similarity with school meals
+                    is_similar = False
+                    if avoid_school_duplicates and school_meals_today:
+                        meal_name_lower = meal['name'].lower()
+                        for school_meal in school_meals_today:
+                            # Simple fuzzy matching: check for common words
+                            meal_words = set(meal_name_lower.split())
+                            school_words = set(school_meal.split())
+                            common_words = meal_words.intersection(school_words)
+
+                            # If they share significant words, consider them similar
+                            significant_words = common_words - {'with', 'and', 'or', 'the', 'a', 'an'}
+                            if len(significant_words) >= 1:
+                                is_similar = True
+                                break
+
+                    if not is_similar:
+                        suitable_meal = meal
+                        break
+
+                if suitable_meal:
+                    generated_plan.append({
+                        'date': current_date,
+                        'meal_type': meal_type,
+                        'meal_id': suitable_meal['id'],
+                        'meal_name': suitable_meal['name']
+                    })
+                    used_meals.add(suitable_meal['id'])
+
+        conn.close()
+
+        return jsonify({'success': True, 'data': generated_plan})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/plan/apply-generated', methods=['POST'])
+def apply_generated_plan():
+    """Apply a generated meal plan to the schedule"""
+    try:
+        data = request.json
+        plan = data.get('plan', [])
+
+        if not plan:
+            return jsonify({'success': False, 'error': 'No plan provided'}), 400
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        added_count = 0
+        for item in plan:
+            try:
+                cursor.execute("""
+                    INSERT INTO scheduled_meals (meal_date, meal_type, meal_id)
+                    VALUES (?, ?, ?)
+                """, (item['date'], item['meal_type'], item['meal_id']))
+                added_count += 1
+            except sqlite3.IntegrityError:
+                # Slot already filled, skip
+                continue
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'data': {'added_count': added_count}})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ============================================================================
 # MEAL HISTORY & FAVORITES ENDPOINTS
 # ============================================================================

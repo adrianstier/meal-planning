@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import {
@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
-import { useWeekPlan } from '../hooks/usePlan';
+import { useWeekPlan, useGenerateWeekPlan, useApplyGeneratedPlan } from '../hooks/usePlan';
 import AddMealDialog from '../components/features/plan/AddMealDialog';
 import type { MealPlan } from '../types/api';
 
@@ -23,6 +23,8 @@ const PlanPage: React.FC = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [generatedPlan, setGeneratedPlan] = useState<any[]>([]);
   const [selectedMeal, setSelectedMeal] = useState<MealPlan | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{
     date: string;
@@ -30,6 +32,8 @@ const PlanPage: React.FC = () => {
   } | null>(null);
 
   const { data: weekPlan, isLoading, error } = useWeekPlan(currentWeekStart);
+  const generateWeekPlan = useGenerateWeekPlan();
+  const applyGeneratedPlan = useApplyGeneratedPlan();
 
   // Generate 7 days starting from currentWeekStart
   const weekDays = useMemo(() => {
@@ -87,6 +91,33 @@ const PlanPage: React.FC = () => {
     setDialogOpen(true);
   };
 
+  const handleGenerateWeek = async () => {
+    try {
+      const result = await generateWeekPlan.mutateAsync({
+        startDate: currentWeekStart,
+        numDays: 7,
+        mealTypes: ['dinner'],
+        avoidSchoolDuplicates: true
+      });
+      setGeneratedPlan(result.data);
+      setGenerateDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to generate week plan:', error);
+      alert('Failed to generate meal plan. Please try again.');
+    }
+  };
+
+  const handleApplyPlan = async () => {
+    try {
+      await applyGeneratedPlan.mutateAsync(generatedPlan);
+      setGenerateDialogOpen(false);
+      setGeneratedPlan([]);
+    } catch (error) {
+      console.error('Failed to apply plan:', error);
+      alert('Failed to apply meal plan. Please try again.');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -137,6 +168,14 @@ const PlanPage: React.FC = () => {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                onClick={handleGenerateWeek}
+                disabled={generateWeekPlan.isPending}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {generateWeekPlan.isPending ? 'Generating...' : 'Generate Week'}
+              </Button>
               <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -369,6 +408,49 @@ const PlanPage: React.FC = () => {
           mealType={selectedSlot.mealType}
         />
       )}
+
+      {/* Generated Plan Dialog */}
+      <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Generated Meal Plan</DialogTitle>
+            <DialogDescription>
+              Review the generated meal plan below. Meals are automatically selected to avoid duplicates with school lunch.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {generatedPlan.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
+                <div>
+                  <p className="font-medium">{item.meal_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(parseISO(item.date), 'EEEE, MMM d')} - {item.meal_type}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {generatedPlan.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No meals generated. Make sure you have recipes in your collection.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApplyPlan}
+              disabled={applyGeneratedPlan.isPending || generatedPlan.length === 0}
+            >
+              {applyGeneratedPlan.isPending ? 'Applying...' : 'Apply to Schedule'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -928,9 +928,14 @@ def suggest_meals():
             # Check if meal_history table exists
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='meal_history'")
             if cursor.fetchone():
-                query += """ AND m.id NOT IN (
+                # Check which column name is used (cooked_date or date_eaten)
+                cursor.execute("PRAGMA table_info(meal_history)")
+                columns = {row[1] for row in cursor.fetchall()}
+                date_column = 'cooked_date' if 'cooked_date' in columns else 'date_eaten'
+
+                query += f""" AND m.id NOT IN (
                     SELECT DISTINCT meal_id FROM meal_history
-                    WHERE cooked_date >= ?
+                    WHERE {date_column} >= ?
                 )"""
                 params.append(cutoff_date)
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -482,6 +482,20 @@ const RecipesPage: React.FC = () => {
                         />
                       </div>
                     )}
+                    {meal.source_url && (
+                      <div className="px-6 pt-3 pb-1">
+                        <a
+                          href={meal.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          View Original Recipe
+                        </a>
+                      </div>
+                    )}
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -886,6 +900,51 @@ const RecipesPage: React.FC = () => {
                 />
               </div>
             )}
+
+            {/* Source URL */}
+            {selectedMeal?.source_url && (
+              <div>
+                <a
+                  href={selectedMeal.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View Original Recipe
+                </a>
+              </div>
+            )}
+
+            {/* Top Comments */}
+            {selectedMeal?.top_comments && (() => {
+              try {
+                const comments = JSON.parse(selectedMeal.top_comments);
+                if (comments && comments.length > 0) {
+                  return (
+                    <div>
+                      <h3 className="font-semibold mb-3 text-lg">Top Comments from Original Recipe</h3>
+                      <div className="space-y-3">
+                        {comments.map((comment: any, index: number) => (
+                          <div key={index} className="bg-muted/50 p-4 rounded-lg border border-muted">
+                            <p className="text-sm text-foreground leading-relaxed">{comment.text}</p>
+                            {comment.upvotes > 0 && (
+                              <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <ThumbsUp className="w-3.5 h-3.5" />
+                                <span className="font-medium">{comment.upvotes} people found this helpful</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+              } catch (e) {
+                return null;
+              }
+              return null;
+            })()}
 
             {/* Kid Rating */}
             <div>

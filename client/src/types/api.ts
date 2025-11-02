@@ -18,6 +18,8 @@ export interface Meal {
   kid_rating?: number;
   image_url?: string;
   cuisine?: string;
+  source_url?: string;
+  top_comments?: string;
 }
 
 export interface MealPlan {

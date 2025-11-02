@@ -2303,6 +2303,15 @@ def generate_weekly_bento_plans():
 
 
 # ============================================================================
+# STATIC FILES ROUTE
+# ============================================================================
+
+@app.route('/static/<path:path>')
+def serve_static(path):
+    """Serve static files from templates/static directory"""
+    return send_from_directory('templates/static', path)
+
+# ============================================================================
 # CATCH-ALL ROUTE FOR REACT ROUTER
 # ============================================================================
 
@@ -2313,8 +2322,8 @@ def serve_react(path):
     Serve React app for all non-API routes.
     This enables React Router to handle client-side routing.
     """
-    # If the path starts with 'api/', return 404
-    if path.startswith('api/'):
+    # If the path starts with 'api/' or 'static/', return 404
+    if path.startswith('api/') or path.startswith('static/'):
         return jsonify({'error': 'Not found'}), 404
 
     # Otherwise serve React's index.html

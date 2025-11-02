@@ -1,0 +1,9 @@
+{
+  "name": "Test Recipe Deploy Check",
+  "meal_type": "snack",
+  "ingredients": "test",
+  "instructions": "test",
+  "image_url": "/static/test.jpg",
+  "source_url": "https://test.com",
+  "cuisine": "American"
+}

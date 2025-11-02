@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import {
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { useWeekPlan, useGenerateWeekPlan, useApplyGeneratedPlan } from '../hooks/usePlan';
+import { useGenerateShoppingList } from '../hooks/useShopping';
 import AddMealDialog from '../components/features/plan/AddMealDialog';
 import type { MealPlan } from '../types/api';
 
@@ -34,6 +35,7 @@ const PlanPage: React.FC = () => {
   const { data: weekPlan, isLoading, error } = useWeekPlan(currentWeekStart);
   const generateWeekPlan = useGenerateWeekPlan();
   const applyGeneratedPlan = useApplyGeneratedPlan();
+  const generateShoppingList = useGenerateShoppingList();
 
   // Generate 7 days starting from currentWeekStart
   const weekDays = useMemo(() => {
@@ -118,6 +120,20 @@ const PlanPage: React.FC = () => {
     }
   };
 
+  const handleGenerateShoppingList = async () => {
+    try {
+      const endDate = format(addDays(parseISO(currentWeekStart), 6), 'yyyy-MM-dd');
+      const result = await generateShoppingList.mutateAsync({
+        startDate: currentWeekStart,
+        endDate: endDate
+      });
+      alert(`Shopping list generated! Added ${result.data.length} items organized by category. Check the Shopping tab.`);
+    } catch (error) {
+      console.error('Failed to generate shopping list:', error);
+      alert('Failed to generate shopping list. Please try again.');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -175,6 +191,14 @@ const PlanPage: React.FC = () => {
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 {generateWeekPlan.isPending ? 'Generating...' : 'Generate Week'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleGenerateShoppingList}
+                disabled={generateShoppingList.isPending}
+              >
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                {generateShoppingList.isPending ? 'Generating...' : 'Shopping List'}
               </Button>
               <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
                 <ChevronLeft className="h-4 w-4" />

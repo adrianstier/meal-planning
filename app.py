@@ -588,43 +588,127 @@ def clear_purchased_items():
 
 @app.route('/api/shopping/generate', methods=['POST'])
 def generate_shopping_from_plan():
-    """Generate shopping list from meal plan"""
+    """Generate smart shopping list from meal plan with AI categorization"""
     try:
         data = request.json
         start_date = data.get('start_date')
         end_date = data.get('end_date')
+        combine_similar = data.get('combine_similar', True)
 
         conn = db.connect()
         cursor = conn.cursor()
 
-        # Get all meals in the date range
+        # Get all meals in the date range with their names
         cursor.execute("""
-            SELECT DISTINCT m.ingredients
+            SELECT DISTINCT m.name, m.ingredients
             FROM scheduled_meals sm
             JOIN meals m ON sm.meal_id = m.id
             WHERE sm.meal_date BETWEEN ? AND ?
             AND m.ingredients IS NOT NULL
         """, (start_date, end_date))
 
-        # Parse ingredients and add to shopping list
-        items_added = []
-        for row in cursor.fetchall():
-            ingredients = row['ingredients']
-            if ingredients:
-                # Split by newline and add each as a shopping item
-                for line in ingredients.split('\n'):
+        meals = cursor.fetchall()
+
+        if not meals:
+            conn.close()
+            return jsonify({'success': True, 'data': [], 'message': 'No meals found in date range'})
+
+        # Collect all ingredients
+        all_ingredients = []
+        for meal in meals:
+            ingredients_text = meal['ingredients']
+            if ingredients_text:
+                for line in ingredients_text.split('\n'):
                     line = line.strip()
                     if line:
-                        cursor.execute("""
-                            INSERT INTO shopping_items (item_name, is_purchased)
-                            VALUES (?, 0)
-                        """, (line,))
-                        items_added.append({'id': cursor.lastrowid, 'item_name': line})
+                        all_ingredients.append(line)
 
-        conn.commit()
-        conn.close()
+        # Use AI to parse, combine, and categorize ingredients
+        ai_prompt = f"""You are a smart grocery list assistant. Parse and organize these ingredients from multiple recipes:
 
-        return jsonify({'success': True, 'data': items_added})
+{chr(10).join(all_ingredients)}
+
+Please:
+1. Parse each ingredient to extract quantity and item name
+2. Combine duplicate items (e.g., "2 cups flour" + "1 cup flour" = "3 cups flour")
+3. Categorize each item into grocery store sections: Produce, Meat & Seafood, Dairy & Eggs, Bakery, Pantry, Frozen, Beverages, Other
+4. Sort items by category
+
+Return a JSON array with this structure:
+[
+  {{
+    "item_name": "combined item with quantity",
+    "category": "store section",
+    "quantity": "amount",
+    "base_item": "item without quantity"
+  }}
+]
+
+IMPORTANT: Return ONLY the JSON array, no other text."""
+
+        try:
+            client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+            message = client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=4096,
+                messages=[{"role": "user", "content": ai_prompt}]
+            )
+
+            response_text = message.content[0].text.strip()
+
+            # Parse JSON response
+            if response_text.startswith('```json'):
+                response_text = response_text[7:]
+            if response_text.startswith('```'):
+                response_text = response_text[3:]
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]
+            response_text = response_text.strip()
+
+            parsed_items = json.loads(response_text)
+
+            # Add items to shopping list
+            items_added = []
+            for item in parsed_items:
+                cursor.execute("""
+                    INSERT INTO shopping_items (item_name, category, quantity, is_purchased)
+                    VALUES (?, ?, ?, 0)
+                """, (
+                    item.get('item_name'),
+                    item.get('category'),
+                    item.get('quantity')
+                ))
+                items_added.append({
+                    'id': cursor.lastrowid,
+                    'item_name': item.get('item_name'),
+                    'category': item.get('category'),
+                    'quantity': item.get('quantity')
+                })
+
+            conn.commit()
+            conn.close()
+
+            return jsonify({
+                'success': True,
+                'data': items_added,
+                'message': f'Added {len(items_added)} items organized by category'
+            })
+
+        except Exception as ai_error:
+            # Fallback to simple parsing if AI fails
+            print(f"AI parsing failed: {ai_error}, falling back to simple mode")
+            items_added = []
+            for line in all_ingredients:
+                cursor.execute("""
+                    INSERT INTO shopping_items (item_name, is_purchased)
+                    VALUES (?, 0)
+                """, (line,))
+                items_added.append({'id': cursor.lastrowid, 'item_name': line})
+
+            conn.commit()
+            conn.close()
+            return jsonify({'success': True, 'data': items_added})
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500

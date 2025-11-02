@@ -113,6 +113,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not run recipe metadata migration: {e}")
 
+    # Fix image URLs missing leading slash
+    print("\n🔄 Fixing image URL paths...")
+    try:
+        from database.migrations.fix_image_urls import migrate
+        migrate(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not fix image URLs: {e}")
+
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")
     print("=" * 60)

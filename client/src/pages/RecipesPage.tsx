@@ -116,6 +116,9 @@ const RecipesPage: React.FC = () => {
         tags: parsedData.tags || '',
         ingredients: ingredientsText,
         instructions: instructionsText,
+        image_url: parsedData.image_url,
+        source_url: parsedData.source_url,
+        cuisine: parsedData.cuisine,
       });
       setAddDialogOpen(true);
       setRecipeText('');
@@ -169,6 +172,9 @@ const RecipesPage: React.FC = () => {
         tags: parsedData.tags || '',
         ingredients: ingredientsText,
         instructions: instructionsText,
+        image_url: parsedData.image_url,
+        source_url: parsedData.source_url,
+        cuisine: parsedData.cuisine,
       });
       setAddDialogOpen(true);
       setRecipeUrl('');

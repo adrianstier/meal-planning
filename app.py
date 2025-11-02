@@ -99,6 +99,41 @@ def health():
     return jsonify(response)
 
 
+@app.route('/api/migrate', methods=['POST'])
+def run_migrations():
+    """Manually run database migrations"""
+    try:
+        results = {}
+
+        # Run cuisine migration
+        try:
+            from database.migrations.add_cuisine import migrate as cuisine_migrate
+            cuisine_migrate(db.db_path)
+            results['cuisine'] = 'success'
+        except Exception as e:
+            results['cuisine'] = f'error: {str(e)}'
+
+        # Run recipe metadata migration
+        try:
+            from database.migrations.add_recipe_metadata import migrate as metadata_migrate
+            metadata_migrate(db.db_path)
+            results['recipe_metadata'] = 'success'
+        except Exception as e:
+            results['recipe_metadata'] = f'error: {str(e)}'
+
+        # Run image URL fix migration
+        try:
+            from database.migrations.fix_image_urls import migrate as image_migrate
+            image_migrate(db.db_path)
+            results['image_urls'] = 'success'
+        except Exception as e:
+            results['image_urls'] = f'error: {str(e)}'
+
+        return jsonify({'success': True, 'migrations': results})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     """Get database statistics"""

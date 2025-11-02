@@ -81,6 +81,22 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not run shopping items migration: {e}")
 
+    # Run meal history and ratings migration
+    print("\n🔄 Running meal history and ratings migration...")
+    try:
+        from database.migrations.add_meal_history_and_ratings import migrate_add_meal_history_and_ratings
+        migrate_add_meal_history_and_ratings(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run meal history migration: {e}")
+
+    # Run leftovers table migration
+    print("\n🔄 Running leftovers table migration...")
+    try:
+        from database.migrations.add_leftovers_table import migrate_add_leftovers_table
+        migrate_add_leftovers_table(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run leftovers migration: {e}")
+
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")
     print("=" * 60)

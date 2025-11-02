@@ -1995,6 +1995,23 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"⚠️  Shopping items migration check: {e}")
 
+    # Run migration for cuisine column if needed
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(meals)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'cuisine' not in columns:
+            print("🔄 Running cuisine column migration...")
+            from database.migrations.add_cuisine import migrate
+            migrate(db.db_path)
+            print("✅ Cuisine column added!")
+        else:
+            print("✅ Cuisine column already exists")
+        conn.close()
+    except Exception as e:
+        print(f"⚠️  Cuisine migration check: {e}")
+
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', '1') == '1'
 

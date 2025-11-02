@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import traceback
 import base64
+import sqlite3
 
 # Load environment variables
 load_dotenv()

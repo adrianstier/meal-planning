@@ -11,6 +11,23 @@ from dataclasses import dataclass
 import os
 
 
+def get_database_path() -> str:
+    """
+    Get the appropriate database path.
+    Uses Railway persistent volume if available, otherwise local file.
+    """
+    # Check if running on Railway with a persistent volume
+    volume_path = os.getenv('RAILWAY_VOLUME_MOUNT_PATH', '/app/data')
+
+    if os.path.exists(volume_path) and os.path.isdir(volume_path):
+        db_path = os.path.join(volume_path, 'meal_planner.db')
+        print(f"📁 Using persistent volume database: {db_path}")
+        return db_path
+    else:
+        print("📁 Using local database: meal_planner.db")
+        return "meal_planner.db"
+
+
 @dataclass
 class Meal:
     """Represents a meal with all its components"""
@@ -38,8 +55,8 @@ class Ingredient:
 class MealPlannerDB:
     """Database interface for meal planning"""
 
-    def __init__(self, db_path: str = "meal_planner.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_database_path()
         self.conn = None
 
     def connect(self):

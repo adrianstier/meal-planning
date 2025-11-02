@@ -113,6 +113,14 @@ def run_migrations():
         except Exception as e:
             results['cuisine'] = f'error: {str(e)}'
 
+        # Run image_url migration (MUST run before recipe_metadata)
+        try:
+            from database.migrations.add_image_url import migrate as image_url_migrate
+            image_url_migrate(db.db_path)
+            results['image_url'] = 'success'
+        except Exception as e:
+            results['image_url'] = f'error: {str(e)}'
+
         # Run recipe metadata migration
         try:
             from database.migrations.add_recipe_metadata import migrate as metadata_migrate
@@ -125,9 +133,9 @@ def run_migrations():
         try:
             from database.migrations.fix_image_urls import migrate as image_migrate
             image_migrate(db.db_path)
-            results['image_urls'] = 'success'
+            results['image_urls_fix'] = 'success'
         except Exception as e:
-            results['image_urls'] = f'error: {str(e)}'
+            results['image_urls_fix'] = f'error: {str(e)}'
 
         return jsonify({'success': True, 'migrations': results})
     except Exception as e:

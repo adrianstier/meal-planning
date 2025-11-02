@@ -105,6 +105,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not run cuisine migration: {e}")
 
+    # Run image_url column migration (MUST run before recipe_metadata)
+    print("\n🔄 Running image_url column migration...")
+    try:
+        from database.migrations.add_image_url import migrate
+        migrate(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run image_url migration: {e}")
+
     # Run recipe metadata migration (source_url, top_comments)
     print("\n🔄 Running recipe metadata migration...")
     try:

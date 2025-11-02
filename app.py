@@ -1676,7 +1676,7 @@ if __name__ == '__main__':
         if not cursor.fetchone():
             print("🔄 Running shopping items migration...")
             from database.migrations.add_shopping_items_table import migrate_add_shopping_items
-            migrate_add_shopping_items(db.db_name)
+            migrate_add_shopping_items(db.db_path)
             print("✅ Shopping items table added!")
         conn.close()
     except Exception as e:

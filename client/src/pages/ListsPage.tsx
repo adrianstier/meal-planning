@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Check, X, Trash2 } from 'lucide-react';
+import { Plus, Check, X, Trash2, Share2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -29,6 +29,42 @@ const ListsPage: React.FC = () => {
     setNewQuantity('');
   };
 
+  const handleShareList = async () => {
+    if (!activeItems.length) return;
+
+    // Format shopping list as text
+    let shareText = 'Shopping List\n\n';
+
+    sortedCategories.forEach(category => {
+      shareText += `${category}:\n`;
+      itemsByCategory[category].forEach(item => {
+        const qty = item.quantity ? ` (${item.quantity})` : '';
+        shareText += `  • ${item.item_name}${qty}\n`;
+      });
+      shareText += '\n';
+    });
+
+    // Try Web Share API first (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Shopping List',
+          text: shareText,
+        });
+      } catch (err) {
+        // User cancelled or error - fallback to clipboard
+        if ((err as Error).name !== 'AbortError') {
+          await navigator.clipboard.writeText(shareText);
+          alert('Shopping list copied to clipboard!');
+        }
+      }
+    } else {
+      // Fallback to clipboard
+      await navigator.clipboard.writeText(shareText);
+      alert('Shopping list copied to clipboard!');
+    }
+  };
+
   // Group items by purchased status and category
   const activeItems = shoppingItems?.filter(item => !item.is_purchased) || [];
   const purchasedItems = shoppingItems?.filter(item => item.is_purchased) || [];
@@ -52,10 +88,25 @@ const ListsPage: React.FC = () => {
       {/* Header */}
       <Card>
         <CardHeader>
-          <CardTitle>Shopping List</CardTitle>
-          <CardDescription>
-            Keep track of what you need to buy
-          </CardDescription>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <CardTitle>Shopping List</CardTitle>
+              <CardDescription>
+                Keep track of what you need to buy
+              </CardDescription>
+            </div>
+            {activeItems.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShareList}
+                className="flex-shrink-0"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+            )}
+          </div>
         </CardHeader>
       </Card>
 
@@ -65,23 +116,27 @@ const ListsPage: React.FC = () => {
           <CardTitle className="text-base">Add Item</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
             <Input
               placeholder="Item name"
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-              className="flex-1"
+              className="flex-1 min-w-0 h-12 text-base"
             />
             <Input
               placeholder="Qty"
               value={newQuantity}
               onChange={(e) => setNewQuantity(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-              className="w-24"
+              className="w-24 h-12 text-base"
             />
-            <Button onClick={handleAddItem} disabled={!newItem.trim()}>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button
+              onClick={handleAddItem}
+              disabled={!newItem.trim()}
+              className="h-12 px-6"
+            >
+              <Plus className="h-5 w-5 mr-2" />
               Add
             </Button>
           </div>
@@ -117,25 +172,27 @@ const ListsPage: React.FC = () => {
                       {itemsByCategory[category].map((item) => (
                         <div
                           key={item.id}
-                          className="flex items-center gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors"
+                          className="flex items-center gap-3 p-4 rounded-md border bg-card hover:bg-accent/50 transition-colors min-h-[60px]"
                         >
                           <button
                             onClick={() => toggleItem.mutateAsync(item.id)}
-                            className="flex-shrink-0 h-5 w-5 rounded border-2 border-primary hover:bg-primary/10 transition-colors"
+                            className="flex-shrink-0 h-8 w-8 rounded border-2 border-primary hover:bg-primary/10 transition-colors active:scale-95"
+                            aria-label="Toggle purchased"
                           />
-                          <div className="flex-1">
-                            <p className="font-medium">{item.item_name}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-base leading-relaxed">{item.item_name}</p>
                             {item.quantity && (
-                              <p className="text-sm text-muted-foreground">{item.quantity}</p>
+                              <p className="text-sm text-muted-foreground mt-1">{item.quantity}</p>
                             )}
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-10 w-10 flex-shrink-0"
                             onClick={() => deleteItem.mutateAsync(item.id)}
+                            aria-label="Delete item"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-5 w-5" />
                           </Button>
                         </div>
                       ))}
@@ -169,29 +226,31 @@ const ListsPage: React.FC = () => {
                   {purchasedItems.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center gap-3 p-3 rounded-md border bg-card"
+                      className="flex items-center gap-3 p-4 rounded-md border bg-card min-h-[60px]"
                     >
                       <button
                         onClick={() => toggleItem.mutateAsync(item.id)}
-                        className="flex-shrink-0 h-5 w-5 rounded border-2 border-primary bg-primary flex items-center justify-center"
+                        className="flex-shrink-0 h-8 w-8 rounded border-2 border-primary bg-primary flex items-center justify-center active:scale-95 transition-transform"
+                        aria-label="Uncheck item"
                       >
-                        <Check className="h-3 w-3 text-primary-foreground" />
+                        <Check className="h-4 w-4 text-primary-foreground" />
                       </button>
-                      <div className="flex-1">
-                        <p className="font-medium line-through text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-base line-through text-muted-foreground leading-relaxed">
                           {item.item_name}
                         </p>
                         {item.quantity && (
-                          <p className="text-sm text-muted-foreground">{item.quantity}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{item.quantity}</p>
                         )}
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-10 w-10 flex-shrink-0"
                         onClick={() => deleteItem.mutateAsync(item.id)}
+                        aria-label="Delete item"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-5 w-5" />
                       </Button>
                     </div>
                   ))}

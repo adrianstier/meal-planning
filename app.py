@@ -22,7 +22,7 @@ import sqlite3
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='templates/static', static_url_path='/static')
 CORS(app)
 
 # Initialize database
@@ -2303,17 +2303,10 @@ def generate_weekly_bento_plans():
 
 
 # ============================================================================
-# STATIC FILES ROUTE
-# ============================================================================
-
-@app.route('/static/<path:path>')
-def serve_static(path):
-    """Serve static files from templates/static directory"""
-    return send_from_directory('templates/static', path)
-
-# ============================================================================
 # CATCH-ALL ROUTE FOR REACT ROUTER
 # ============================================================================
+# Note: Flask automatically serves files from templates/static at /static/
+# because we configured static_folder='templates/static' when creating the app
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -2322,8 +2315,8 @@ def serve_react(path):
     Serve React app for all non-API routes.
     This enables React Router to handle client-side routing.
     """
-    # If the path starts with 'api/' or 'static/', return 404
-    if path.startswith('api/') or path.startswith('static/'):
+    # If the path starts with 'api/', return 404 (static is handled automatically)
+    if path.startswith('api/'):
         return jsonify({'error': 'Not found'}), 404
 
     # Otherwise serve React's index.html

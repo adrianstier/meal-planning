@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { format, startOfWeek, addDays, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart } from 'lucide-react';
+import { format, startOfWeek, addDays, parseISO, isToday } from 'date-fns';
+import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart, Clock, Baby, Package, Utensils, MoreVertical } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import {
@@ -91,6 +91,51 @@ const PlanPage: React.FC = () => {
   const handleAddMeal = (date: string, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
     setSelectedSlot({ date, mealType });
     setDialogOpen(true);
+  };
+
+  // Helper to check if meal has specific tag
+  const hasTag = (tags: string | null | undefined, tag: string) => {
+    return tags?.toLowerCase().includes(tag.toLowerCase());
+  };
+
+  // Helper to render meal badges
+  const renderMealBadges = (meal: any) => {
+    const badges = [];
+
+    if (meal.cook_time_minutes && meal.cook_time_minutes <= 30) {
+      badges.push(
+        <span key="quick" className="inline-flex items-center text-xs text-orange-700">
+          <Clock className="h-3 w-3 mr-0.5" />
+          {meal.cook_time_minutes}m
+        </span>
+      );
+    }
+
+    if (hasTag(meal.meal_tags, 'kid-friendly')) {
+      badges.push(
+        <span key="kid" className="inline-flex items-center text-xs text-blue-700">
+          <Baby className="h-3 w-3" />
+        </span>
+      );
+    }
+
+    if (hasTag(meal.meal_tags, 'bento')) {
+      badges.push(
+        <span key="bento" className="inline-flex items-center text-xs text-green-700">
+          <Package className="h-3 w-3" />
+        </span>
+      );
+    }
+
+    if (hasTag(meal.meal_tags, 'leftovers')) {
+      badges.push(
+        <span key="leftovers" className="inline-flex items-center text-xs text-purple-700">
+          <Utensils className="h-3 w-3" />
+        </span>
+      );
+    }
+
+    return badges;
   };
 
   const handleGenerateWeek = async () => {
@@ -224,12 +269,23 @@ const PlanPage: React.FC = () => {
             snack: [],
           };
 
+          const isTodayCard = isToday(parseISO(day.date));
+
           return (
-            <Card key={day.date} className="flex flex-col">
+            <Card
+              key={day.date}
+              className={`flex flex-col ${isTodayCard ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+            >
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">
-                  <div className="hidden md:block">{day.dayName}</div>
-                  <div className="md:hidden">{day.dayShort}</div>
+                  <div className="hidden md:block">
+                    {day.dayName}
+                    {isTodayCard && <span className="ml-2 text-xs font-normal text-primary">(Today)</span>}
+                  </div>
+                  <div className="md:hidden">
+                    {day.dayShort}
+                    {isTodayCard && <span className="ml-1 text-xs font-normal text-primary">•</span>}
+                  </div>
                 </CardTitle>
                 <CardDescription>
                   {day.month} {day.dayNum}
@@ -259,7 +315,12 @@ const PlanPage: React.FC = () => {
                           setViewDialogOpen(true);
                         }}
                       >
-                        {meal.meal_name}
+                        <div className="font-medium text-sm mb-0.5">{meal.meal_name}</div>
+                        {renderMealBadges(meal).length > 0 && (
+                          <div className="flex gap-1.5 flex-wrap">
+                            {renderMealBadges(meal)}
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -290,7 +351,12 @@ const PlanPage: React.FC = () => {
                           setViewDialogOpen(true);
                         }}
                       >
-                        {meal.meal_name}
+                        <div className="font-medium text-sm mb-0.5">{meal.meal_name}</div>
+                        {renderMealBadges(meal).length > 0 && (
+                          <div className="flex gap-1.5 flex-wrap">
+                            {renderMealBadges(meal)}
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -321,7 +387,12 @@ const PlanPage: React.FC = () => {
                           setViewDialogOpen(true);
                         }}
                       >
-                        {meal.meal_name}
+                        <div className="font-medium text-sm mb-0.5">{meal.meal_name}</div>
+                        {renderMealBadges(meal).length > 0 && (
+                          <div className="flex gap-1.5 flex-wrap">
+                            {renderMealBadges(meal)}
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (

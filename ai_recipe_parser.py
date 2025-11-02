@@ -9,12 +9,19 @@ import json
 from typing import Dict, List, Optional
 import re
 import requests
-from bs4 import BeautifulSoup
 import os
 import uuid
 from urllib.parse import urlparse, urljoin
 from PIL import Image
 from io import BytesIO
+
+# Optional dependency for image extraction from URLs
+try:
+    from bs4 import BeautifulSoup
+    HAS_BEAUTIFULSOUP = True
+except ImportError:
+    HAS_BEAUTIFULSOUP = False
+    print("⚠️  BeautifulSoup not available - image extraction from URLs will be disabled")
 
 
 class RecipeParser:
@@ -36,6 +43,11 @@ class RecipeParser:
         Extract and download the main recipe image from a URL
         Returns relative path to saved image or None
         """
+        # Check if BeautifulSoup is available
+        if not HAS_BEAUTIFULSOUP:
+            print("⚠️  BeautifulSoup not installed - skipping image extraction from URL")
+            return None
+
         try:
             # Fetch the webpage
             headers = {

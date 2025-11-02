@@ -73,6 +73,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not run migration: {e}")
 
+    # Run shopping_items table migration
+    print("\n🔄 Running shopping items table migration...")
+    try:
+        from database.migrations.add_shopping_items_table import migrate_add_shopping_items
+        migrate_add_shopping_items(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run shopping items migration: {e}")
+
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")
     print("=" * 60)

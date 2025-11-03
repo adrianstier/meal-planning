@@ -62,6 +62,7 @@ const RecipesPage: React.FC = () => {
     tags: '',
     ingredients: '',
     instructions: '',
+    image_url: '',
   });
 
   const { data: meals, isLoading } = useMeals();
@@ -202,6 +203,7 @@ const RecipesPage: React.FC = () => {
         tags: '',
         ingredients: '',
         instructions: '',
+        image_url: '',
       });
       setParsedRecipe(null);
       setIsEditing(false);
@@ -636,6 +638,7 @@ const RecipesPage: React.FC = () => {
                             tags: meal.tags || '',
                             ingredients: meal.ingredients || '',
                             instructions: meal.instructions || '',
+                            image_url: meal.image_url || '',
                           });
                           setSelectedMeal(meal);
                           setIsEditing(true);
@@ -858,6 +861,19 @@ const RecipesPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                 placeholder="e.g., italian, pasta, quick"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="image_url">Image URL (optional)</Label>
+              <Input
+                id="image_url"
+                value={formData.image_url || ''}
+                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste a URL to an image of the recipe
+              </p>
             </div>
 
             <div className="space-y-2">

@@ -35,5 +35,6 @@ python3 database/migrations/add_recipe_metadata.py "$DB_PATH" || echo "⚠️  R
 python3 database/migrations/add_cuisine.py "$DB_PATH" || echo "⚠️  Cuisine migration skipped"
 python3 database/migrations/add_bento_tables.py "$DB_PATH" || echo "⚠️  Bento tables migration skipped"
 python3 database/migrations/add_performance_indexes.py "$DB_PATH" || echo "⚠️  Performance indexes migration skipped"
+python3 database/migrations/add_multi_user_support.py "$DB_PATH" || echo "⚠️  Multi-user migration skipped"
 
 echo "✅ Build complete!"

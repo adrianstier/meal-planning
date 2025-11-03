@@ -1149,6 +1149,7 @@ def get_week_plan():
         conn = db.connect()
         cursor = conn.cursor()
 
+        # TODO: Re-enable user_id filter once migration adds the column
         cursor.execute("""
             SELECT
                 sm.id,
@@ -1167,7 +1168,6 @@ def get_week_plan():
             JOIN meals m ON sm.meal_id = m.id
             JOIN meal_types mt ON sm.meal_type_id = mt.id
             WHERE sm.meal_date BETWEEN ? AND ?
-            AND sm.user_id = ?
             ORDER BY sm.meal_date,
                 CASE mt.name
                     WHEN 'breakfast' THEN 1
@@ -1175,7 +1175,7 @@ def get_week_plan():
                     WHEN 'snack' THEN 3
                     WHEN 'dinner' THEN 4
                 END
-        """, (start_date, end_date, user_id))
+        """, (start_date, end_date))
 
         plan_items = [dict(row) for row in cursor.fetchall()]
         conn.close()

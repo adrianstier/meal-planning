@@ -1,0 +1,138 @@
+import axios from 'axios';
+import type {
+  Meal,
+  MealPlan,
+  Leftover,
+  SchoolMenuItem,
+  MenuFeedback,
+  LunchAlternative,
+  CalendarData,
+  ShoppingItem,
+  MealHistory,
+  ApiResponse,
+  PlanConstraints,
+  LeftoverSuggestion,
+} from '../types/api';
+
+// API base URL - use relative URLs in production, localhost in development
+const API_BASE_URL = process.env.REACT_APP_API_URL || (
+  process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5001'
+);
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
+
+// Interceptor to unwrap Flask API responses { success: true, data: ... }
+api.interceptors.response.use(
+  (response) => {
+    // If response has success field, unwrap the data
+    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+      return { ...response, data: response.data.data };
+    }
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Meal API
+export const mealsApi = {
+  getAll: () => api.get<Meal[]>('/api/meals'),
+  getById: (id: number) => api.get<Meal>(`/api/meals/${id}`),
+  create: (meal: Partial<Meal>) => api.post<Meal>('/api/meals', meal),
+  update: (id: number, meal: Partial<Meal>) => api.put<Meal>(`/api/meals/${id}`, meal),
+  delete: (id: number) => api.delete(`/api/meals/${id}`),
+  parseRecipe: (text: string) => api.post<Meal>('/api/meals/parse', { recipe_text: text }),
+  search: (query: string) => api.get<Meal[]>(`/api/meals/search?q=${encodeURIComponent(query)}`),
+  favorite: (id: number) => api.post(`/api/meals/${id}/favorite`),
+  unfavorite: (id: number) => api.delete(`/api/meals/${id}/favorite`),
+  updateLeftoverSettings: (id: number, settings: { makes_leftovers: boolean; leftover_servings?: number; leftover_days?: number }) =>
+    api.put(`/api/meals/${id}/leftover-settings`, settings),
+};
+
+// Meal Plan API
+export const planApi = {
+  getWeek: (startDate: string) => api.get<MealPlan[]>(`/api/plan/week?start_date=${startDate}`),
+  add: (plan: Partial<MealPlan>) => api.post<MealPlan>('/api/plan', plan),
+  update: (id: number, plan: Partial<MealPlan>) => api.put<MealPlan>(`/api/plan/${id}`, plan),
+  delete: (id: number) => api.delete(`/api/plan/${id}`),
+  suggest: (date: string, mealType: string, constraints?: PlanConstraints) =>
+    api.post<Meal[]>('/api/plan/suggest', { date, meal_type: mealType, ...constraints }),
+  generateWeek: (startDate: string, numDays?: number, mealTypes?: string[], avoidSchoolDuplicates?: boolean, cuisines?: string[] | 'all', generateBentos?: boolean, bentoChildName?: string) =>
+    api.post<any[]>('/api/plan/generate-week', {
+      start_date: startDate,
+      num_days: numDays,
+      meal_types: mealTypes,
+      avoid_school_duplicates: avoidSchoolDuplicates,
+      cuisines: cuisines,
+      generate_bentos: generateBentos,
+      bento_child_name: bentoChildName
+    }),
+  applyGenerated: (plan: any[]) => api.post('/api/plan/apply-generated', { plan }),
+};
+
+// Leftovers API
+export const leftoversApi = {
+  getActive: () => api.get<Leftover[]>('/api/leftovers'),
+  add: (leftover: { meal_id: number; cooked_date?: string; servings?: number; days_good?: number; notes?: string }) =>
+    api.post<Leftover>('/api/leftovers', leftover),
+  consume: (id: number) => api.post(`/api/leftovers/${id}/consume`),
+  updateServings: (id: number, servings: number) => api.put(`/api/leftovers/${id}/servings`, { servings_remaining: servings }),
+  getSuggestions: () => api.get<LeftoverSuggestion[]>('/api/leftovers/suggestions'),
+};
+
+// School Menu API
+export const schoolMenuApi = {
+  getAll: () => api.get<SchoolMenuItem[]>('/api/school-menu'),
+  getByDate: (date: string) => api.get<SchoolMenuItem[]>(`/api/school-menu?date=${date}`),
+  getRange: (startDate: string, endDate: string) =>
+    api.get<SchoolMenuItem[]>(`/api/school-menu?start_date=${startDate}&end_date=${endDate}`),
+  add: (item: Partial<SchoolMenuItem>) => api.post<SchoolMenuItem>('/api/school-menu', item),
+  addBulk: (items: Partial<SchoolMenuItem>[]) => api.post('/api/school-menu', { items }),
+  delete: (id: number) => api.delete(`/api/school-menu/${id}`),
+  addFeedback: (menuItemId: number, feedbackType: 'disliked' | 'allergic' | 'wont_eat', notes?: string) =>
+    api.post<MenuFeedback>('/api/school-menu/feedback', { menu_item_id: menuItemId, feedback_type: feedbackType, notes }),
+  getLunchAlternatives: (date: string) => api.get<LunchAlternative>(`/api/school-menu/lunch-alternatives/${date}`),
+  parsePhoto: (imageData: string, imageType: string, autoAdd: boolean = false) =>
+    api.post<{ success: boolean; menu_items: SchoolMenuItem[]; count: number; added_count?: number }>(
+      '/api/school-menu/parse-photo',
+      { image_data: imageData, image_type: imageType, auto_add: autoAdd },
+      { timeout: 60000 } // 60 second timeout for vision API
+    ),
+  getCalendar: (startDate?: string, endDate?: string) => {
+    let url = '/api/school-menu/calendar';
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (params.toString()) url += `?${params.toString()}`;
+    return api.get<{ success: boolean; calendar_data: CalendarData }>(url);
+  },
+  cleanup: (daysOld: number = 60) => api.post('/api/school-menu/cleanup', { days_old: daysOld }),
+};
+
+// Shopping List API
+export const shoppingApi = {
+  getAll: () => api.get<ShoppingItem[]>('/api/shopping'),
+  add: (item: Partial<ShoppingItem>) => api.post<ShoppingItem>('/api/shopping', item),
+  update: (id: number, item: Partial<ShoppingItem>) => api.put<ShoppingItem>(`/api/shopping/${id}`, item),
+  delete: (id: number) => api.delete(`/api/shopping/${id}`),
+  togglePurchased: (id: number) => api.post(`/api/shopping/${id}/toggle`),
+  clearPurchased: () => api.delete('/api/shopping/purchased'),
+  generateFromPlan: (startDate: string, endDate: string) =>
+    api.post<ShoppingItem[]>('/api/shopping/generate', { start_date: startDate, end_date: endDate }),
+};
+
+// History API
+export const historyApi = {
+  getAll: () => api.get<MealHistory[]>('/api/history'),
+  add: (history: Partial<MealHistory>) => api.post<MealHistory>('/api/history', history),
+  update: (id: number, history: Partial<MealHistory>) => api.put<MealHistory>(`/api/history/${id}`, history),
+  delete: (id: number) => api.delete(`/api/history/${id}`),
+  getByMeal: (mealId: number) => api.get<MealHistory[]>(`/api/history/meal/${mealId}`),
+};
+
+export default api;

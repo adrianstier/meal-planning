@@ -6,7 +6,8 @@ import sys
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from meal_planner import get_db_path
+from meal_planner import MealPlannerDB
 
 if __name__ == '__main__':
-    print(get_db_path())
+    db = MealPlannerDB()
+    print(db.db_path)

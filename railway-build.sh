@@ -1,7 +1,13 @@
 #!/bin/bash
 # Railway build script - builds React app during deployment
+# Build timestamp: 2025-11-03 06:50:00 UTC - FORCE REBUILD
 
 echo "🏗️  Building React app..."
+echo "🔄 Clearing npm cache to force fresh build..."
+cd client
+rm -rf node_modules/.cache
+rm -rf build
+cd ..
 cd client
 npm install
 npm run build

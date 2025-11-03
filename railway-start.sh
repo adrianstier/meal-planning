@@ -10,5 +10,8 @@ echo "📊 Database path: $DB_PATH"
 echo "🔄 Running multi-user authentication migration..."
 python3 database/migrations/add_multi_user_support.py "$DB_PATH" || echo "⚠️  Multi-user migration skipped"
 
+echo "🔄 Resetting admin password to known value..."
+python3 database/migrations/reset_admin_password.py "$DB_PATH" || echo "⚠️  Password reset skipped"
+
 echo "✅ Migrations complete! Starting gunicorn..."
 exec gunicorn app:app

@@ -5,10 +5,14 @@ Adds new columns: meal_type, servings, difficulty, tags, ingredients, instructio
 """
 
 import sqlite3
+import sys
+import os
 from datetime import datetime
 
-def migrate_database():
-    conn = sqlite3.connect('meal_planner.db')
+def migrate_database(db_path='meal_planner.db'):
+    """Run database migration to add React schema columns"""
+    print(f"Migrating database at: {db_path}")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     print("Starting database migration to React schema...")
@@ -84,4 +88,9 @@ def migrate_database():
     conn.close()
 
 if __name__ == '__main__':
-    migrate_database()
+    db_path = sys.argv[1] if len(sys.argv) > 1 else 'meal_planner.db'
+
+    if not os.path.exists(db_path):
+        print(f"Warning: Database not found at {db_path}, will create new one")
+
+    migrate_database(db_path)

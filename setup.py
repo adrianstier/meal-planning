@@ -164,6 +164,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not run multi-user migration: {e}")
 
+    # Reset admin password to known value (for deployment consistency)
+    print("\n🔄 Resetting admin password to known value...")
+    try:
+        from database.migrations.reset_admin_password import reset_admin_password
+        reset_admin_password('OwtvQubm2H9BP0qE', db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not reset admin password: {e}")
+
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")
     print("=" * 60)

@@ -1,7 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
+import LoginPage from './pages/LoginPage';
 import PlanPage from './pages/PlanPage';
 import RecipesPage from './pages/RecipesPage';
 import BentoPage from './pages/BentoPage';
@@ -20,23 +22,48 @@ const queryClient = new QueryClient({
   },
 });
 
+function AppContent() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  return (
+    <Router>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Navigate to="/plan" replace />} />
+          <Route path="/plan" element={<PlanPage />} />
+          <Route path="/recipes" element={<RecipesPage />} />
+          <Route path="/bento" element={<BentoPage />} />
+          <Route path="/browse" element={<Navigate to="/recipes" replace />} />
+          <Route path="/leftovers" element={<LeftoversPage />} />
+          <Route path="/school-menu" element={<SchoolMenuPage />} />
+          <Route path="/lists" element={<ListsPage />} />
+        </Routes>
+      </Layout>
+    </Router>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Navigate to="/plan" replace />} />
-            <Route path="/plan" element={<PlanPage />} />
-            <Route path="/recipes" element={<RecipesPage />} />
-            <Route path="/bento" element={<BentoPage />} />
-            <Route path="/browse" element={<Navigate to="/recipes" replace />} />
-            <Route path="/leftovers" element={<LeftoversPage />} />
-            <Route path="/school-menu" element={<SchoolMenuPage />} />
-            <Route path="/lists" element={<ListsPage />} />
-          </Routes>
-        </Layout>
-      </Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

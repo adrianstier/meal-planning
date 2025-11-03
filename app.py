@@ -4,13 +4,17 @@ Flask Web Application for Family Meal Planning
 Includes AI-powered recipe parsing and meal randomization
 """
 
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory, session
 from flask_cors import CORS
 from meal_planner import MealPlannerDB
 from ai_recipe_parser import RecipeParser
 from school_menu_vision_parser import SchoolMenuVisionParser
 from recipe_url_scraper import RecipeURLScraper
 from validation import db_connection, sanitize_ai_input, ValidationError, error_response
+from auth import (
+    authenticate_user, create_user, get_current_user,
+    get_current_user_id, login_required
+)
 import os
 from dotenv import load_dotenv
 import random
@@ -21,12 +25,20 @@ import base64
 import sqlite3
 import json
 import anthropic
+import secrets
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__, static_folder='templates/static', static_url_path='/static')
-CORS(app)
+
+# Configure session for authentication
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('RAILWAY_ENVIRONMENT') is not None  # HTTPS only in production
+
+CORS(app, supports_credentials=True)
 
 # Initialize database
 db = MealPlannerDB()
@@ -142,6 +154,104 @@ def health():
     return jsonify(response)
 
 
+# ============================================================================
+# AUTHENTICATION ENDPOINTS
+# ============================================================================
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Register a new user"""
+    data = request.json
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+    display_name = data.get('display_name')
+
+    if not username or not email or not password:
+        return jsonify({
+            'success': False,
+            'error': 'Username, email, and password are required'
+        }), 400
+
+    user_id, error = create_user(username, email, password, display_name, db.db_path)
+
+    if error:
+        return jsonify({
+            'success': False,
+            'error': error
+        }), 400
+
+    # Auto-login after registration
+    session['user_id'] = user_id
+
+    return jsonify({
+        'success': True,
+        'message': 'Registration successful'
+    })
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login user"""
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({
+            'success': False,
+            'error': 'Username and password are required'
+        }), 400
+
+    user, error = authenticate_user(username, password, db.db_path)
+
+    if error:
+        return jsonify({
+            'success': False,
+            'error': error
+        }), 401
+
+    # Set session
+    session['user_id'] = user['id']
+
+    return jsonify({
+        'success': True,
+        'user': {
+            'id': user['id'],
+            'username': user['username'],
+            'email': user['email'],
+            'display_name': user.get('display_name')
+        }
+    })
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    """Logout user"""
+    session.pop('user_id', None)
+    return jsonify({
+        'success': True,
+        'message': 'Logged out successfully'
+    })
+
+
+@app.route('/api/auth/me', methods=['GET'])
+def get_me():
+    """Get current user info"""
+    user = get_current_user(db.db_path)
+
+    if not user:
+        return jsonify({
+            'success': False,
+            'error': 'Not authenticated'
+        }), 401
+
+    return jsonify({
+        'success': True,
+        'user': user
+    })
+
+
 @app.route('/api/migrate', methods=['POST'])
 def run_migrations():
     """Manually run database migrations"""
@@ -196,9 +306,11 @@ def get_stats():
 
 
 @app.route('/api/meals', methods=['GET'])
+@login_required
 def get_meals():
     """Get all meals with optional filters and pagination"""
     try:
+        user_id = get_current_user_id()
         meal_type = request.args.get('type')  # dinner, lunch, snack, breakfast
 
         # Performance: Add pagination support
@@ -217,9 +329,9 @@ def get_meals():
 
             # Get total count for pagination metadata
             if meal_type:
-                cursor.execute("SELECT COUNT(*) as total FROM meals WHERE meal_type = ?", (meal_type,))
+                cursor.execute("SELECT COUNT(*) as total FROM meals WHERE user_id = ? AND meal_type = ?", (user_id, meal_type))
             else:
-                cursor.execute("SELECT COUNT(*) as total FROM meals")
+                cursor.execute("SELECT COUNT(*) as total FROM meals WHERE user_id = ?", (user_id,))
 
             total_count = cursor.fetchone()['total']
 
@@ -228,17 +340,18 @@ def get_meals():
                 cursor.execute("""
                     SELECT *
                     FROM meals
-                    WHERE meal_type = ?
+                    WHERE user_id = ? AND meal_type = ?
                     ORDER BY name
                     LIMIT ? OFFSET ?
-                """, (meal_type, per_page, offset))
+                """, (user_id, meal_type, per_page, offset))
             else:
                 cursor.execute("""
                     SELECT *
                     FROM meals
+                    WHERE user_id = ?
                     ORDER BY name
                     LIMIT ? OFFSET ?
-                """, (per_page, offset))
+                """, (user_id, per_page, offset))
 
             meals = [dict(row) for row in cursor.fetchall()]
 
@@ -262,26 +375,31 @@ def get_meals():
 
 
 @app.route('/api/meals/search', methods=['GET'])
+@login_required
 def search_meals():
     """Search meals by name or ingredient"""
     try:
+        user_id = get_current_user_id()
         query = request.args.get('q', '')
         meal_type = request.args.get('type')
 
-        meals = db.search_meals(query, meal_type)
+        meals = db.search_meals(query, meal_type, user_id)
         return jsonify({'success': True, 'data': meals})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/meals/<int:meal_id>', methods=['GET'])
+@login_required
 def get_meal(meal_id):
     """Get a single meal by ID"""
     try:
+        user_id = get_current_user_id()
+
         # Security: Use context manager to ensure connection is closed
         with db_connection(db) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
+            cursor.execute("SELECT * FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
             meal = cursor.fetchone()
 
             if not meal:
@@ -294,9 +412,11 @@ def get_meal(meal_id):
 
 
 @app.route('/api/meals', methods=['POST'])
+@login_required
 def create_meal():
     """Create a new meal"""
     try:
+        user_id = get_current_user_id()
         data = request.json
 
         # Security: Use context manager to ensure connection is closed
@@ -312,8 +432,8 @@ def create_meal():
                 INSERT INTO meals (
                     name, meal_type, meal_type_id, cook_time_minutes, servings, difficulty,
                     tags, ingredients, instructions, is_favorite, makes_leftovers,
-                    leftover_servings, leftover_days, image_url, source_url, cuisine, top_comments
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    leftover_servings, leftover_days, image_url, source_url, cuisine, top_comments, user_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 data.get('name'),
                 meal_type,
@@ -331,7 +451,8 @@ def create_meal():
                 data.get('image_url'),
                 data.get('source_url'),
                 data.get('cuisine'),
-                data.get('top_comments')
+                data.get('top_comments'),
+                user_id
             ))
 
             meal_id = cursor.lastrowid
@@ -346,9 +467,11 @@ def create_meal():
 
 
 @app.route('/api/meals/<int:meal_id>', methods=['PUT'])
+@login_required
 def update_meal(meal_id):
     """Update an existing meal"""
     try:
+        user_id = get_current_user_id()
         data = request.json
 
         # Security: Whitelist allowed fields to prevent SQL injection
@@ -362,6 +485,11 @@ def update_meal(meal_id):
         # Security: Use context manager to ensure connection is closed
         with db_connection(db) as conn:
             cursor = conn.cursor()
+
+            # Verify meal ownership
+            cursor.execute("SELECT id FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'error': 'Meal not found'}), 404
 
             # Build update query dynamically based on provided fields
             update_fields = []
@@ -384,12 +512,13 @@ def update_meal(meal_id):
                 return jsonify({'success': False, 'error': 'No fields to update'}), 400
 
             update_values.append(meal_id)
-            query = f"UPDATE meals SET {', '.join(update_fields)} WHERE id = ?"
+            update_values.append(user_id)
+            query = f"UPDATE meals SET {', '.join(update_fields)} WHERE id = ? AND user_id = ?"
 
             cursor.execute(query, update_values)
 
             # Return the updated meal
-            cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
+            cursor.execute("SELECT * FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
             meal = cursor.fetchone()
 
             if not meal:
@@ -401,12 +530,21 @@ def update_meal(meal_id):
 
 
 @app.route('/api/meals/<int:meal_id>', methods=['DELETE'])
+@login_required
 def delete_meal(meal_id):
     """Delete a meal"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM meals WHERE id = ?", (meal_id,))
+
+        # Verify ownership before deleting
+        cursor.execute("SELECT id FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Meal not found'}), 404
+
+        cursor.execute("DELETE FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
         conn.commit()
         conn.close()
 
@@ -416,12 +554,21 @@ def delete_meal(meal_id):
 
 
 @app.route('/api/meals/<int:meal_id>/favorite', methods=['POST'])
+@login_required
 def favorite_meal(meal_id):
     """Mark a meal as favorite"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
-        cursor.execute("UPDATE meals SET is_favorite = 1 WHERE id = ?", (meal_id,))
+
+        # Verify ownership
+        cursor.execute("SELECT id FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Meal not found'}), 404
+
+        cursor.execute("UPDATE meals SET is_favorite = 1 WHERE id = ? AND user_id = ?", (meal_id, user_id))
         conn.commit()
         conn.close()
 
@@ -431,12 +578,21 @@ def favorite_meal(meal_id):
 
 
 @app.route('/api/meals/<int:meal_id>/favorite', methods=['DELETE'])
+@login_required
 def unfavorite_meal(meal_id):
     """Remove favorite status from a meal"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
-        cursor.execute("UPDATE meals SET is_favorite = 0 WHERE id = ?", (meal_id,))
+
+        # Verify ownership
+        cursor.execute("SELECT id FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Meal not found'}), 404
+
+        cursor.execute("UPDATE meals SET is_favorite = 0 WHERE id = ? AND user_id = ?", (meal_id, user_id))
         conn.commit()
         conn.close()
 
@@ -446,6 +602,7 @@ def unfavorite_meal(meal_id):
 
 
 @app.route('/api/meals/parse', methods=['POST'])
+@login_required
 def parse_recipe():
     """Parse a recipe using AI or URL scraper"""
     try:
@@ -482,17 +639,20 @@ def parse_recipe():
 
 
 @app.route('/api/meals/kid-friendly', methods=['GET'])
+@login_required
 def get_kid_friendly_meals():
     """Get kid-friendly meals"""
     try:
+        user_id = get_current_user_id()
         min_level = int(request.args.get('min_level', 7))
-        meals = db.get_kid_friendly_meals(min_level)
+        meals = db.get_kid_friendly_meals(min_level, user_id)
         return jsonify({'success': True, 'data': meals})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/meals/randomize', methods=['POST'])
+@login_required
 def randomize_meals():
     """
     Randomize weekly meal plan with filters:
@@ -503,6 +663,7 @@ def randomize_meals():
     - days: number of days to plan (default 7)
     """
     try:
+        user_id = get_current_user_id()
         data = request.json
         dietary_pref = data.get('dietary_preference', 'all')
         time_constraint = data.get('time_constraint', 'all')
@@ -522,10 +683,11 @@ def randomize_meals():
             JOIN meal_types mt ON m.meal_type_id = mt.id
             LEFT JOIN meal_ingredients mi ON m.id = mi.meal_id
             LEFT JOIN ingredients i ON mi.ingredient_id = i.id
-            WHERE m.kid_friendly_level >= ?
+            WHERE m.user_id = ?
+            AND m.kid_friendly_level >= ?
             AND mt.name = 'dinner'
         """
-        params = [kid_friendly_min]
+        params = [user_id, kid_friendly_min]
 
         # Dietary filters
         if dietary_pref == 'vegetarian':
@@ -592,6 +754,7 @@ def randomize_meals():
 
 
 @app.route('/api/meals/weekly-plan', methods=['GET'])
+@login_required
 def get_weekly_plan():
     """Get the current weekly meal plan"""
     try:
@@ -603,9 +766,11 @@ def get_weekly_plan():
 
 
 @app.route('/api/shopping-list', methods=['GET'])
+@login_required
 def get_shopping_list():
     """Generate shopping list for a meal plan"""
     try:
+        user_id = get_current_user_id()
         plan_id = int(request.args.get('plan_id', 1))
         shopping_list = db.generate_shopping_list(plan_id)
         return jsonify({'success': True, 'data': shopping_list})
@@ -618,16 +783,19 @@ def get_shopping_list():
 # ============================================================================
 
 @app.route('/api/shopping', methods=['GET'])
+@login_required
 def get_shopping_items():
     """Get all shopping list items"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
         cursor.execute("""
             SELECT id, item_name, category, quantity, is_purchased, created_at
             FROM shopping_items
+            WHERE user_id = ?
             ORDER BY is_purchased ASC, category ASC, item_name ASC
-        """)
+        """, (user_id,))
         items = [dict(row) for row in cursor.fetchall()]
         conn.close()
         return jsonify({'success': True, 'data': items})
@@ -637,28 +805,31 @@ def get_shopping_items():
 
 
 @app.route('/api/shopping', methods=['POST'])
+@login_required
 def add_shopping_item():
     """Add a new shopping list item"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         conn = db.connect()
         cursor = conn.cursor()
 
         cursor.execute("""
-            INSERT INTO shopping_items (item_name, category, quantity, is_purchased)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO shopping_items (item_name, category, quantity, is_purchased, user_id)
+            VALUES (?, ?, ?, ?, ?)
         """, (
             data.get('item_name'),
             data.get('category'),
             data.get('quantity'),
-            data.get('is_purchased', False)
+            data.get('is_purchased', False),
+            user_id
         ))
 
         item_id = cursor.lastrowid
         conn.commit()
 
         # Fetch the created item
-        cursor.execute("SELECT * FROM shopping_items WHERE id = ?", (item_id,))
+        cursor.execute("SELECT * FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, user_id))
         item = dict(cursor.fetchone())
         conn.close()
 
@@ -669,29 +840,38 @@ def add_shopping_item():
 
 
 @app.route('/api/shopping/<int:item_id>', methods=['PUT'])
+@login_required
 def update_shopping_item(item_id):
     """Update a shopping list item"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         conn = db.connect()
         cursor = conn.cursor()
 
+        # Verify ownership
+        cursor.execute("SELECT id FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Item not found'}), 404
+
         cursor.execute("""
             UPDATE shopping_items
             SET item_name = ?, category = ?, quantity = ?, is_purchased = ?
-            WHERE id = ?
+            WHERE id = ? AND user_id = ?
         """, (
             data.get('item_name'),
             data.get('category'),
             data.get('quantity'),
             data.get('is_purchased'),
-            item_id
+            item_id,
+            user_id
         ))
 
         conn.commit()
 
         # Fetch the updated item
-        cursor.execute("SELECT * FROM shopping_items WHERE id = ?", (item_id,))
+        cursor.execute("SELECT * FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, user_id))
         item = dict(cursor.fetchone())
         conn.close()
 
@@ -702,12 +882,21 @@ def update_shopping_item(item_id):
 
 
 @app.route('/api/shopping/<int:item_id>', methods=['DELETE'])
+@login_required
 def delete_shopping_item(item_id):
     """Delete a shopping list item"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM shopping_items WHERE id = ?", (item_id,))
+
+        # Verify ownership
+        cursor.execute("SELECT id FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Item not found'}), 404
+
+        cursor.execute("DELETE FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, user_id))
         conn.commit()
         conn.close()
         return jsonify({'success': True, 'message': 'Item deleted'})
@@ -717,20 +906,29 @@ def delete_shopping_item(item_id):
 
 
 @app.route('/api/shopping/<int:item_id>/toggle', methods=['POST'])
+@login_required
 def toggle_shopping_item(item_id):
     """Toggle the purchased status of a shopping item"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("SELECT id FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Item not found'}), 404
+
         cursor.execute("""
             UPDATE shopping_items
             SET is_purchased = NOT is_purchased
-            WHERE id = ?
-        """, (item_id,))
+            WHERE id = ? AND user_id = ?
+        """, (item_id, user_id))
         conn.commit()
 
         # Fetch the updated item
-        cursor.execute("SELECT * FROM shopping_items WHERE id = ?", (item_id,))
+        cursor.execute("SELECT * FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, user_id))
         item = dict(cursor.fetchone())
         conn.close()
 
@@ -741,12 +939,14 @@ def toggle_shopping_item(item_id):
 
 
 @app.route('/api/shopping/purchased', methods=['DELETE'])
+@login_required
 def clear_purchased_items():
     """Delete all purchased items"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM shopping_items WHERE is_purchased = 1")
+        cursor.execute("DELETE FROM shopping_items WHERE is_purchased = 1 AND user_id = ?", (user_id,))
         conn.commit()
         conn.close()
         return jsonify({'success': True, 'message': 'Purchased items cleared'})
@@ -756,9 +956,11 @@ def clear_purchased_items():
 
 
 @app.route('/api/shopping/generate', methods=['POST'])
+@login_required
 def generate_shopping_from_plan():
     """Generate smart shopping list from meal plan with AI categorization"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         start_date = data.get('start_date')
         end_date = data.get('end_date')
@@ -773,8 +975,9 @@ def generate_shopping_from_plan():
             FROM scheduled_meals sm
             JOIN meals m ON sm.meal_id = m.id
             WHERE sm.meal_date BETWEEN ? AND ?
+            AND sm.user_id = ?
             AND m.ingredients IS NOT NULL
-        """, (start_date, end_date))
+        """, (start_date, end_date, user_id))
 
         meals = cursor.fetchall()
 
@@ -855,12 +1058,13 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
             items_added = []
             for item in parsed_items:
                 cursor.execute("""
-                    INSERT INTO shopping_items (item_name, category, quantity, is_purchased)
-                    VALUES (?, ?, ?, 0)
+                    INSERT INTO shopping_items (item_name, category, quantity, is_purchased, user_id)
+                    VALUES (?, ?, ?, 0, ?)
                 """, (
                     item.get('item_name'),
                     item.get('category'),
-                    item.get('quantity')
+                    item.get('quantity'),
+                    user_id
                 ))
                 items_added.append({
                     'id': cursor.lastrowid,
@@ -884,9 +1088,9 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
             items_added = []
             for line in all_ingredients:
                 cursor.execute("""
-                    INSERT INTO shopping_items (item_name, is_purchased)
-                    VALUES (?, 0)
-                """, (line,))
+                    INSERT INTO shopping_items (item_name, is_purchased, user_id)
+                    VALUES (?, 0, ?)
+                """, (line, user_id))
                 items_added.append({'id': cursor.lastrowid, 'item_name': line})
 
             conn.commit()
@@ -927,9 +1131,11 @@ def init_database():
 # ============================================================================
 
 @app.route('/api/plan/week', methods=['GET'])
+@login_required
 def get_week_plan():
     """Get week's meal plan starting from specified date"""
     try:
+        user_id = get_current_user_id()
         start_date = request.args.get('start_date')
 
         if not start_date:
@@ -961,6 +1167,7 @@ def get_week_plan():
             JOIN meals m ON sm.meal_id = m.id
             JOIN meal_types mt ON sm.meal_type_id = mt.id
             WHERE sm.meal_date BETWEEN ? AND ?
+            AND sm.user_id = ?
             ORDER BY sm.meal_date,
                 CASE mt.name
                     WHEN 'breakfast' THEN 1
@@ -968,7 +1175,7 @@ def get_week_plan():
                     WHEN 'snack' THEN 3
                     WHEN 'dinner' THEN 4
                 END
-        """, (start_date, end_date))
+        """, (start_date, end_date, user_id))
 
         plan_items = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -980,9 +1187,11 @@ def get_week_plan():
 
 
 @app.route('/api/plan', methods=['POST'])
+@login_required
 def add_plan_entry():
     """Add meal to plan"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         plan_date = data.get('plan_date')
         meal_type = data.get('meal_type')
@@ -1018,27 +1227,28 @@ def add_plan_entry():
 
         cursor.execute("""
             SELECT id FROM meal_plans
-            WHERE week_start_date = ?
-        """, (week_start.strftime('%Y-%m-%d'),))
+            WHERE week_start_date = ? AND user_id = ?
+        """, (week_start.strftime('%Y-%m-%d'), user_id))
 
         plan = cursor.fetchone()
         if plan:
             meal_plan_id = plan['id']
         else:
             cursor.execute("""
-                INSERT INTO meal_plans (name, week_start_date, week_end_date)
-                VALUES (?, ?, ?)
+                INSERT INTO meal_plans (name, week_start_date, week_end_date, user_id)
+                VALUES (?, ?, ?, ?)
             """, (f"Week of {week_start.strftime('%Y-%m-%d')}",
                   week_start.strftime('%Y-%m-%d'),
-                  week_end.strftime('%Y-%m-%d')))
+                  week_end.strftime('%Y-%m-%d'),
+                  user_id))
             meal_plan_id = cursor.lastrowid
 
         # Add scheduled meal
         cursor.execute("""
             INSERT INTO scheduled_meals (
-                meal_plan_id, meal_id, day_of_week, meal_date, meal_type_id, notes
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        """, (meal_plan_id, meal_id, day_of_week, plan_date, meal_type_id, notes))
+                meal_plan_id, meal_id, day_of_week, meal_date, meal_type_id, notes, user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (meal_plan_id, meal_id, day_of_week, plan_date, meal_type_id, notes, user_id))
 
         plan_entry_id = cursor.lastrowid
         conn.commit()
@@ -1068,12 +1278,20 @@ def add_plan_entry():
 
 
 @app.route('/api/plan/<int:plan_id>', methods=['PUT'])
+@login_required
 def update_plan_entry(plan_id):
     """Update plan entry"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         conn = db.connect()
         cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("SELECT id FROM scheduled_meals WHERE id = ? AND user_id = ?", (plan_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Plan entry not found'}), 404
 
         # Security: Whitelist allowed fields
         ALLOWED_FIELDS = {'meal_id', 'meal_type', 'plan_date', 'notes'}
@@ -1111,7 +1329,8 @@ def update_plan_entry(plan_id):
             return jsonify({'success': False, 'error': 'No fields to update'}), 400
 
         update_values.append(plan_id)
-        query = f"UPDATE scheduled_meals SET {', '.join(update_fields)} WHERE id = ?"
+        update_values.append(user_id)
+        query = f"UPDATE scheduled_meals SET {', '.join(update_fields)} WHERE id = ? AND user_id = ?"
 
         cursor.execute(query, update_values)
         conn.commit()
@@ -1128,8 +1347,8 @@ def update_plan_entry(plan_id):
             FROM scheduled_meals sm
             JOIN meals m ON sm.meal_id = m.id
             JOIN meal_types mt ON sm.meal_type_id = mt.id
-            WHERE sm.id = ?
-        """, (plan_id,))
+            WHERE sm.id = ? AND sm.user_id = ?
+        """, (plan_id, user_id))
 
         plan_entry = cursor.fetchone()
         conn.close()
@@ -1144,12 +1363,21 @@ def update_plan_entry(plan_id):
 
 
 @app.route('/api/plan/<int:plan_id>', methods=['DELETE'])
+@login_required
 def delete_plan_entry(plan_id):
     """Delete plan entry"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM scheduled_meals WHERE id = ?", (plan_id,))
+
+        # Verify ownership before deleting
+        cursor.execute("SELECT id FROM scheduled_meals WHERE id = ? AND user_id = ?", (plan_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Plan entry not found'}), 404
+
+        cursor.execute("DELETE FROM scheduled_meals WHERE id = ? AND user_id = ?", (plan_id, user_id))
         conn.commit()
         conn.close()
 
@@ -1160,9 +1388,11 @@ def delete_plan_entry(plan_id):
 
 
 @app.route('/api/plan/suggest', methods=['POST'])
+@login_required
 def suggest_meals():
     """AI meal suggestions based on criteria"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         date = data.get('date')
         meal_type = data.get('meal_type', 'dinner')
@@ -1179,8 +1409,9 @@ def suggest_meals():
             FROM meals m
             LEFT JOIN meal_types mt ON m.meal_type_id = mt.id
             WHERE (m.meal_type = ? OR mt.name = ?)
+            AND m.user_id = ?
         """
-        params = [meal_type, meal_type]
+        params = [meal_type, meal_type, user_id]
 
         # Filter by cook time
         if max_cook_time:
@@ -1213,10 +1444,11 @@ def suggest_meals():
             # Also exclude recently scheduled meals
             query += """ AND m.id NOT IN (
                 SELECT DISTINCT meal_id FROM scheduled_meals
-                WHERE meal_date >= ? AND meal_date < ?
+                WHERE meal_date >= ? AND meal_date < ? AND user_id = ?
             )"""
             params.append(cutoff_date)
             params.append(date)
+            params.append(user_id)
 
         query += " ORDER BY RANDOM() LIMIT 5"
 
@@ -1231,9 +1463,11 @@ def suggest_meals():
 
 
 @app.route('/api/plan/generate-week', methods=['POST'])
+@login_required
 def generate_week_plan():
     """Generate a weekly meal plan with smart scheduling and cuisine filtering"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         start_date = data.get('start_date')
         num_days = data.get('num_days', 7)
@@ -1252,8 +1486,10 @@ def generate_week_plan():
             SELECT id, name, meal_type, tags, kid_friendly_level, cuisine
             FROM meals
             WHERE meal_type IN ({})
+            AND user_id = ?
         """.format(','.join('?' * len(meal_types)))
         params = list(meal_types)
+        params.append(user_id)
 
         # Add cuisine filter if specified
         if cuisines != 'all' and cuisines and len(cuisines) > 0:
@@ -1384,9 +1620,11 @@ def generate_week_plan():
 
 
 @app.route('/api/plan/apply-generated', methods=['POST'])
+@login_required
 def apply_generated_plan():
     """Apply a generated meal plan to the schedule"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         plan = data.get('plan', [])
 
@@ -1397,12 +1635,12 @@ def apply_generated_plan():
         cursor = conn.cursor()
 
         # Get or create current meal plan
-        cursor.execute("SELECT id FROM meal_plans ORDER BY id DESC LIMIT 1")
+        cursor.execute("SELECT id FROM meal_plans WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,))
         result = cursor.fetchone()
         if result:
             meal_plan_id = result[0]
         else:
-            cursor.execute("INSERT INTO meal_plans (name) VALUES (?)", ("Generated Plan",))
+            cursor.execute("INSERT INTO meal_plans (name, user_id) VALUES (?, ?)", ("Generated Plan", user_id))
             meal_plan_id = cursor.lastrowid
 
         # Meal type mapping
@@ -1420,9 +1658,9 @@ def apply_generated_plan():
 
                 cursor.execute("""
                     INSERT INTO scheduled_meals (
-                        meal_plan_id, meal_id, day_of_week, meal_date, meal_type_id
-                    ) VALUES (?, ?, ?, ?, ?)
-                """, (meal_plan_id, item['meal_id'], day_of_week, item['date'], meal_type_id))
+                        meal_plan_id, meal_id, day_of_week, meal_date, meal_type_id, user_id
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (meal_plan_id, item['meal_id'], day_of_week, item['date'], meal_type_id, user_id))
                 added_count += 1
             except sqlite3.IntegrityError:
                 # Slot already filled, skip
@@ -1442,9 +1680,21 @@ def apply_generated_plan():
 # ============================================================================
 
 @app.route('/api/meals/<int:meal_id>/mark-cooked', methods=['POST'])
+@login_required
 def mark_meal_cooked(meal_id):
     """Mark a meal as cooked"""
     try:
+        user_id = get_current_user_id()
+
+        # Verify meal ownership
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Meal not found'}), 404
+        conn.close()
+
         data = request.get_json() or {}
         cooked_date = data.get('cooked_date')
         rating = data.get('rating')
@@ -1463,9 +1713,21 @@ def mark_meal_cooked(meal_id):
 
 
 @app.route('/api/meals/<int:meal_id>/toggle-favorite', methods=['POST'])
+@login_required
 def toggle_meal_favorite(meal_id):
     """Toggle favorite status for a meal"""
     try:
+        user_id = get_current_user_id()
+
+        # Verify meal ownership
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Meal not found'}), 404
+        conn.close()
+
         is_favorite = db.toggle_favorite(meal_id)
 
         return jsonify({
@@ -1479,10 +1741,12 @@ def toggle_meal_favorite(meal_id):
 
 
 @app.route('/api/favorites', methods=['GET'])
+@login_required
 def get_favorites():
     """Get all favorite meals"""
     try:
-        favorites = db.get_favorites()
+        user_id = get_current_user_id()
+        favorites = db.get_favorites(user_id=user_id)
         return jsonify({
             'success': True,
             'meals': favorites,
@@ -1494,11 +1758,13 @@ def get_favorites():
 
 
 @app.route('/api/recently-cooked', methods=['GET'])
+@login_required
 def get_recently_cooked():
     """Get recently cooked meals"""
     try:
+        user_id = get_current_user_id()
         limit = request.args.get('limit', 10, type=int)
-        meals = db.get_recently_cooked(limit)
+        meals = db.get_recently_cooked(limit=limit, user_id=user_id)
 
         return jsonify({
             'success': True,
@@ -1511,12 +1777,14 @@ def get_recently_cooked():
 
 
 @app.route('/api/havent-made', methods=['GET'])
+@login_required
 def get_havent_made():
     """Get meals not made in a while"""
     try:
+        user_id = get_current_user_id()
         days = request.args.get('days', 30, type=int)
         limit = request.args.get('limit', 10, type=int)
-        meals = db.get_havent_made_in_while(days, limit)
+        meals = db.get_havent_made_in_while(days=days, limit=limit, user_id=user_id)
 
         return jsonify({
             'success': True,
@@ -1530,12 +1798,14 @@ def get_havent_made():
 
 
 @app.route('/api/history', methods=['GET'])
+@login_required
 def get_history():
     """Get cooking history"""
     try:
+        user_id = get_current_user_id()
         meal_id = request.args.get('meal_id', type=int)
         limit = request.args.get('limit', 20, type=int)
-        history = db.get_meal_history(meal_id, limit)
+        history = db.get_meal_history(meal_id=meal_id, limit=limit, user_id=user_id)
 
         return jsonify({
             'success': True,
@@ -1552,9 +1822,11 @@ def get_history():
 # ============================================================================
 
 @app.route('/api/leftovers', methods=['GET'])
+@login_required
 def get_leftovers():
     """Get all active leftovers with days_until_expiry calculated"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
 
@@ -1572,8 +1844,9 @@ def get_leftovers():
             FROM leftovers_inventory l
             JOIN meals m ON l.meal_id = m.id
             WHERE l.consumed_at IS NULL
+            AND m.user_id = ?
             ORDER BY l.expires_date ASC
-        """)
+        """, (user_id,))
 
         leftovers = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -1589,9 +1862,11 @@ def get_leftovers():
 
 
 @app.route('/api/leftovers', methods=['POST'])
+@login_required
 def add_leftover():
     """Add leftovers to inventory"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         meal_id = data.get('meal_id')
         cooked_date = data.get('cooked_date')
@@ -1605,6 +1880,19 @@ def add_leftover():
                 'error': 'meal_id is required'
             }), 400
 
+        # Verify meal ownership
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
+        meal = cursor.fetchone()
+
+        if not meal:
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Meal not found or access denied'
+            }), 404
+
         # Calculate expires_date
         if not cooked_date:
             cooked_date = datetime.now().strftime('%Y-%m-%d')
@@ -1612,10 +1900,6 @@ def add_leftover():
         cooked_dt = datetime.strptime(cooked_date, '%Y-%m-%d')
         expires_dt = cooked_dt + timedelta(days=days_good)
         expires_date = expires_dt.strftime('%Y-%m-%d')
-
-        # Insert into database
-        conn = db.connect()
-        cursor = conn.cursor()
 
         cursor.execute("""
             INSERT INTO leftovers_inventory (
@@ -1656,9 +1940,29 @@ def add_leftover():
 
 
 @app.route('/api/leftovers/<int:leftover_id>/consume', methods=['POST'])
+@login_required
 def consume_leftover(leftover_id):
     """Mark leftovers as consumed"""
     try:
+        user_id = get_current_user_id()
+
+        # Verify ownership through meals table
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT l.id FROM leftovers_inventory l
+            JOIN meals m ON l.meal_id = m.id
+            WHERE l.id = ? AND m.user_id = ?
+        """, (leftover_id, user_id))
+        leftover = cursor.fetchone()
+        conn.close()
+
+        if not leftover:
+            return jsonify({
+                'success': False,
+                'error': 'Leftover not found or access denied'
+            }), 404
+
         db.mark_leftovers_consumed(leftover_id)
 
         return jsonify({
@@ -1671,9 +1975,11 @@ def consume_leftover(leftover_id):
 
 
 @app.route('/api/leftovers/<int:leftover_id>/servings', methods=['PUT'])
+@login_required
 def update_leftover_servings(leftover_id):
     """Update remaining servings"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         servings = int(data.get('servings', 0))
 
@@ -1682,6 +1988,23 @@ def update_leftover_servings(leftover_id):
                 'success': False,
                 'error': 'Servings must be non-negative'
             }), 400
+
+        # Verify ownership through meals table
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT l.id FROM leftovers_inventory l
+            JOIN meals m ON l.meal_id = m.id
+            WHERE l.id = ? AND m.user_id = ?
+        """, (leftover_id, user_id))
+        leftover = cursor.fetchone()
+        conn.close()
+
+        if not leftover:
+            return jsonify({
+                'success': False,
+                'error': 'Leftover not found or access denied'
+            }), 404
 
         db.update_leftover_servings(leftover_id, servings)
 
@@ -1695,9 +2018,11 @@ def update_leftover_servings(leftover_id):
 
 
 @app.route('/api/leftovers/suggestions', methods=['GET'])
+@login_required
 def get_leftover_suggestions():
     """Get expiring leftovers needing attention"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
 
@@ -1715,9 +2040,10 @@ def get_leftover_suggestions():
             FROM leftovers_inventory l
             JOIN meals m ON l.meal_id = m.id
             WHERE l.consumed_at IS NULL
+            AND m.user_id = ?
             AND julianday(l.expires_date) - julianday('now') <= 2
             ORDER BY l.expires_date ASC
-        """)
+        """, (user_id,))
 
         suggestions = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -1733,13 +2059,28 @@ def get_leftover_suggestions():
 
 
 @app.route('/api/meals/<int:meal_id>/leftover-settings', methods=['PUT'])
+@login_required
 def update_leftover_settings(meal_id):
     """Update leftover settings for a meal"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         makes_leftovers = data.get('makes_leftovers', False)
         servings = int(data.get('leftover_servings', 0))
         days = int(data.get('leftover_days', 1))
+
+        # Verify meal ownership
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
+        meal = cursor.fetchone()
+        conn.close()
+
+        if not meal:
+            return jsonify({
+                'success': False,
+                'error': 'Meal not found or access denied'
+            }), 404
 
         db.update_meal_leftover_settings(meal_id, makes_leftovers, servings, days)
 
@@ -1757,9 +2098,11 @@ def update_leftover_settings(meal_id):
 # ============================================================================
 
 @app.route('/api/school-menu', methods=['GET'])
+@login_required
 def get_school_menu():
     """Get school menu - supports ?date= or ?start_date&end_date"""
     try:
+        user_id = get_current_user_id()
         date = request.args.get('date')
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
@@ -1767,11 +2110,11 @@ def get_school_menu():
 
         if date:
             # Get menu for specific date
-            menu_items = db.get_school_menu_by_date(date)
+            menu_items = db.get_school_menu_by_date(date, user_id)
         elif start_date and end_date:
-            menu_items = db.get_school_menu_range(start_date, end_date)
+            menu_items = db.get_school_menu_range(start_date, end_date, user_id)
         else:
-            menu_items = db.get_upcoming_school_menu(days)
+            menu_items = db.get_upcoming_school_menu(days, user_id)
 
         return jsonify({
             'success': True,
@@ -1784,10 +2127,12 @@ def get_school_menu():
 
 
 @app.route('/api/school-menu/date/<date>', methods=['GET'])
+@login_required
 def get_school_menu_by_date(date):
     """Get school menu for a specific date"""
     try:
-        menu_items = db.get_school_menu_by_date(date)
+        user_id = get_current_user_id()
+        menu_items = db.get_school_menu_by_date(date, user_id)
         return jsonify({
             'success': True,
             'date': date,
@@ -1800,15 +2145,17 @@ def get_school_menu_by_date(date):
 
 
 @app.route('/api/school-menu', methods=['POST'])
+@login_required
 def add_school_menu():
     """Add school menu item(s) - single or bulk upload"""
     try:
+        user_id = get_current_user_id()
         data = request.json
 
         # Check if bulk upload (with items array or direct array)
         if 'items' in data and isinstance(data['items'], list):
             # Bulk upload with {items: [...]}
-            added_count = db.add_school_menu_bulk(data['items'])
+            added_count = db.add_school_menu_bulk(data['items'], user_id)
             return jsonify({
                 'success': True,
                 'data': {'added_count': added_count},
@@ -1816,7 +2163,7 @@ def add_school_menu():
             })
         elif isinstance(data, list):
             # Direct array format
-            added_count = db.add_school_menu_bulk(data)
+            added_count = db.add_school_menu_bulk(data, user_id)
             return jsonify({
                 'success': True,
                 'data': {'added_count': added_count},
@@ -1835,7 +2182,7 @@ def add_school_menu():
                     'error': 'menu_date and meal_name are required'
                 }), 400
 
-            menu_id = db.add_school_menu_item(menu_date, meal_name, meal_type, description)
+            menu_id = db.add_school_menu_item(menu_date, meal_name, meal_type, description, user_id)
 
             if menu_id:
                 return jsonify({
@@ -1855,10 +2202,19 @@ def add_school_menu():
 
 
 @app.route('/api/school-menu/<int:menu_id>', methods=['DELETE'])
+@login_required
 def delete_school_menu(menu_id):
     """Delete a school menu item"""
     try:
-        db.delete_school_menu_item(menu_id)
+        user_id = get_current_user_id()
+        deleted_count = db.delete_school_menu_item(menu_id, user_id)
+
+        if deleted_count == 0:
+            return jsonify({
+                'success': False,
+                'error': 'Menu item not found or access denied'
+            }), 404
+
         return jsonify({
             'success': True,
             'message': 'Menu item deleted'
@@ -1869,9 +2225,11 @@ def delete_school_menu(menu_id):
 
 
 @app.route('/api/school-menu/feedback', methods=['POST'])
+@login_required
 def add_menu_feedback():
     """Add feedback about a school menu item"""
     try:
+        user_id = get_current_user_id()
         data = request.json
         menu_item_id = data.get('menu_item_id')
         feedback_type = data.get('feedback_type')  # disliked, allergic, wont_eat
@@ -1883,7 +2241,20 @@ def add_menu_feedback():
                 'error': 'menu_item_id and feedback_type are required'
             }), 400
 
-        feedback_id = db.add_menu_feedback(menu_item_id, feedback_type, notes)
+        # Verify the menu item exists and belongs to this user
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM school_menu_items WHERE id = ? AND user_id = ?", (menu_item_id, user_id))
+        menu_item = cursor.fetchone()
+        conn.close()
+
+        if not menu_item:
+            return jsonify({
+                'success': False,
+                'error': 'Menu item not found or access denied'
+            }), 404
+
+        feedback_id = db.add_menu_feedback(menu_item_id, feedback_type, notes, user_id)
 
         return jsonify({
             'success': True,
@@ -1896,10 +2267,12 @@ def add_menu_feedback():
 
 
 @app.route('/api/school-menu/lunch-alternatives/<date>', methods=['GET'])
+@login_required
 def get_lunch_alternatives(date):
     """Get smart lunch alternatives for a specific date"""
     try:
-        alternatives = db.suggest_lunch_alternatives(date)
+        user_id = get_current_user_id()
+        alternatives = db.suggest_lunch_alternatives(date, user_id)
         return jsonify({
             'success': True,
             'data': alternatives
@@ -1910,12 +2283,14 @@ def get_lunch_alternatives(date):
 
 
 @app.route('/api/school-menu/cleanup', methods=['POST'])
+@login_required
 def cleanup_old_menus():
     """Clean up old school menu items"""
     try:
+        user_id = get_current_user_id()
         data = request.get_json() or {}
         days_ago = data.get('days_ago', 30)
-        deleted_count = db.clear_old_school_menus(days_ago)
+        deleted_count = db.clear_old_school_menus(days_ago, user_id)
         return jsonify({
             'success': True,
             'data': {'deleted_count': deleted_count},
@@ -1927,6 +2302,7 @@ def cleanup_old_menus():
 
 
 @app.route('/api/school-menu/parse-photo', methods=['POST'])
+@login_required
 def parse_menu_photo():
     """Parse school menu from uploaded photo using Claude Vision"""
     if not vision_parser:
@@ -1936,6 +2312,7 @@ def parse_menu_photo():
         }), 503
 
     try:
+        user_id = get_current_user_id()
         data = request.json
         image_data = data.get('image_data')  # Base64 encoded image
         image_type = data.get('image_type', 'image/jpeg')
@@ -1963,7 +2340,7 @@ def parse_menu_photo():
         # Optionally add to database automatically
         added_count = 0
         if auto_add:
-            added_count = db.add_school_menu_bulk(menu_items)
+            added_count = db.add_school_menu_bulk(menu_items, user_id)
 
         return jsonify({
             'success': True,
@@ -1981,9 +2358,11 @@ def parse_menu_photo():
 
 
 @app.route('/api/school-menu/calendar', methods=['GET'])
+@login_required
 def get_school_menu_calendar():
     """Get school menu in calendar format for table view"""
     try:
+        user_id = get_current_user_id()
         # Get date range (default to current month)
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
@@ -2009,7 +2388,7 @@ def get_school_menu_calendar():
 
             end_date = last_day.strftime('%Y-%m-%d')
 
-        menu_items = db.get_school_menu_range(start_date, end_date)
+        menu_items = db.get_school_menu_range(start_date, end_date, user_id)
 
         # Group by date and meal type
         calendar_data = {}
@@ -2055,17 +2434,20 @@ def serve_service_worker():
 # ============================================================================
 
 @app.route('/api/bento-items', methods=['GET'])
+@login_required
 def get_bento_items():
     """Get all bento items"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
 
         cursor.execute("""
             SELECT id, name, category, is_favorite, allergens, notes, prep_time_minutes, created_at
             FROM bento_items
+            WHERE user_id = ?
             ORDER BY category, name
-        """)
+        """, (user_id,))
 
         items = []
         for row in cursor.fetchall():
@@ -2088,9 +2470,11 @@ def get_bento_items():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/bento-items', methods=['POST'])
+@login_required
 def create_bento_item():
     """Create a new bento item"""
     try:
+        user_id = get_current_user_id()
         data = request.get_json()
 
         # Validate required fields
@@ -2110,15 +2494,16 @@ def create_bento_item():
         cursor = conn.cursor()
 
         cursor.execute("""
-            INSERT INTO bento_items (name, category, is_favorite, allergens, notes, prep_time_minutes)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO bento_items (name, category, is_favorite, allergens, notes, prep_time_minutes, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             data['name'].strip(),
             data['category'],
             data.get('is_favorite', False),
             data.get('allergens', '').strip() if data.get('allergens') else None,
             data.get('notes', '').strip() if data.get('notes') else None,
-            data.get('prep_time_minutes')
+            data.get('prep_time_minutes'),
+            user_id
         ))
 
         item_id = cursor.lastrowid
@@ -2134,18 +2519,26 @@ def create_bento_item():
         return jsonify({'success': False, 'error': 'Failed to create bento item. Please try again.'}), 500
 
 @app.route('/api/bento-items/<int:item_id>', methods=['PUT'])
+@login_required
 def update_bento_item(item_id):
     """Update a bento item"""
     try:
+        user_id = get_current_user_id()
         data = request.get_json()
 
         conn = db.connect()
         cursor = conn.cursor()
 
+        # Verify ownership
+        cursor.execute("SELECT id FROM bento_items WHERE id = ? AND user_id = ?", (item_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Bento item not found'}), 404
+
         cursor.execute("""
             UPDATE bento_items
             SET name = ?, category = ?, is_favorite = ?, allergens = ?, notes = ?, prep_time_minutes = ?
-            WHERE id = ?
+            WHERE id = ? AND user_id = ?
         """, (
             data['name'],
             data['category'],
@@ -2153,7 +2546,8 @@ def update_bento_item(item_id):
             data.get('allergens'),
             data.get('notes'),
             data.get('prep_time_minutes'),
-            item_id
+            item_id,
+            user_id
         ))
 
         conn.commit()
@@ -2166,13 +2560,21 @@ def update_bento_item(item_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/bento-items/<int:item_id>', methods=['DELETE'])
+@login_required
 def delete_bento_item(item_id):
     """Delete a bento item"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
 
-        cursor.execute("DELETE FROM bento_items WHERE id = ?", (item_id,))
+        # Verify ownership
+        cursor.execute("SELECT id FROM bento_items WHERE id = ? AND user_id = ?", (item_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Bento item not found'}), 404
+
+        cursor.execute("DELETE FROM bento_items WHERE id = ? AND user_id = ?", (item_id, user_id))
 
         conn.commit()
         conn.close()
@@ -2184,9 +2586,11 @@ def delete_bento_item(item_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/bento-plans', methods=['GET'])
+@login_required
 def get_bento_plans():
     """Get bento plans for a date range"""
     try:
+        user_id = get_current_user_id()
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
 
@@ -2204,12 +2608,13 @@ def get_bento_plans():
             LEFT JOIN bento_items bi2 ON bp.compartment2_item_id = bi2.id
             LEFT JOIN bento_items bi3 ON bp.compartment3_item_id = bi3.id
             LEFT JOIN bento_items bi4 ON bp.compartment4_item_id = bi4.id
+            WHERE bp.user_id = ?
         """
 
-        params = []
+        params = [user_id]
         if start_date and end_date:
-            query += " WHERE bp.date BETWEEN ? AND ?"
-            params = [start_date, end_date]
+            query += " AND bp.date BETWEEN ? AND ?"
+            params.extend([start_date, end_date])
 
         query += " ORDER BY bp.date"
 
@@ -2236,9 +2641,11 @@ def get_bento_plans():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/bento-plans', methods=['POST'])
+@login_required
 def create_bento_plan():
     """Create a new bento plan"""
     try:
+        user_id = get_current_user_id()
         data = request.get_json()
 
         conn = db.connect()
@@ -2246,8 +2653,8 @@ def create_bento_plan():
 
         cursor.execute("""
             INSERT INTO bento_plans (date, child_name, compartment1_item_id, compartment2_item_id,
-                                   compartment3_item_id, compartment4_item_id, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                                   compartment3_item_id, compartment4_item_id, notes, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data['date'],
             data.get('child_name'),
@@ -2255,7 +2662,8 @@ def create_bento_plan():
             data.get('compartment2_item_id'),
             data.get('compartment3_item_id'),
             data.get('compartment4_item_id'),
-            data.get('notes')
+            data.get('notes'),
+            user_id
         ))
 
         plan_id = cursor.lastrowid
@@ -2269,19 +2677,27 @@ def create_bento_plan():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/bento-plans/<int:plan_id>', methods=['PUT'])
+@login_required
 def update_bento_plan(plan_id):
     """Update a bento plan"""
     try:
+        user_id = get_current_user_id()
         data = request.get_json()
 
         conn = db.connect()
         cursor = conn.cursor()
 
+        # Verify ownership
+        cursor.execute("SELECT id FROM bento_plans WHERE id = ? AND user_id = ?", (plan_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Bento plan not found'}), 404
+
         cursor.execute("""
             UPDATE bento_plans
             SET child_name = ?, compartment1_item_id = ?, compartment2_item_id = ?,
                 compartment3_item_id = ?, compartment4_item_id = ?, notes = ?
-            WHERE id = ?
+            WHERE id = ? AND user_id = ?
         """, (
             data.get('child_name'),
             data.get('compartment1_item_id'),
@@ -2289,7 +2705,8 @@ def update_bento_plan(plan_id):
             data.get('compartment3_item_id'),
             data.get('compartment4_item_id'),
             data.get('notes'),
-            plan_id
+            plan_id,
+            user_id
         ))
 
         conn.commit()
@@ -2302,13 +2719,21 @@ def update_bento_plan(plan_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/bento-plans/<int:plan_id>', methods=['DELETE'])
+@login_required
 def delete_bento_plan(plan_id):
     """Delete a bento plan"""
     try:
+        user_id = get_current_user_id()
         conn = db.connect()
         cursor = conn.cursor()
 
-        cursor.execute("DELETE FROM bento_plans WHERE id = ?", (plan_id,))
+        # Verify ownership
+        cursor.execute("SELECT id FROM bento_plans WHERE id = ? AND user_id = ?", (plan_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Bento plan not found'}), 404
+
+        cursor.execute("DELETE FROM bento_plans WHERE id = ? AND user_id = ?", (plan_id, user_id))
 
         conn.commit()
         conn.close()
@@ -2320,9 +2745,11 @@ def delete_bento_plan(plan_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/bento-plans/generate-week', methods=['POST'])
+@login_required
 def generate_weekly_bento_plans():
     """Generate bento plans for a week with variety"""
     try:
+        user_id = get_current_user_id()
         data = request.get_json()
 
         # Validate required fields
@@ -2341,8 +2768,9 @@ def generate_weekly_bento_plans():
         cursor.execute("""
             SELECT id, name, category
             FROM bento_items
+            WHERE user_id = ?
             ORDER BY is_favorite DESC, RANDOM()
-        """)
+        """, (user_id,))
 
         items_by_category = {}
         total_items = 0
@@ -2403,9 +2831,9 @@ def generate_weekly_bento_plans():
             # Create the bento plan
             cursor.execute("""
                 INSERT INTO bento_plans (date, child_name, compartment1_item_id, compartment2_item_id,
-                                       compartment3_item_id, compartment4_item_id)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (date_str, child_name, compartments[0], compartments[1], compartments[2], compartments[3]))
+                                       compartment3_item_id, compartment4_item_id, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (date_str, child_name, compartments[0], compartments[1], compartments[2], compartments[3], user_id))
 
             plans_created.append({
                 'id': cursor.lastrowid,

@@ -260,7 +260,7 @@ class MealPlannerDB:
 
         return shopping_list
 
-    def search_meals(self, query: str, meal_type: Optional[str] = None) -> List[Dict]:
+    def search_meals(self, query: str, meal_type: Optional[str] = None, user_id: Optional[int] = None) -> List[Dict]:
         """Search meals by name or ingredients"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -275,6 +275,10 @@ class MealPlannerDB:
         """
 
         params = [f"%{query}%", f"%{query}%"]
+
+        if user_id is not None:
+            sql += " AND m.user_id = ?"
+            params.append(user_id)
 
         if meal_type:
             sql += " AND mt.name = ?"
@@ -351,7 +355,7 @@ class MealPlannerDB:
         conn.commit()
         print(f"✓ Added {ingredient_name} to meal")
 
-    def get_kid_friendly_meals(self, min_level: int = 7) -> List[Dict]:
+    def get_kid_friendly_meals(self, min_level: int = 7, user_id: Optional[int] = None) -> List[Dict]:
         """Get highly kid-friendly meals"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -361,10 +365,16 @@ class MealPlannerDB:
             FROM meals m
             JOIN meal_types mt ON m.meal_type_id = mt.id
             WHERE m.kid_friendly_level >= ?
-            ORDER BY m.kid_friendly_level DESC, m.name
         """
+        params = [min_level]
 
-        cursor.execute(query, (min_level,))
+        if user_id is not None:
+            query += " AND m.user_id = ?"
+            params.append(user_id)
+
+        query += " ORDER BY m.kid_friendly_level DESC, m.name"
+
+        cursor.execute(query, params)
         meals = [dict(row) for row in cursor.fetchall()]
 
         for meal in meals:
@@ -461,7 +471,7 @@ class MealPlannerDB:
             conn.commit()
             return True
 
-    def get_favorites(self) -> List[Dict]:
+    def get_favorites(self, user_id: Optional[int] = None) -> List[Dict]:
         """Get all favorite meals"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -471,10 +481,16 @@ class MealPlannerDB:
             FROM meals m
             JOIN meal_types mt ON m.meal_type_id = mt.id
             JOIN meal_favorites mf ON m.id = mf.meal_id
-            ORDER BY mf.favorited_at DESC
         """
+        params = []
 
-        cursor.execute(query)
+        if user_id is not None:
+            query += " WHERE m.user_id = ?"
+            params.append(user_id)
+
+        query += " ORDER BY mf.favorited_at DESC"
+
+        cursor.execute(query, params)
         meals = [dict(row) for row in cursor.fetchall()]
 
         for meal in meals:
@@ -482,7 +498,7 @@ class MealPlannerDB:
 
         return meals
 
-    def get_recently_cooked(self, limit: int = 10) -> List[Dict]:
+    def get_recently_cooked(self, limit: int = 10, user_id: Optional[int] = None) -> List[Dict]:
         """Get recently cooked meals"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -496,11 +512,17 @@ class MealPlannerDB:
             LEFT JOIN meal_history mh ON m.id = mh.meal_id
                 AND mh.cooked_date = m.last_cooked
             WHERE m.last_cooked IS NOT NULL
-            ORDER BY m.last_cooked DESC
-            LIMIT ?
         """
+        params = []
 
-        cursor.execute(query, (limit,))
+        if user_id is not None:
+            query += " AND m.user_id = ?"
+            params.append(user_id)
+
+        query += " ORDER BY m.last_cooked DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(query, params)
         meals = [dict(row) for row in cursor.fetchall()]
 
         for meal in meals:
@@ -508,7 +530,7 @@ class MealPlannerDB:
 
         return meals
 
-    def get_havent_made_in_while(self, days: int = 30, limit: int = 10) -> List[Dict]:
+    def get_havent_made_in_while(self, days: int = 30, limit: int = 10, user_id: Optional[int] = None) -> List[Dict]:
         """Get meals that haven't been made recently or ever"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -520,14 +542,22 @@ class MealPlannerDB:
                    m.last_cooked, m.times_cooked
             FROM meals m
             JOIN meal_types mt ON m.meal_type_id = mt.id
-            WHERE m.last_cooked IS NULL
-               OR m.last_cooked < ?
+            WHERE (m.last_cooked IS NULL OR m.last_cooked < ?)
+        """
+        params = [cutoff_date]
+
+        if user_id is not None:
+            query += " AND m.user_id = ?"
+            params.append(user_id)
+
+        query += """
             ORDER BY m.last_cooked ASC NULLS FIRST,
                      m.kid_friendly_level DESC
             LIMIT ?
         """
+        params.append(limit)
 
-        cursor.execute(query, (cutoff_date, limit))
+        cursor.execute(query, params)
         meals = [dict(row) for row in cursor.fetchall()]
 
         for meal in meals:
@@ -535,33 +565,35 @@ class MealPlannerDB:
 
         return meals
 
-    def get_meal_history(self, meal_id: int = None, limit: int = 20) -> List[Dict]:
+    def get_meal_history(self, meal_id: int = None, limit: int = 20, user_id: Optional[int] = None) -> List[Dict]:
         """Get cooking history, optionally for a specific meal"""
         conn = self.connect()
         cursor = conn.cursor()
 
-        if meal_id:
-            query = """
-                SELECT mh.*, m.name as meal_name, mt.name as meal_type_name
-                FROM meal_history mh
-                JOIN meals m ON mh.meal_id = m.id
-                JOIN meal_types mt ON m.meal_type_id = mt.id
-                WHERE mh.meal_id = ?
-                ORDER BY mh.cooked_date DESC
-                LIMIT ?
-            """
-            cursor.execute(query, (meal_id, limit))
-        else:
-            query = """
-                SELECT mh.*, m.name as meal_name, mt.name as meal_type_name
-                FROM meal_history mh
-                JOIN meals m ON mh.meal_id = m.id
-                JOIN meal_types mt ON m.meal_type_id = mt.id
-                ORDER BY mh.cooked_date DESC
-                LIMIT ?
-            """
-            cursor.execute(query, (limit,))
+        query = """
+            SELECT mh.*, m.name as meal_name, mt.name as meal_type_name
+            FROM meal_history mh
+            JOIN meals m ON mh.meal_id = m.id
+            JOIN meal_types mt ON m.meal_type_id = mt.id
+        """
+        params = []
+        where_clauses = []
 
+        if meal_id:
+            where_clauses.append("mh.meal_id = ?")
+            params.append(meal_id)
+
+        if user_id is not None:
+            where_clauses.append("m.user_id = ?")
+            params.append(user_id)
+
+        if where_clauses:
+            query += " WHERE " + " AND ".join(where_clauses)
+
+        query += " ORDER BY mh.cooked_date DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(query, params)
         return [dict(row) for row in cursor.fetchall()]
 
     # ========== LEFTOVERS MANAGEMENT METHODS ==========
@@ -714,23 +746,24 @@ class MealPlannerDB:
     # ========================================================================
 
     def add_school_menu_item(self, menu_date: str, meal_name: str,
-                             meal_type: str = 'lunch', description: str = None):
+                             meal_type: str = 'lunch', description: str = None,
+                             user_id: int = None):
         """Add a school cafeteria menu item"""
         conn = self.connect()
         cursor = conn.cursor()
 
         try:
             cursor.execute("""
-                INSERT INTO school_menu_items (menu_date, meal_name, meal_type, description)
-                VALUES (?, ?, ?, ?)
-            """, (menu_date, meal_name, meal_type, description))
+                INSERT INTO school_menu_items (menu_date, meal_name, meal_type, description, user_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (menu_date, meal_name, meal_type, description, user_id))
             conn.commit()
             return cursor.lastrowid
         except sqlite3.IntegrityError:
             # Item already exists for this date
             return None
 
-    def add_school_menu_bulk(self, menu_items: List[Dict]) -> int:
+    def add_school_menu_bulk(self, menu_items: List[Dict], user_id: int = None) -> int:
         """
         Add multiple school menu items at once
         menu_items: List of dicts with keys: menu_date, meal_name, meal_type, description
@@ -743,13 +776,14 @@ class MealPlannerDB:
         for item in menu_items:
             try:
                 cursor.execute("""
-                    INSERT INTO school_menu_items (menu_date, meal_name, meal_type, description)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO school_menu_items (menu_date, meal_name, meal_type, description, user_id)
+                    VALUES (?, ?, ?, ?, ?)
                 """, (
                     item['menu_date'],
                     item['meal_name'],
                     item.get('meal_type', 'lunch'),
-                    item.get('description')
+                    item.get('description'),
+                    user_id
                 ))
                 added_count += 1
             except sqlite3.IntegrityError:
@@ -759,7 +793,7 @@ class MealPlannerDB:
         conn.commit()
         return added_count
 
-    def get_school_menu_by_date(self, menu_date: str) -> List[Dict]:
+    def get_school_menu_by_date(self, menu_date: str, user_id: int = None) -> List[Dict]:
         """Get school menu for a specific date"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -769,15 +803,15 @@ class MealPlannerDB:
                    COUNT(sf.id) as dislike_count,
                    GROUP_CONCAT(sf.feedback_type) as feedback_types
             FROM school_menu_items sm
-            LEFT JOIN school_menu_feedback sf ON sm.id = sf.menu_item_id
-            WHERE sm.menu_date = ?
+            LEFT JOIN school_menu_feedback sf ON sm.id = sf.menu_item_id AND sf.user_id = ?
+            WHERE sm.menu_date = ? AND sm.user_id = ?
             GROUP BY sm.id
             ORDER BY sm.meal_type, sm.meal_name
-        """, (menu_date,))
+        """, (user_id, menu_date, user_id))
 
         return [dict(row) for row in cursor.fetchall()]
 
-    def get_school_menu_range(self, start_date: str, end_date: str) -> List[Dict]:
+    def get_school_menu_range(self, start_date: str, end_date: str, user_id: int = None) -> List[Dict]:
         """Get school menu for a date range"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -787,34 +821,34 @@ class MealPlannerDB:
                    COUNT(sf.id) as dislike_count,
                    GROUP_CONCAT(sf.feedback_type) as feedback_types
             FROM school_menu_items sm
-            LEFT JOIN school_menu_feedback sf ON sm.id = sf.menu_item_id
-            WHERE sm.menu_date BETWEEN ? AND ?
+            LEFT JOIN school_menu_feedback sf ON sm.id = sf.menu_item_id AND sf.user_id = ?
+            WHERE sm.menu_date BETWEEN ? AND ? AND sm.user_id = ?
             GROUP BY sm.id
             ORDER BY sm.menu_date, sm.meal_type, sm.meal_name
-        """, (start_date, end_date))
+        """, (user_id, start_date, end_date, user_id))
 
         return [dict(row) for row in cursor.fetchall()]
 
-    def get_upcoming_school_menu(self, days: int = 7) -> List[Dict]:
+    def get_upcoming_school_menu(self, days: int = 7, user_id: int = None) -> List[Dict]:
         """Get upcoming school menu items"""
         today = datetime.now().strftime('%Y-%m-%d')
         end_date = (datetime.now() + timedelta(days=days)).strftime('%Y-%m-%d')
-        return self.get_school_menu_range(today, end_date)
+        return self.get_school_menu_range(today, end_date, user_id)
 
-    def add_menu_feedback(self, menu_item_id: int, feedback_type: str, notes: str = None):
+    def add_menu_feedback(self, menu_item_id: int, feedback_type: str, notes: str = None, user_id: int = None):
         """Record feedback about a school menu item (disliked, allergic, wont_eat)"""
         conn = self.connect()
         cursor = conn.cursor()
 
         cursor.execute("""
-            INSERT INTO school_menu_feedback (menu_item_id, feedback_type, notes)
-            VALUES (?, ?, ?)
-        """, (menu_item_id, feedback_type, notes))
+            INSERT INTO school_menu_feedback (menu_item_id, feedback_type, notes, user_id)
+            VALUES (?, ?, ?, ?)
+        """, (menu_item_id, feedback_type, notes, user_id))
 
         conn.commit()
         return cursor.lastrowid
 
-    def get_disliked_school_meals(self) -> List[str]:
+    def get_disliked_school_meals(self, user_id: int = None) -> List[str]:
         """Get list of school meals kids don't like"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -824,11 +858,12 @@ class MealPlannerDB:
             FROM school_menu_items sm
             JOIN school_menu_feedback sf ON sm.id = sf.menu_item_id
             WHERE sf.feedback_type IN ('disliked', 'wont_eat')
-        """)
+            AND sm.user_id = ? AND sf.user_id = ?
+        """, (user_id, user_id))
 
         return [row['meal_name'] for row in cursor.fetchall()]
 
-    def suggest_lunch_alternatives(self, menu_date: str) -> Dict:
+    def suggest_lunch_alternatives(self, menu_date: str, user_id: int = None) -> Dict:
         """
         Suggest lunch alternatives based on:
         1. What's for school lunch that day
@@ -840,10 +875,10 @@ class MealPlannerDB:
         cursor = conn.cursor()
 
         # Get school menu for that date
-        school_menu = self.get_school_menu_by_date(menu_date)
+        school_menu = self.get_school_menu_by_date(menu_date, user_id)
 
         # Get disliked meals
-        disliked_meals = self.get_disliked_school_meals()
+        disliked_meals = self.get_disliked_school_meals(user_id)
 
         # Check if any school menu items are disliked
         needs_alternative = any(
@@ -862,9 +897,10 @@ class MealPlannerDB:
             WHERE mt.name IN ('lunch', 'snack')
             AND (m.prep_time_minutes + m.cook_time_minutes) <= 15
             AND m.kid_friendly_level >= 7
+            AND m.user_id = ?
             ORDER BY m.kid_friendly_level DESC
             LIMIT 5
-        """)
+        """, (user_id,))
         quick_lunches = [dict(row) for row in cursor.fetchall()]
 
         return {
@@ -899,19 +935,20 @@ class MealPlannerDB:
 
         return "✓ School lunch should be fine"
 
-    def delete_school_menu_item(self, menu_item_id: int):
+    def delete_school_menu_item(self, menu_item_id: int, user_id: int = None):
         """Delete a school menu item"""
         conn = self.connect()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM school_menu_items WHERE id = ?", (menu_item_id,))
+        cursor.execute("DELETE FROM school_menu_items WHERE id = ? AND user_id = ?", (menu_item_id, user_id))
         conn.commit()
+        return cursor.rowcount
 
-    def clear_old_school_menus(self, days_ago: int = 30):
+    def clear_old_school_menus(self, days_ago: int = 30, user_id: int = None):
         """Clear school menu items older than specified days"""
         cutoff_date = (datetime.now() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
         conn = self.connect()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM school_menu_items WHERE menu_date < ?", (cutoff_date,))
+        cursor.execute("DELETE FROM school_menu_items WHERE menu_date < ? AND user_id = ?", (cutoff_date, user_id))
         conn.commit()
         return cursor.rowcount
 

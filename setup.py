@@ -156,6 +156,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not run performance indexes migration: {e}")
 
+    # Add multi-user authentication
+    print("\n🔄 Running multi-user authentication migration...")
+    try:
+        from database.migrations.add_users_and_auth import migrate
+        migrate(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run multi-user migration: {e}")
+
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")
     print("=" * 60)

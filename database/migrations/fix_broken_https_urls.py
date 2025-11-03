@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Database migration: Fix image URLs that are missing leading slash
+Database migration: Fix image URLs that have /https:// or /http:// (broken by previous migration)
 """
 
 import sqlite3
@@ -11,33 +11,30 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 def migrate(db_path='meal_planner.db'):
-    """Fix image_url paths that are missing leading slash"""
+    """Fix broken image URLs that start with /http:// or /https://"""
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     try:
-        # Find all meals with image_url that doesn't start with / (but skip http/https URLs)
+        # Find all meals with broken image URLs
         cursor.execute("""
             SELECT id, image_url
             FROM meals
-            WHERE image_url IS NOT NULL
-            AND image_url != ''
-            AND image_url NOT LIKE '/%'
-            AND image_url NOT LIKE 'http://%'
-            AND image_url NOT LIKE 'https://%'
+            WHERE image_url LIKE '/http://%'
+            OR image_url LIKE '/https://%'
         """)
 
         meals_to_fix = cursor.fetchall()
 
         if not meals_to_fix:
-            print("✅ All image URLs are already correct")
+            print("✅ No broken image URLs found")
             return
 
-        print(f"🔧 Fixing {len(meals_to_fix)} image URLs...")
+        print(f"🔧 Fixing {len(meals_to_fix)} broken image URLs...")
 
         for meal_id, image_url in meals_to_fix:
-            # Add leading slash
-            fixed_url = f"/{image_url}"
+            # Remove the leading slash
+            fixed_url = image_url[1:]  # Remove first character (the /)
             cursor.execute("""
                 UPDATE meals
                 SET image_url = ?
@@ -46,7 +43,7 @@ def migrate(db_path='meal_planner.db'):
             print(f"  ✓ Fixed meal {meal_id}: {image_url} → {fixed_url}")
 
         conn.commit()
-        print(f"✅ Successfully fixed {len(meals_to_fix)} image URLs")
+        print(f"✅ Successfully fixed {len(meals_to_fix)} broken image URLs")
 
     except Exception as e:
         print(f"❌ Migration failed: {e}")

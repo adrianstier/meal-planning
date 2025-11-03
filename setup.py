@@ -132,6 +132,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not fix image URLs: {e}")
 
+    # Fix broken https URLs (that were corrupted by previous migration)
+    print("\n🔄 Fixing broken HTTPS URLs...")
+    try:
+        from database.migrations.fix_broken_https_urls import migrate
+        migrate(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not fix broken HTTPS URLs: {e}")
+
     # Add bento box tables
     print("\n🔄 Running bento box tables migration...")
     try:

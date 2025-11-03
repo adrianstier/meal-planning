@@ -3,5 +3,5 @@ builder = "nixpacks"
 buildCommand = "chmod +x railway-build.sh && ./railway-build.sh"
 
 [deploy]
-startCommand = "chmod +x run-migrations.sh && ./run-migrations.sh && gunicorn app:app"
+startCommand = "python3 setup.py && gunicorn app:app"
 restartPolicyType = "on_failure"

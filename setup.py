@@ -64,7 +64,7 @@ def setup_database():
     print("\n🔄 Running React schema migration...")
     try:
         import subprocess
-        result = subprocess.run(['python3', 'database/migrations/migrate_to_react_schema.py'],
+        result = subprocess.run(['python3', 'database/migrations/migrate_to_react_schema.py', db.db_path],
                               capture_output=True, text=True)
         if result.returncode == 0:
             print("✅ React schema migrated!")
@@ -136,6 +136,14 @@ def setup_database():
         migrate(db.db_path)
     except Exception as e:
         print(f"⚠️  Could not run bento tables migration: {e}")
+
+    # Add performance indexes
+    print("\n🔄 Running performance indexes migration...")
+    try:
+        from database.migrations.add_performance_indexes import migrate
+        migrate(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run performance indexes migration: {e}")
 
     print("\n" + "=" * 60)
     print("📊 DATABASE STATISTICS")

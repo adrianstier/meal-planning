@@ -17,24 +17,27 @@ def setup_database():
     db = MealPlannerDB()
 
     # Check if database already exists
-    if os.path.exists(db.db_path):
-        # In production (Railway or Render), skip the prompt and just use existing DB
-        if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('RENDER'):
+    database_exists = os.path.exists(db.db_path)
+    is_production = os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('RENDER')
+
+    if database_exists:
+        if is_production:
             print(f"✓ Using existing database at '{db.db_path}'")
-            print("  (Skipping recreation in production environment)")
-            return
-        # In local dev, prompt user
-        response = input(f"\n⚠️  Database '{db.db_path}' already exists. Recreate? (y/n): ")
-        if response.lower() != 'y':
-            print("❌ Setup cancelled.")
-            return
-        os.remove(db.db_path)
-        print(f"✓ Removed existing database")
+            print("  (Skipping recreation, but will run migrations)")
+        else:
+            # In local dev, prompt user
+            response = input(f"\n⚠️  Database '{db.db_path}' already exists. Recreate? (y/n): ")
+            if response.lower() != 'y':
+                print("❌ Setup cancelled.")
+                return
+            os.remove(db.db_path)
+            print(f"✓ Removed existing database")
+            database_exists = False
 
-    print("\n📊 Creating database...")
-
-    # Initialize with schema and seed data
-    db.initialize_database()
+    if not database_exists:
+        print("\n📊 Creating database...")
+        # Initialize with schema and seed data
+        db.initialize_database()
 
     # Load additional meals and run migrations
     sql_files = [

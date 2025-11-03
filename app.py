@@ -1613,7 +1613,88 @@ def generate_week_plan():
 
         conn.close()
 
-        return jsonify({'success': True, 'data': generated_plan})
+        # Generate bento boxes if requested
+        bento_message = None
+        if data.get('generateBentos'):
+            try:
+                child_name = data.get('bentoChildName', '')
+
+                # Use the existing bento generation logic
+                bento_conn = db.connect()
+                bento_cursor = bento_conn.cursor()
+
+                # Get all available bento items
+                bento_cursor.execute("""
+                    SELECT id, name, category
+                    FROM bento_items
+                    WHERE user_id = ?
+                    ORDER BY is_favorite DESC, RANDOM()
+                """, (user_id,))
+
+                items_by_category = {}
+                total_items = 0
+                for row in bento_cursor.fetchall():
+                    total_items += 1
+                    category = row[2]
+                    if category not in items_by_category:
+                        items_by_category[category] = []
+                    items_by_category[category].append({'id': row[0], 'name': row[1]})
+
+                if total_items >= 4 and len(items_by_category) >= 2:
+                    # Generate 5 days of bento boxes
+                    plans_created = []
+                    used_items = set()
+
+                    for day_offset in range(5):
+                        current_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=day_offset)).strftime('%Y-%m-%d')
+
+                        # Select 4 different items from different categories
+                        compartments = [None, None, None, None]
+                        categories_used = set()
+
+                        for i in range(4):
+                            available_categories = [c for c in items_by_category.keys() if c not in categories_used]
+
+                            if available_categories:
+                                category = random.choice(available_categories)
+                                categories_used.add(category)
+
+                                available_items = [item for item in items_by_category[category] if item['id'] not in used_items]
+                                if not available_items:
+                                    available_items = items_by_category[category]
+
+                                if available_items:
+                                    item = random.choice(available_items)
+                                    compartments[i] = item['id']
+                                    used_items.add(item['id'])
+
+                                    if len(used_items) > 10:
+                                        used_items = set()
+
+                        # Create the bento plan
+                        bento_cursor.execute("""
+                            INSERT INTO bento_plans (date, child_name, compartment1_item_id, compartment2_item_id,
+                                                   compartment3_item_id, compartment4_item_id, user_id)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """, (current_date, child_name, compartments[0], compartments[1], compartments[2], compartments[3], user_id))
+
+                        plans_created.append({'id': bento_cursor.lastrowid, 'date': current_date})
+
+                    bento_conn.commit()
+                    bento_message = f'Successfully created {len(plans_created)} bento box plans for the week!'
+                else:
+                    bento_message = f'Need at least 4 bento items from 2 categories to generate bentos. You have {total_items} items.'
+
+                bento_conn.close()
+            except Exception as bento_error:
+                print(f"Bento generation error: {bento_error}")
+                bento_message = f'Meal plan created, but bento generation failed: {str(bento_error)}'
+
+        response = {'success': True, 'data': generated_plan}
+        if bento_message:
+            response['bentoMessage'] = bento_message
+
+        return jsonify(response)
     except Exception as e:
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500

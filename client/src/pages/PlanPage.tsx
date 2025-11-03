@@ -33,6 +33,8 @@ const PlanPage: React.FC = () => {
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   } | null>(null);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [generateBentos, setGenerateBentos] = useState(false);
+  const [bentoChildName, setBentoChildName] = useState('');
 
   const { data: weekPlan, isLoading, error } = useWeekPlan(currentWeekStart);
   const { data: meals } = useMeals();
@@ -165,10 +167,17 @@ const PlanPage: React.FC = () => {
         numDays: 7,
         mealTypes: ['dinner'],
         avoidSchoolDuplicates: true,
-        cuisines: selectedCuisines.length > 0 ? selectedCuisines : 'all'
+        cuisines: selectedCuisines.length > 0 ? selectedCuisines : 'all',
+        generateBentos: generateBentos,
+        bentoChildName: bentoChildName
       });
       setGeneratedPlan(result.data);
       setGenerateDialogOpen(true);
+
+      // Show success message if bentos were also generated
+      if (generateBentos && result.bentoMessage) {
+        alert(result.bentoMessage);
+      }
     } catch (error) {
       console.error('Failed to generate week plan:', error);
       alert('Failed to generate meal plan. Please try again.');
@@ -315,6 +324,42 @@ const PlanPage: React.FC = () => {
               )}
             </div>
           )}
+          {/* Bento Box Generation Options */}
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-start gap-3">
+              <div className="text-sm font-medium text-muted-foreground min-w-[80px] pt-1.5">
+                Bento Boxes:
+              </div>
+              <div className="flex flex-col gap-3 flex-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={generateBentos}
+                    onChange={(e) => setGenerateBentos(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm">Generate bento box lunches for the week</span>
+                </label>
+                {generateBentos && (
+                  <div className="ml-6">
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-xs text-muted-foreground">Child's name (optional)</span>
+                      <input
+                        type="text"
+                        value={bentoChildName}
+                        onChange={(e) => setBentoChildName(e.target.value)}
+                        placeholder="e.g., Emma"
+                        className="text-sm px-3 py-1.5 rounded-md border border-input bg-background"
+                      />
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Will create 5 bento box plans (Mon-Fri) with varied items from your collection
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </CardHeader>
       </Card>
 

@@ -31,6 +31,7 @@ const BentoPage: React.FC = () => {
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BentoItem | null>(null);
   const [weekStart, setWeekStart] = useState('');
+  const [quickAddExpanded, setQuickAddExpanded] = useState(true);
 
   const [itemFormData, setItemFormData] = useState({
     name: '',
@@ -49,6 +50,40 @@ const BentoPage: React.FC = () => {
     { value: 'dairy', label: 'Dairy', color: 'bg-blue-100 border-blue-300', emoji: '🧀' },
     { value: 'snack', label: 'Snack', color: 'bg-purple-100 border-purple-300', emoji: '🍪' },
   ];
+
+  // Common kids' lunch items organized by category
+  const quickAddItems = {
+    protein: [
+      'Turkey roll-ups', 'Ham cubes', 'Chicken nuggets', 'Hard-boiled egg',
+      'Salami slices', 'Pepperoni', 'Cheese quesadilla', 'Meatballs',
+      'Tuna salad', 'Chicken strips', 'Mini hot dogs', 'Deli meat wraps'
+    ],
+    fruit: [
+      'Apple slices', 'Grapes', 'Strawberries', 'Blueberries',
+      'Mandarin oranges', 'Watermelon cubes', 'Pineapple chunks', 'Banana',
+      'Kiwi slices', 'Cantaloupe', 'Raspberries', 'Fruit cup'
+    ],
+    vegetable: [
+      'Baby carrots', 'Cucumber slices', 'Cherry tomatoes', 'Bell pepper strips',
+      'Celery sticks', 'Sugar snap peas', 'Broccoli florets', 'Edamame',
+      'Corn', 'Green beans', 'Avocado slices', 'Hummus with veggies'
+    ],
+    grain: [
+      'Crackers', 'Pretzels', 'Goldfish', 'Mini bagel', 'Granola bar',
+      'Rice cakes', 'Pita bread', 'Tortilla chips', 'Popcorn',
+      'Mini muffin', 'Graham crackers', 'Cereal mix'
+    ],
+    dairy: [
+      'String cheese', 'Cheese cubes', 'Yogurt', 'Cottage cheese',
+      'Babybel cheese', 'Cheese crackers', 'Cream cheese', 'Yogurt tube',
+      'Cheese stick', 'Mini cheese wheels'
+    ],
+    snack: [
+      'Fruit snacks', 'Applesauce', 'Veggie straws', 'Trail mix',
+      'Dried fruit', 'Nutella & crackers', 'Animal crackers', 'Cookies',
+      'Fruit leather', 'Pudding cup', 'Jello cup', 'Rice Krispies treat'
+    ]
+  };
 
   useEffect(() => {
     fetchItems();
@@ -168,6 +203,23 @@ const BentoPage: React.FC = () => {
     setItemDialogOpen(true);
   };
 
+  const handleQuickAdd = async (itemName: string, category: string) => {
+    try {
+      await axios.post('/api/bento-items', {
+        name: itemName,
+        category: category,
+        is_favorite: false,
+        allergens: '',
+        notes: '',
+        prep_time_minutes: null
+      });
+      fetchItems();
+    } catch (error) {
+      console.error('Error quick-adding bento item:', error);
+      alert('Failed to add item. It may already exist.');
+    }
+  };
+
   const getCategoryInfo = (category: string) => {
     return categories.find(c => c.value === category) || categories[0];
   };
@@ -219,11 +271,66 @@ const BentoPage: React.FC = () => {
 
         {/* Items Tab */}
         <TabsContent value="items" className="space-y-4">
+          {/* Quick Add Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Food Items by Category</CardTitle>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    Quick Add Common Items
+                  </CardTitle>
+                  <CardDescription>
+                    Click any item to add it instantly to your Bento items
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setQuickAddExpanded(!quickAddExpanded)}
+                >
+                  {quickAddExpanded ? 'Hide' : 'Show'}
+                </Button>
+              </div>
+            </CardHeader>
+            {quickAddExpanded && (
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {categories.map(category => (
+                    <div key={category.value} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{category.emoji}</span>
+                        <h3 className="font-semibold">{category.label}</h3>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {quickAddItems[category.value as keyof typeof quickAddItems].map((itemName) => {
+                          const alreadyAdded = items.some(item => item.name === itemName);
+                          return (
+                            <Button
+                              key={itemName}
+                              variant={alreadyAdded ? "secondary" : "outline"}
+                              size="sm"
+                              onClick={() => handleQuickAdd(itemName, category.value)}
+                              disabled={alreadyAdded}
+                              className="h-7 text-xs"
+                            >
+                              {alreadyAdded && '✓ '}{itemName}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Bento Items</CardTitle>
               <CardDescription>
-                Manage foods your kids like, organized by type
+                Items you've added, organized by category
               </CardDescription>
             </CardHeader>
             <CardContent>

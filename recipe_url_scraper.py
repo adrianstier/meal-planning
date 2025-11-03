@@ -133,15 +133,13 @@ class RecipeURLScraper:
             except:
                 pass
 
-            # Download and save image
+            # Use original image URL directly (don't download to avoid Railway storage issues)
             try:
                 image_url = scraper.image()
                 if image_url:
-                    image_path = self.download_image(image_url)
-                    if image_path:
-                        recipe_data['image_url'] = image_path
+                    recipe_data['image_url'] = image_url
             except Exception as e:
-                print(f"⚠️  Could not extract/download image: {e}")
+                print(f"⚠️  Could not extract image URL: {e}")
 
             # Extract top comments from recipe page
             try:

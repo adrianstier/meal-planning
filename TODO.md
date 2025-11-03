@@ -1,20 +1,25 @@
 # Family Meal Planner - TODO List
 
 **Last Updated**: November 3, 2025
-**Status**: Post-Responsive Navigation Deployment
+**Status**: Bento Integration Deploying
 
 ---
 
 ## IMMEDIATE PRIORITIES
 
-### 1. Wait for Responsive Navigation Deployment ⏳
-- **Status**: In Progress (monitoring script running)
-- **Description**: Responsive navigation with hamburger menu is being deployed to Railway
+### 1. Wait for Bento Integration Deployment ⏳
+- **Status**: In Progress (deploying to Railway)
+- **Description**: Bento box integration with meal planning system
+- **Changes Being Deployed**:
+  - Quick Add feature for Bento page (70+ common kids lunch items)
+  - Bento generation checkbox in meal plan page
+  - Backend support for automatic bento generation with meal plans
+  - Generates 5 weekday bentos when requested
 - **Actions**:
-  - Monitor deployment completion (check every 60 seconds)
-  - Verify hamburger menu works on mobile/tablet (< 1024px)
-  - Verify horizontal nav works on desktop (≥ 1024px)
-  - Take screenshots to confirm functionality
+  - Monitor deployment completion (monitoring script running)
+  - Test Quick Add feature on Bento page
+  - Test bento generation from meal plan page
+  - Verify bentos are created properly
 
 ---
 

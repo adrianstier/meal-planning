@@ -55,13 +55,15 @@ export const useSuggestMeal = () => {
 
 export const useGenerateWeekPlan = () => {
   return useMutation({
-    mutationFn: ({ startDate, numDays, mealTypes, avoidSchoolDuplicates, cuisines }: {
+    mutationFn: ({ startDate, numDays, mealTypes, avoidSchoolDuplicates, cuisines, generateBentos, bentoChildName }: {
       startDate: string;
       numDays?: number;
       mealTypes?: string[];
       avoidSchoolDuplicates?: boolean;
       cuisines?: string[] | 'all';
-    }) => planApi.generateWeek(startDate, numDays, mealTypes, avoidSchoolDuplicates, cuisines),
+      generateBentos?: boolean;
+      bentoChildName?: string;
+    }) => planApi.generateWeek(startDate, numDays, mealTypes, avoidSchoolDuplicates, cuisines, generateBentos, bentoChildName),
   });
 };
 

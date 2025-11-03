@@ -175,8 +175,8 @@ const PlanPage: React.FC = () => {
       setGenerateDialogOpen(true);
 
       // Show success message if bentos were also generated
-      if (generateBentos && result.bentoMessage) {
-        alert(result.bentoMessage);
+      if (generateBentos && (result.data as any).bentoMessage) {
+        alert((result.data as any).bentoMessage);
       }
     } catch (error) {
       console.error('Failed to generate week plan:', error);

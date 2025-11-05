@@ -33,8 +33,11 @@ export interface MealPlan {
   difficulty?: 'easy' | 'medium' | 'hard';
   servings?: number;
   tags?: string;
+  meal_tags?: string;
   ingredients?: string;
   instructions?: string;
+  cuisine?: string;
+  image_url?: string;
 }
 
 // Leftovers types

@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
 import StarRating from '../components/StarRating';
+import { useDragDrop } from '../contexts/DragDropContext';
 
 const RecipesPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -71,6 +72,7 @@ const RecipesPage: React.FC = () => {
   const toggleFavorite = useToggleFavorite();
   const deleteMeal = useDeleteMeal();
   const parseRecipe = useParseRecipe();
+  const { setDraggedRecipe } = useDragDrop();
 
   const handleParseRecipe = async () => {
     try {
@@ -343,6 +345,7 @@ const RecipesPage: React.FC = () => {
     lunch: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'lunch') || [])),
     dinner: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'dinner') || [])),
     snack: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'snack') || [])),
+    favorites: sortMeals(filterMeals(meals?.filter(m => m.is_favorite) || [])),
   };
 
   return (
@@ -465,7 +468,7 @@ const RecipesPage: React.FC = () => {
 
       {/* Recipes by Type */}
       <Tabs defaultValue="dinner" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="breakfast">
             Breakfast ({mealsByType.breakfast.length})
           </TabsTrigger>
@@ -478,9 +481,13 @@ const RecipesPage: React.FC = () => {
           <TabsTrigger value="snack">
             Snacks ({mealsByType.snack.length})
           </TabsTrigger>
+          <TabsTrigger value="favorites">
+            <Heart className="h-4 w-4 mr-1.5 fill-red-500 text-red-500" />
+            Favorites ({mealsByType.favorites.length})
+          </TabsTrigger>
         </TabsList>
 
-        {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((type) => (
+        {(['breakfast', 'lunch', 'dinner', 'snack', 'favorites'] as const).map((type) => (
           <TabsContent key={type} value={type} className="space-y-4">
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">
@@ -488,14 +495,25 @@ const RecipesPage: React.FC = () => {
               </div>
             ) : mealsByType[type].length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                No {type} recipes yet. Add one to get started!
+                {type === 'favorites'
+                  ? 'No favorite recipes yet. Click the heart icon on any recipe to add it to your favorites!'
+                  : `No ${type} recipes yet. Add one to get started!`}
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {mealsByType[type].map((meal) => (
                   <Card
                     key={meal.id}
-                    className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow overflow-hidden"
+                    draggable
+                    onDragStart={(e) => {
+                      setDraggedRecipe({ meal, sourceType: 'recipes' });
+                      e.dataTransfer.effectAllowed = 'copy';
+                      e.dataTransfer.setData('application/json', JSON.stringify(meal));
+                    }}
+                    onDragEnd={() => {
+                      setDraggedRecipe(null);
+                    }}
+                    className="flex flex-col cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow overflow-hidden"
                     onClick={() => {
                       setSelectedMeal(meal);
                       setViewDialogOpen(true);
@@ -730,6 +748,9 @@ const RecipesPage: React.FC = () => {
                 value={recipeUrl}
                 onChange={(e) => setRecipeUrl(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Note: Some sites like NY Times Cooking require a subscription. If you get an error, copy and paste the recipe text instead.
+              </p>
             </div>
           </div>
           <DialogFooter>

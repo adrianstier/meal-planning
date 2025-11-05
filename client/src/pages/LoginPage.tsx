@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const { login, register } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +34,8 @@ export default function LoginPage() {
         }
         await register(username, email, password, displayName);
       }
+      // Navigate to home page after successful login/register
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {

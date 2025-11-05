@@ -1,11 +1,12 @@
-// Force rebuild - 2025-11-03 13:30
+// Force rebuild - 2025-11-04 Enhanced UX
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DragDropProvider } from './contexts/DragDropContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
-import PlanPage from './pages/PlanPage';
+import PlanPageEnhanced from './pages/PlanPageEnhanced';
 import RecipesPage from './pages/RecipesPage';
 import BentoPage from './pages/BentoPage';
 import LeftoversPage from './pages/LeftoversPage';
@@ -23,7 +24,8 @@ const queryClient = new QueryClient({
   },
 });
 
-function AppContent() {
+// Protected route wrapper component
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -38,23 +40,68 @@ function AppContent() {
   }
 
   if (!user) {
-    return <LoginPage />;
+    return <Navigate to="/login" replace />;
   }
 
+  return <>{children}</>;
+}
+
+function AppContent() {
   return (
     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/plan" replace />} />
-          <Route path="/plan" element={<PlanPage />} />
-          <Route path="/recipes" element={<RecipesPage />} />
-          <Route path="/bento" element={<BentoPage />} />
-          <Route path="/browse" element={<Navigate to="/recipes" replace />} />
-          <Route path="/leftovers" element={<LeftoversPage />} />
-          <Route path="/school-menu" element={<SchoolMenuPage />} />
-          <Route path="/lists" element={<ListsPage />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Layout>
+              <Navigate to="/plan" replace />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/plan" element={
+          <ProtectedRoute>
+            <Layout>
+              <PlanPageEnhanced />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/recipes" element={
+          <ProtectedRoute>
+            <Layout>
+              <RecipesPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/bento" element={
+          <ProtectedRoute>
+            <Layout>
+              <BentoPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/browse" element={<Navigate to="/recipes" replace />} />
+        <Route path="/leftovers" element={
+          <ProtectedRoute>
+            <Layout>
+              <LeftoversPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/school-menu" element={
+          <ProtectedRoute>
+            <Layout>
+              <SchoolMenuPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/lists" element={
+          <ProtectedRoute>
+            <Layout>
+              <ListsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+      </Routes>
     </Router>
   );
 }
@@ -63,7 +110,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppContent />
+        <DragDropProvider>
+          <AppContent />
+        </DragDropProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

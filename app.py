@@ -621,9 +621,40 @@ def parse_recipe():
                     return jsonify({'success': True, 'data': parsed, 'source': 'url_scraper'})
                 except Exception as url_error:
                     print(f"URL scraper failed: {url_error}")
-                    # Fall back to AI parser if URL scraper fails
-                    if not recipe_parser:
-                        return jsonify({'success': False, 'error': f'URL scraper failed: {str(url_error)}'}), 500
+
+                    # Check error type and provide appropriate messaging
+                    error_str = str(url_error).lower()
+
+                    # Categorize the error
+                    if '403' in error_str or 'forbidden' in error_str:
+                        error_type = 'blocked'
+                        user_message = 'This recipe site is blocking automated access. Please copy and paste the recipe text instead, or try using "Parse from Text".'
+                    elif '401' in error_str or 'unauthorized' in error_str:
+                        error_type = 'paywall'
+                        user_message = 'This recipe site requires a subscription or login. Please copy and paste the recipe text instead.'
+                    elif '404' in error_str or 'not found' in error_str:
+                        error_type = 'not_found'
+                        user_message = 'Recipe URL not found. Please check the URL and try again.'
+                    elif 'ssl' in error_str or 'certificate' in error_str:
+                        error_type = 'ssl'
+                        user_message = 'SSL certificate error. Please try copying and pasting the recipe text instead.'
+                    else:
+                        error_type = 'unknown'
+                        user_message = f'Failed to parse recipe from URL: {str(url_error)}'
+
+                    # For blocking/paywall errors, provide clear user message
+                    # Don't try AI parser fallback since it needs the actual recipe content
+                    if error_type in ['blocked', 'paywall', 'not_found']:
+                        print(f"⚠️  URL scraper failed ({error_type}): {user_message}")
+                        return jsonify({'success': False, 'error': user_message}), 500
+
+                    # For other errors, fall back to AI parser if available
+                    if recipe_parser:
+                        print(f"⚠️  URL scraper failed ({error_type}). Falling back to AI parser...")
+                        # Continue to AI parser below
+                        pass
+                    else:
+                        return jsonify({'success': False, 'error': user_message}), 500
             elif not recipe_parser:
                 return jsonify({'success': False, 'error': 'Neither URL scraper nor AI parser available'}), 503
 

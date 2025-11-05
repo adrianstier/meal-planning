@@ -36,7 +36,15 @@ api.interceptors.response.use(
     }
     return response;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    // Extract error message from Flask API response { success: false, error: "message" }
+    if (error.response?.data?.error) {
+      error.message = error.response.data.error;
+    } else if (error.response?.data?.message) {
+      error.message = error.response.data.message;
+    }
+    return Promise.reject(error);
+  }
 );
 
 // Meal API

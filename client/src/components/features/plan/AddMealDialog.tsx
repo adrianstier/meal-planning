@@ -26,7 +26,7 @@ interface AddMealDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   date: string;
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner' | 'snack';
 }
 
 const AddMealDialog: React.FC<AddMealDialogProps> = ({
@@ -63,9 +63,17 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
   const handleGetSuggestions = async () => {
     setLoadingSuggestions(true);
     try {
+      // Map frontend meal types to backend types
+      let backendMealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+      if (mealType === 'morning_snack' || mealType === 'afternoon_snack' || mealType === 'snack') {
+        backendMealType = 'snack';
+      } else {
+        backendMealType = mealType as 'breakfast' | 'lunch' | 'dinner';
+      }
+
       const result = await suggestMeal.mutateAsync({
         date,
-        mealType,
+        mealType: backendMealType,
         constraints,
       });
       setSuggestions(result.data || []);
@@ -80,9 +88,17 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
     if (!selectedMealId) return;
 
     try {
+      // Map frontend meal types to backend types
+      let backendMealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+      if (mealType === 'morning_snack' || mealType === 'afternoon_snack' || mealType === 'snack') {
+        backendMealType = 'snack';
+      } else {
+        backendMealType = mealType as 'breakfast' | 'lunch' | 'dinner';
+      }
+
       await addPlanItem.mutateAsync({
         plan_date: date,
-        meal_type: mealType,
+        meal_type: backendMealType,
         meal_id: selectedMealId,
       });
       onOpenChange(false);

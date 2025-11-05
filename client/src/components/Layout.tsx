@@ -27,10 +27,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     await logout();
   };
 
+  const isPlanPage = location.pathname === '/plan';
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
         <div className="container flex h-14 sm:h-16 items-center px-3 sm:px-4">
           {/* Logo and Title */}
           <div className="flex items-center space-x-2 mr-4">
@@ -147,7 +149,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* Main Content */}
-      <main className="container py-4 sm:py-6 px-3 sm:px-4 lg:px-6">
+      <main className={cn(
+        isPlanPage
+          ? "flex-1 overflow-hidden"
+          : "container py-4 sm:py-6 px-3 sm:px-4 lg:px-6"
+      )}>
         {children}
       </main>
     </div>

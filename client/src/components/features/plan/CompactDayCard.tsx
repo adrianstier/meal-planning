@@ -86,7 +86,11 @@ const CompactDayCard: React.FC<CompactDayCardProps> = ({
                   ? 'border-primary/30 bg-primary/5'
                   : 'border-muted-foreground/20 bg-muted/10'
               } hover:border-primary/50 hover:bg-primary/10`}
-              onDrop={(e) => onDrop(date, key, e)}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('!border-primary', '!bg-primary/20', 'shadow-lg');
+                onDrop(date, key, e);
+              }}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.currentTarget.classList.add('!border-primary', '!bg-primary/20', 'shadow-lg');

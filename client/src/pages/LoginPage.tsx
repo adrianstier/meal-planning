@@ -154,16 +154,6 @@ export default function LoginPage() {
               : 'Already have an account? Sign in'}
           </button>
         </div>
-
-        {isLogin && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">
-              <strong>Default admin account:</strong><br />
-              Username: admin<br />
-              (Check server logs for the password on first deployment)
-            </p>
-          </div>
-        )}
       </Card>
     </div>
   );

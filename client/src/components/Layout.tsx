@@ -36,13 +36,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0">
         <div className="container flex h-14 sm:h-16 items-center px-3 sm:px-4">
           {/* Logo and Title */}
-          <div className="flex items-center space-x-2 mr-4">
+          <Link to="/plan" className="flex items-center space-x-2 mr-4 hover:opacity-80 transition-opacity">
             <UtensilsCrossed className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
             <h1 className="text-base sm:text-lg md:text-xl font-bold truncate">
               <span className="hidden sm:inline">Family Meal Planner</span>
               <span className="sm:hidden">Meal Planner</span>
             </h1>
-          </div>
+          </Link>
 
           {/* Desktop Navigation - Large screens only */}
           <nav className="hidden lg:flex flex-1 items-center space-x-1">

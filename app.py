@@ -184,9 +184,13 @@ def register():
     # Auto-login after registration
     session['user_id'] = user_id
 
+    # Get user data to return
+    user = get_current_user(db.db_path)
+
     return jsonify({
         'success': True,
-        'message': 'Registration successful'
+        'message': 'Registration successful',
+        'user': user
     })
 
 

@@ -2135,7 +2135,7 @@ def clear_week_plan():
         end = start + timedelta(days=6)
         end_date = end.strftime('%Y-%m-%d')
 
-        conn = db.connect()
+        conn = sqlite3.connect(db.db_path)
         cursor = conn.cursor()
 
         # Delete all scheduled meals for this week for this user

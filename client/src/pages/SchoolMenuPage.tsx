@@ -61,8 +61,9 @@ const SchoolMenuPage: React.FC = () => {
 
       // Clear success message after 5 seconds
       setTimeout(() => setParseSuccess(null), 5000);
-    } catch (error: any) {
-      console.error('Failed to parse menu photo:', error);
+    } catch (err) {
+      console.error('Failed to parse menu photo:', err);
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
       const errorMessage = error?.response?.data?.error || error?.message || 'Failed to parse menu photo. Please try again.';
       setParseError(errorMessage);
     } finally {

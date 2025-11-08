@@ -16,6 +16,14 @@ module.exports = {
       },
     },
     extend: {
+      fontSize: {
+        // Ensure minimum font sizes for mobile accessibility
+        'xs': ['0.875rem', { lineHeight: '1.25rem' }], // 14px min
+        'sm': ['0.875rem', { lineHeight: '1.25rem' }], // 14px min
+        'base': ['1rem', { lineHeight: '1.5rem' }],     // 16px
+        'lg': ['1.125rem', { lineHeight: '1.75rem' }],  // 18px
+        'xl': ['1.25rem', { lineHeight: '1.75rem' }],   // 20px
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

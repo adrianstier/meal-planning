@@ -115,7 +115,9 @@ class RecipeURLScraper:
             # Optional fields
             try:
                 recipe_data['tags'] = ', '.join(scraper.category().split() if scraper.category() else [])
-            except:
+            except (AttributeError, TypeError) as e:
+                # AttributeError: scraper doesn't have category method
+                # TypeError: category() returned unexpected type
                 recipe_data['tags'] = ''
 
             # Extract and normalize cuisine
@@ -130,7 +132,9 @@ class RecipeURLScraper:
                             recipe_data['tags'] += f", {normalized_cuisine}"
                     elif normalized_cuisine:
                         recipe_data['tags'] = normalized_cuisine
-            except:
+            except (AttributeError, TypeError) as e:
+                # AttributeError: scraper doesn't have cuisine method
+                # TypeError: cuisine() returned unexpected type
                 pass
 
             # Use original image URL directly (don't download to avoid Railway storage issues)
@@ -173,7 +177,9 @@ class RecipeURLScraper:
         """Parse time to minutes"""
         try:
             return int(time_minutes) if time_minutes else None
-        except:
+        except (ValueError, TypeError) as e:
+            # ValueError: time_minutes is not convertible to int
+            # TypeError: time_minutes is None or wrong type
             return None
 
     def _parse_yields(self, yields_str: str) -> Optional[int]:
@@ -183,7 +189,10 @@ class RecipeURLScraper:
             import re
             match = re.search(r'(\d+)', str(yields_str))
             return int(match.group(1)) if match else None
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            # ValueError: cannot convert to int
+            # TypeError: yields_str is None
+            # AttributeError: match is None
             return None
 
     def _normalize_cuisine(self, cuisine_str: str) -> Optional[str]:

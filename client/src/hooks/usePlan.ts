@@ -77,3 +77,14 @@ export const useApplyGeneratedPlan = () => {
     },
   });
 };
+
+export const useClearWeekPlan = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (startDate: string) => planApi.clearWeek(startDate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plan'] });
+    },
+  });
+};

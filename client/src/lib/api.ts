@@ -12,6 +12,8 @@ import type {
   ApiResponse,
   PlanConstraints,
   LeftoverSuggestion,
+  Restaurant,
+  RestaurantFilters,
 } from '../types/api';
 
 // API base URL - use relative URLs in production, localhost in development
@@ -68,6 +70,7 @@ export const planApi = {
   add: (plan: Partial<MealPlan>) => api.post<MealPlan>('/api/plan', plan),
   update: (id: number, plan: Partial<MealPlan>) => api.put<MealPlan>(`/api/plan/${id}`, plan),
   delete: (id: number) => api.delete(`/api/plan/${id}`),
+  clearWeek: (startDate: string) => api.post('/api/plan/clear-week', { start_date: startDate }),
   suggest: (date: string, mealType: string, constraints?: PlanConstraints) =>
     api.post<Meal[]>('/api/plan/suggest', { date, meal_type: mealType, ...constraints }),
   generateWeek: (startDate: string, numDays?: number, mealTypes?: string[], avoidSchoolDuplicates?: boolean, cuisines?: string[] | 'all', generateBentos?: boolean, bentoChildName?: string) =>
@@ -141,6 +144,27 @@ export const historyApi = {
   update: (id: number, history: Partial<MealHistory>) => api.put<MealHistory>(`/api/history/${id}`, history),
   delete: (id: number) => api.delete(`/api/history/${id}`),
   getByMeal: (mealId: number) => api.get<MealHistory[]>(`/api/history/meal/${mealId}`),
+};
+
+// Restaurant API
+export const restaurantsApi = {
+  getAll: (filters?: RestaurantFilters) => {
+    const params = new URLSearchParams();
+    if (filters?.cuisine_type) params.append('cuisine', filters.cuisine_type);
+    if (filters?.outdoor_seating !== undefined) params.append('outdoor_seating', filters.outdoor_seating.toString());
+    if (filters?.has_bar !== undefined) params.append('has_bar', filters.has_bar.toString());
+    const queryString = params.toString();
+    return api.get<Restaurant[]>(`/api/restaurants${queryString ? `?${queryString}` : ''}`);
+  },
+  getById: (id: number) => api.get<Restaurant>(`/api/restaurants/${id}`),
+  create: (restaurant: Partial<Restaurant>) => api.post<Restaurant>('/api/restaurants', restaurant),
+  update: (id: number, restaurant: Partial<Restaurant>) => api.put<Restaurant>(`/api/restaurants/${id}`, restaurant),
+  delete: (id: number) => api.delete(`/api/restaurants/${id}`),
+  suggest: (filters?: RestaurantFilters) => api.post<Restaurant[]>('/api/restaurants/suggest', filters || {}),
+  search: (query: string) => api.post<Partial<Restaurant>>('/api/restaurants/search', { query }),
+  scrape: (id: number) => api.post<Restaurant>(`/api/restaurants/${id}/scrape`),
+  scrapeUrl: (url: string) => api.post<Partial<Restaurant>>('/api/restaurants/scrape-url', { url }),
+  geocode: (address: string) => api.post<{ latitude: number; longitude: number; display_name: string }>('/api/restaurants/geocode', { address }),
 };
 
 export default api;

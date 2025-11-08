@@ -81,7 +81,10 @@ class RecipeParser:
                                 image_url = img_data[0]
                             elif isinstance(img_data, dict) and 'url' in img_data:
                                 image_url = img_data['url']
-                    except:
+                    except (json.JSONDecodeError, TypeError, KeyError) as e:
+                        # JSONDecodeError: invalid JSON in schema
+                        # TypeError: schema_data is not the expected type
+                        # KeyError: missing expected keys
                         pass
 
             # Method 3: Look for largest image in article/recipe content

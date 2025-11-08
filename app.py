@@ -1067,7 +1067,7 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
         try:
             client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
             message = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-3-5-haiku-20241022",
                 max_tokens=4096,
                 messages=[{"role": "user", "content": ai_prompt}]
             )
@@ -1158,6 +1158,628 @@ def init_database():
 
 
 # ============================================================================
+# RESTAURANT ENDPOINTS
+# ============================================================================
+
+@app.route('/api/restaurants', methods=['GET'])
+@login_required
+def get_restaurants():
+    """Get all restaurants with optional filters"""
+    try:
+        user_id = get_current_user_id()
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Build query with optional filters
+        query = "SELECT * FROM restaurants WHERE user_id = ?"
+        params = [user_id]
+
+        # Filter by cuisine type
+        cuisine = request.args.get('cuisine')
+        if cuisine:
+            query += " AND cuisine_type = ?"
+            params.append(cuisine)
+
+        # Filter by outdoor seating
+        outdoor = request.args.get('outdoor_seating')
+        if outdoor is not None:
+            query += " AND outdoor_seating = ?"
+            params.append(1 if outdoor == 'true' else 0)
+
+        # Filter by has bar
+        has_bar = request.args.get('has_bar')
+        if has_bar is not None:
+            query += " AND has_bar = ?"
+            params.append(1 if has_bar == 'true' else 0)
+
+        query += " ORDER BY name ASC"
+
+        cursor.execute(query, params)
+        restaurants = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return jsonify({'success': True, 'data': restaurants})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/restaurants', methods=['POST'])
+@login_required
+def create_restaurant():
+    """Add a new restaurant"""
+    try:
+        user_id = get_current_user_id()
+        data = request.json
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO restaurants (
+                name, address, latitude, longitude, phone, website,
+                cuisine_type, price_range, outdoor_seating, has_bar,
+                takes_reservations, good_for_groups, kid_friendly,
+                rating, notes, tags, user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data.get('name'),
+            data.get('address'),
+            data.get('latitude'),
+            data.get('longitude'),
+            data.get('phone'),
+            data.get('website'),
+            data.get('cuisine_type'),
+            data.get('price_range'),
+            data.get('outdoor_seating', False),
+            data.get('has_bar', False),
+            data.get('takes_reservations', False),
+            data.get('good_for_groups', False),
+            data.get('kid_friendly', False),
+            data.get('rating'),
+            data.get('notes'),
+            data.get('tags'),
+            user_id
+        ))
+
+        restaurant_id = cursor.lastrowid
+        conn.commit()
+
+        # Fetch the created restaurant
+        cursor.execute("SELECT * FROM restaurants WHERE id = ?", (restaurant_id,))
+        restaurant = dict(cursor.fetchone())
+        conn.close()
+
+        return jsonify({'success': True, 'data': restaurant}), 201
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/restaurants/<int:restaurant_id>', methods=['GET'])
+@login_required
+def get_restaurant(restaurant_id):
+    """Get a single restaurant by ID"""
+    try:
+        user_id = get_current_user_id()
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM restaurants WHERE id = ? AND user_id = ?", (restaurant_id, user_id))
+        restaurant = cursor.fetchone()
+        conn.close()
+
+        if not restaurant:
+            return jsonify({'success': False, 'error': 'Restaurant not found'}), 404
+
+        return jsonify({'success': True, 'data': dict(restaurant)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/restaurants/<int:restaurant_id>', methods=['PUT'])
+@login_required
+def update_restaurant(restaurant_id):
+    """Update an existing restaurant"""
+    try:
+        user_id = get_current_user_id()
+        data = request.json
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("SELECT id FROM restaurants WHERE id = ? AND user_id = ?", (restaurant_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Restaurant not found'}), 404
+
+        cursor.execute("""
+            UPDATE restaurants SET
+                name = ?, address = ?, latitude = ?, longitude = ?,
+                phone = ?, website = ?, cuisine_type = ?, price_range = ?,
+                outdoor_seating = ?, has_bar = ?, takes_reservations = ?,
+                good_for_groups = ?, kid_friendly = ?, rating = ?,
+                notes = ?, tags = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND user_id = ?
+        """, (
+            data.get('name'),
+            data.get('address'),
+            data.get('latitude'),
+            data.get('longitude'),
+            data.get('phone'),
+            data.get('website'),
+            data.get('cuisine_type'),
+            data.get('price_range'),
+            data.get('outdoor_seating'),
+            data.get('has_bar'),
+            data.get('takes_reservations'),
+            data.get('good_for_groups'),
+            data.get('kid_friendly'),
+            data.get('rating'),
+            data.get('notes'),
+            data.get('tags'),
+            restaurant_id,
+            user_id
+        ))
+
+        conn.commit()
+
+        # Fetch the updated restaurant
+        cursor.execute("SELECT * FROM restaurants WHERE id = ?", (restaurant_id,))
+        restaurant = dict(cursor.fetchone())
+        conn.close()
+
+        return jsonify({'success': True, 'data': restaurant})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/restaurants/<int:restaurant_id>', methods=['DELETE'])
+@login_required
+def delete_restaurant(restaurant_id):
+    """Delete a restaurant"""
+    try:
+        user_id = get_current_user_id()
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("SELECT id FROM restaurants WHERE id = ? AND user_id = ?", (restaurant_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Restaurant not found'}), 404
+
+        cursor.execute("DELETE FROM restaurants WHERE id = ? AND user_id = ?", (restaurant_id, user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Restaurant deleted'})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/restaurants/suggest', methods=['POST'])
+@login_required
+def suggest_restaurants():
+    """Suggest 3 random restaurants based on filters"""
+    try:
+        user_id = get_current_user_id()
+        data = request.json or {}
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Build query with optional filters
+        query = "SELECT * FROM restaurants WHERE user_id = ?"
+        params = [user_id]
+
+        # Apply filters
+        if data.get('cuisine_type'):
+            query += " AND cuisine_type = ?"
+            params.append(data['cuisine_type'])
+
+        if data.get('outdoor_seating'):
+            query += " AND outdoor_seating = 1"
+
+        if data.get('has_bar'):
+            query += " AND has_bar = 1"
+
+        if data.get('kid_friendly'):
+            query += " AND kid_friendly = 1"
+
+        if data.get('price_range'):
+            query += " AND price_range = ?"
+            params.append(data['price_range'])
+
+        # Get all matching restaurants and randomly select up to 3
+        query += " ORDER BY RANDOM() LIMIT 3"
+
+        cursor.execute(query, params)
+        suggestions = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
+        return jsonify({'success': True, 'data': suggestions})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/restaurants/geocode', methods=['POST'])
+@login_required
+def geocode_address():
+    """Geocode an address to get latitude/longitude using Nominatim (OpenStreetMap)"""
+    try:
+        data = request.json
+        address = data.get('address')
+
+        if not address:
+            return jsonify({'success': False, 'error': 'Address is required'}), 400
+
+        # Use Nominatim (OpenStreetMap) - free geocoding service
+        import urllib.parse
+        import urllib.request
+
+        # Encode address for URL
+        encoded_address = urllib.parse.quote(address)
+        url = f"https://nominatim.openstreetmap.org/search?q={encoded_address}&format=json&limit=1"
+
+        # Add user agent as required by Nominatim
+        req = urllib.request.Request(url, headers={'User-Agent': 'FamilyMealPlanner/1.0'})
+
+        with urllib.request.urlopen(req, timeout=10) as response:
+            results = json.loads(response.read().decode())
+
+        if not results:
+            return jsonify({
+                'success': False,
+                'error': 'Address not found. Please check the address and try again.'
+            }), 404
+
+        result = results[0]
+        return jsonify({
+            'success': True,
+            'data': {
+                'latitude': float(result['lat']),
+                'longitude': float(result['lon']),
+                'display_name': result.get('display_name', address)
+            }
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Geocoding failed: {str(e)}'}), 500
+
+
+@app.route('/api/restaurants/scrape-url', methods=['POST'])
+@login_required
+def scrape_restaurant_from_url():
+    """Scrape restaurant info from any URL (restaurant website, Google Maps, etc.) using AI"""
+    try:
+        data = request.json
+        url = data.get('url')
+
+        if not url:
+            return jsonify({'success': False, 'error': 'URL is required'}), 400
+
+        # Check if AI is available
+        if not recipe_parser:
+            return jsonify({
+                'success': False,
+                'error': 'AI parser not available. Please set ANTHROPIC_API_KEY.'
+            }), 503
+
+        try:
+            import urllib.request
+
+            # Fetch the webpage content
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+            })
+
+            with urllib.request.urlopen(req, timeout=15) as response:
+                html_content = response.read().decode('utf-8', errors='ignore')
+
+            # Use Claude to extract restaurant information from the HTML
+            client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+
+            prompt = f"""Extract all restaurant information from this webpage HTML. Return ONLY a JSON object with this exact structure:
+{{
+  "name": "Restaurant Name",
+  "address": "Full Address",
+  "phone": "Phone Number",
+  "website": "Website URL",
+  "cuisine_type": "Type of Cuisine",
+  "price_range": "$", "$$", "$$$", or "$$$$",
+  "rating": 4.5,
+  "image_url": "URL to main restaurant image (find the primary/hero image)",
+  "hours_data": {{"Monday": "11:00 AM - 10:00 PM", ...}},
+  "happy_hour_info": {{"days": [...], "time": "...", "details": "..."}},
+  "outdoor_seating": true/false,
+  "has_bar": true/false,
+  "takes_reservations": true/false,
+  "good_for_groups": true/false,
+  "kid_friendly": true/false,
+  "notes": "Any notable features, specialties, or interesting facts"
+}}
+
+Extract as much information as possible from the HTML below. If a field is not available, use null or appropriate default.
+For image_url, find the main restaurant photo - look for og:image meta tags, large images in the content, or hero images.
+
+HTML Content (truncated to first 10000 chars):
+{html_content[:10000]}
+
+Return ONLY valid JSON, no other text."""
+
+            message = client.messages.create(
+                model="claude-3-5-haiku-20241022",
+                max_tokens=2048,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            response_text = message.content[0].text.strip()
+
+            # Remove markdown code blocks if present
+            if response_text.startswith('```'):
+                response_text = response_text.split('```')[1]
+                if response_text.startswith('json'):
+                    response_text = response_text[4:]
+                response_text = response_text.strip()
+
+            scraped_data = json.loads(response_text)
+
+            # Convert boolean fields to proper format
+            for bool_field in ['outdoor_seating', 'has_bar', 'takes_reservations', 'good_for_groups', 'kid_friendly']:
+                if bool_field in scraped_data and scraped_data[bool_field] is not None:
+                    scraped_data[bool_field] = bool(scraped_data[bool_field])
+
+            # Convert JSON objects to strings for storage
+            if 'hours_data' in scraped_data and scraped_data['hours_data']:
+                scraped_data['hours_data'] = json.dumps(scraped_data['hours_data'])
+            if 'happy_hour_info' in scraped_data and scraped_data['happy_hour_info']:
+                scraped_data['happy_hour_info'] = json.dumps(scraped_data['happy_hour_info'])
+
+            return jsonify({
+                'success': True,
+                'data': scraped_data,
+                'message': 'Restaurant information extracted successfully'
+            })
+
+        except urllib.error.URLError as e:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to fetch URL: {str(e)}. Note: Some sites like Yelp block automated access. Try using the restaurant\'s own website instead.'
+            }), 400
+        except json.JSONDecodeError as e:
+            return jsonify({
+                'success': False,
+                'error': 'AI returned invalid JSON. Please try again.',
+                'raw_response': response_text[:500]
+            }), 500
+        except Exception as e:
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': f'Scraping failed: {str(e)}'
+            }), 500
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/restaurants/search', methods=['POST'])
+@login_required
+def search_restaurant():
+    """Search for restaurant info using Claude's web search"""
+    try:
+        data = request.json
+        query = data.get('query')  # e.g., "Chez Panisse, Berkeley"
+
+        if not query:
+            return jsonify({'success': False, 'error': 'Search query is required'}), 400
+
+        # Check if AI is available
+        if not recipe_parser:
+            return jsonify({
+                'success': False,
+                'error': 'AI search not available. Please set ANTHROPIC_API_KEY.'
+            }), 503
+
+        try:
+            client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+
+            # Use Claude with web search to find the restaurant
+            message = client.messages.create(
+                model="claude-3-5-haiku-20241022",
+                max_tokens=4096,
+                tools=[{
+                    "type": "web_search_20250305",
+                    "name": "web_search",
+                    "max_uses": 3
+                }],
+                messages=[{
+                    "role": "user",
+                    "content": f"""Find comprehensive information about this restaurant: {query}
+
+Search the web and extract ALL available details. Return ONLY a JSON object with this exact structure:
+{{
+  "name": "Restaurant Name",
+  "address": "Full Street Address with City, State, ZIP",
+  "phone": "Phone Number",
+  "website": "Official Website URL",
+  "cuisine_type": "Type of Cuisine",
+  "price_range": "$", "$$", "$$$", or "$$$$",
+  "rating": 4.5,
+  "image_url": "URL to main restaurant image",
+  "hours_data": {{"Monday": "11:00 AM - 10:00 PM", "Tuesday": "11:00 AM - 10:00 PM", ...}},
+  "happy_hour_info": {{"days": ["Monday", "Friday"], "time": "4:00 PM - 6:00 PM", "details": "Half off appetizers"}},
+  "outdoor_seating": true/false,
+  "has_bar": true/false,
+  "takes_reservations": true/false,
+  "good_for_groups": true/false,
+  "kid_friendly": true/false,
+  "notes": "Any notable features, specialties, awards, or interesting facts"
+}}
+
+For the image_url, try to find a high-quality photo from the restaurant's website, Google Maps, or review sites.
+If a field is not available, use null or appropriate default. Return ONLY valid JSON, no other text."""
+                }]
+            )
+
+            # Extract response text
+            response_text = ""
+            for block in message.content:
+                if hasattr(block, 'text'):
+                    response_text += block.text
+
+            # Clean up response - remove markdown code blocks if present
+            response_text = response_text.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text[7:]
+            if response_text.startswith('```'):
+                response_text = response_text[3:]
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]
+            response_text = response_text.strip()
+
+            # Parse JSON response
+            restaurant_data = json.loads(response_text)
+
+            # Convert nested JSON objects to strings for storage
+            if isinstance(restaurant_data.get('hours_data'), dict):
+                restaurant_data['hours_data'] = json.dumps(restaurant_data['hours_data'])
+            if isinstance(restaurant_data.get('happy_hour_info'), dict):
+                restaurant_data['happy_hour_info'] = json.dumps(restaurant_data['happy_hour_info'])
+
+            return jsonify({
+                'success': True,
+                'data': restaurant_data,
+                'message': 'Restaurant information found successfully'
+            })
+
+        except json.JSONDecodeError as e:
+            return jsonify({
+                'success': False,
+                'error': 'AI returned invalid JSON. Please try a more specific search (e.g., "Restaurant Name, City").',
+                'raw_response': response_text[:500] if 'response_text' in locals() else 'No response'
+            }), 500
+        except Exception as e:
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': f'Search failed: {str(e)}'
+            }), 500
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/restaurants/<int:restaurant_id>/scrape', methods=['POST'])
+@login_required
+def scrape_restaurant_info(restaurant_id):
+    """Scrape restaurant info using AI (hours, happy hours, etc.)"""
+    try:
+        user_id = get_current_user_id()
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Verify ownership and get restaurant
+        cursor.execute("SELECT * FROM restaurants WHERE id = ? AND user_id = ?", (restaurant_id, user_id))
+        restaurant = cursor.fetchone()
+        if not restaurant:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Restaurant not found'}), 404
+
+        restaurant_dict = dict(restaurant)
+
+        # Check if AI is available
+        if not recipe_parser:
+            return jsonify({
+                'success': False,
+                'error': 'AI parser not available. Please set ANTHROPIC_API_KEY.'
+            }), 503
+
+        # Use Claude to generate realistic restaurant hours/happy hour info
+        # Note: This generates plausible data. For real scraping, you'd need to integrate with Google Places API
+        try:
+            client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+
+            prompt = f"""Generate realistic operating hours and happy hour information for this restaurant. Return ONLY a JSON object with this exact structure:
+{{
+  "hours_data": {{"Monday": "11:00 AM - 10:00 PM", "Tuesday": "11:00 AM - 10:00 PM", "Wednesday": "11:00 AM - 10:00 PM", "Thursday": "11:00 AM - 10:00 PM", "Friday": "11:00 AM - 11:00 PM", "Saturday": "10:00 AM - 11:00 PM", "Sunday": "10:00 AM - 9:00 PM"}},
+  "happy_hour_info": {{"days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "time": "4:00 PM - 6:00 PM", "details": "Half off appetizers and $2 off draft beers"}}
+}}
+
+Restaurant: {restaurant_dict.get('name')}
+Cuisine: {restaurant_dict.get('cuisine_type', 'Restaurant')}
+{f"Website: {restaurant_dict.get('website')}" if restaurant_dict.get('website') else ""}
+
+Generate typical hours for this type of establishment. Return ONLY valid JSON, no other text."""
+
+            message = client.messages.create(
+                model="claude-3-5-haiku-20241022",
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            response_text = message.content[0].text.strip()
+
+            # Try to extract JSON from response
+            try:
+                # Remove markdown code blocks if present
+                if response_text.startswith('```'):
+                    response_text = response_text.split('```')[1]
+                    if response_text.startswith('json'):
+                        response_text = response_text[4:]
+                    response_text = response_text.strip()
+
+                scraped_data = json.loads(response_text)
+
+                # Update restaurant with scraped data
+                cursor.execute("""
+                    UPDATE restaurants
+                    SET hours_data = ?, happy_hour_info = ?, last_scraped = CURRENT_TIMESTAMP
+                    WHERE id = ? AND user_id = ?
+                """, (
+                    json.dumps(scraped_data.get('hours_data')) if scraped_data.get('hours_data') else None,
+                    json.dumps(scraped_data.get('happy_hour_info')) if scraped_data.get('happy_hour_info') else None,
+                    restaurant_id,
+                    user_id
+                ))
+                conn.commit()
+
+                # Fetch updated restaurant
+                cursor.execute("SELECT * FROM restaurants WHERE id = ?", (restaurant_id,))
+                updated_restaurant = dict(cursor.fetchone())
+                conn.close()
+
+                return jsonify({
+                    'success': True,
+                    'data': updated_restaurant,
+                    'message': 'Restaurant information generated successfully'
+                })
+
+            except json.JSONDecodeError:
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'AI returned invalid JSON. Please try again.',
+                    'raw_response': response_text[:500]
+                }), 500
+
+        except Exception as e:
+            conn.close()
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': f'AI processing failed: {str(e)}'
+            }), 500
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
 # MEAL PLAN API ENDPOINTS
 # ============================================================================
 
@@ -1194,7 +1816,9 @@ def get_week_plan():
                 m.servings,
                 m.tags,
                 m.ingredients,
-                m.instructions
+                m.instructions,
+                m.cuisine,
+                m.image_url
             FROM scheduled_meals sm
             JOIN meals m ON sm.meal_id = m.id
             JOIN meal_types mt ON sm.meal_type_id = mt.id
@@ -1418,6 +2042,48 @@ def delete_plan_entry(plan_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/plan/clear-week', methods=['POST'])
+@login_required
+def clear_week_plan():
+    """Clear all meals for a specific week"""
+    try:
+        user_id = get_current_user_id()
+        data = request.json
+        start_date = data.get('start_date')
+
+        if not start_date:
+            return jsonify({'success': False, 'error': 'start_date is required'}), 400
+
+        # Calculate end date (6 days after start)
+        from datetime import datetime, timedelta
+        start = datetime.strptime(start_date, '%Y-%m-%d')
+        end = start + timedelta(days=6)
+        end_date = end.strftime('%Y-%m-%d')
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Delete all scheduled meals for this week for this user
+        cursor.execute("""
+            DELETE FROM scheduled_meals
+            WHERE meal_date BETWEEN ? AND ?
+            AND user_id = ?
+        """, (start_date, end_date, user_id))
+
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': f'Cleared {deleted_count} meals from week',
+            'deleted_count': deleted_count
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/plan/suggest', methods=['POST'])
 @login_required
 def suggest_meals():
@@ -1547,7 +2213,10 @@ def generate_week_plan():
                     if date not in school_menu:
                         school_menu[date] = []
                     school_menu[date].append(item['meal_name'].lower())
-            except:
+            except (AttributeError, KeyError, TypeError) as e:
+                # AttributeError: db doesn't have get_school_menu_range method
+                # KeyError: item missing menu_date or meal_name
+                # TypeError: unexpected data type
                 pass  # If school menu doesn't exist, just skip
 
         # Generate meal plan with cuisine balancing

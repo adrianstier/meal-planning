@@ -83,3 +83,23 @@ htmlcov/
 # R Project files
 *.Rproj
 .Rproj.user/
+
+# Debug and test artifacts
+debug-login.js
+analyze-ui.js
+analyze_ui.py
+get_db_path.py
+monitor_*.sh
+*.png
+!docs/**/*.png
+!client/public/**/*.png
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Node
+node_modules/
+package-lock.json
+npm-debug.log*

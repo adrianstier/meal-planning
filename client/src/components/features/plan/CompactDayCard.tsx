@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format, parseISO, isToday } from 'date-fns';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
 import type { MealPlan } from '../../../types/api';
@@ -20,6 +20,7 @@ interface CompactDayCardProps {
   };
   onDrop: (date: string, mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner', e: React.DragEvent) => void;
   onMealClick?: (meal: MealPlan) => void;
+  mealDisplayMode?: 'dinners' | '3-meals' | 'all';
 }
 
 const CompactDayCard: React.FC<CompactDayCardProps> = ({
@@ -31,11 +32,20 @@ const CompactDayCard: React.FC<CompactDayCardProps> = ({
   meals,
   onDrop,
   onMealClick,
+  mealDisplayMode = 'all',
 }) => {
   const [expanded, setExpanded] = useState(false);
   const isTodayCard = isToday(parseISO(date));
 
-  const mealTypes: Array<{ key: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner'; label: string; emoji: string }> = [
+  // Helper to determine which meals to show
+  const shouldShowMeal = (mealType: string): boolean => {
+    if (mealDisplayMode === 'all') return true;
+    if (mealDisplayMode === 'dinners') return mealType === 'dinner';
+    if (mealDisplayMode === '3-meals') return ['breakfast', 'lunch', 'dinner'].includes(mealType);
+    return false;
+  };
+
+  const allMealTypes: Array<{ key: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner'; label: string; emoji: string }> = [
     { key: 'breakfast', label: 'Breakfast', emoji: '🍳' },
     { key: 'morning_snack', label: 'Morning Snack', emoji: '🍎' },
     { key: 'lunch', label: 'Lunch', emoji: '🥗' },
@@ -43,7 +53,11 @@ const CompactDayCard: React.FC<CompactDayCardProps> = ({
     { key: 'dinner', label: 'Dinner', emoji: '🍽️' },
   ];
 
-  const totalMeals = Object.values(meals).flat().length;
+  const mealTypes = allMealTypes.filter(mealType => shouldShowMeal(mealType.key));
+
+  const totalMeals = Object.entries(meals)
+    .filter(([mealType]) => shouldShowMeal(mealType))
+    .flatMap(([_, mealList]) => mealList).length;
 
   return (
     <Card className={`${isTodayCard ? 'ring-2 ring-primary' : ''}`}>
@@ -114,7 +128,10 @@ const CompactDayCard: React.FC<CompactDayCardProps> = ({
                         </div>
                       </div>
                     ) : (
-                      <div className="text-xs text-muted-foreground/60">Drop here</div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Plus className="h-3 w-3" />
+                        <span>Drag recipe here</span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -150,8 +167,9 @@ const CompactDayCard: React.FC<CompactDayCardProps> = ({
                       ))}
                     </div>
                   ) : (
-                    <div className="text-xs text-center text-muted-foreground/60 py-2">
-                      Drop a recipe here
+                    <div className="text-xs text-center text-muted-foreground py-3 border-2 border-dashed border-muted-foreground/30 rounded bg-muted/5">
+                      <Plus className="h-4 w-4 mx-auto mb-1 opacity-50" />
+                      <div>Drag a recipe here</div>
                     </div>
                   )}
                 </div>

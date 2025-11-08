@@ -81,7 +81,6 @@ const RecipesPage: React.FC = () => {
       // The axios interceptor unwraps { success: true, data: {...} } to just {...}
       // So result.data is the parsed recipe object
       const parsedData = result.data;
-      console.log('Parsed recipe data:', parsedData);
 
       setParsedRecipe(parsedData);
       setParseDialogOpen(false);
@@ -91,7 +90,7 @@ const RecipesPage: React.FC = () => {
       let ingredientsText = '';
       if (parsedData.ingredients && Array.isArray(parsedData.ingredients)) {
         ingredientsText = parsedData.ingredients
-          .map((ing: any) => {
+          .map((ing: { quantity?: string; name: string }) => {
             const quantity = ing.quantity ? `${ing.quantity} ` : '';
             const name = ing.name || '';
             return `${quantity}${name}`.trim();
@@ -139,7 +138,6 @@ const RecipesPage: React.FC = () => {
       const result = await parseRecipe.mutateAsync(recipeUrl);
 
       const parsedData = result.data;
-      console.log('Parsed recipe data from URL:', parsedData);
 
       setParsedRecipe(parsedData);
       setUrlDialogOpen(false);
@@ -148,7 +146,7 @@ const RecipesPage: React.FC = () => {
       let ingredientsText = '';
       if (parsedData.ingredients && Array.isArray(parsedData.ingredients)) {
         ingredientsText = parsedData.ingredients
-          .map((ing: any) => {
+          .map((ing: { quantity?: string; name: string }) => {
             const quantity = ing.quantity ? `${ing.quantity} ` : '';
             const name = ing.name || '';
             return `${quantity}${name}`.trim();
@@ -988,7 +986,7 @@ const RecipesPage: React.FC = () => {
                     <div>
                       <h3 className="font-semibold mb-3 text-lg">Top Comments from Original Recipe</h3>
                       <div className="space-y-3">
-                        {comments.map((comment: any, index: number) => (
+                        {comments.map((comment: { text: string; upvotes: number }, index: number) => (
                           <div key={index} className="bg-muted/50 p-4 rounded-lg border border-muted">
                             <p className="text-sm text-foreground leading-relaxed">{comment.text}</p>
                             {comment.upvotes > 0 && (

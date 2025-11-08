@@ -168,3 +168,38 @@ export interface BentoPlan {
   compartment4?: BentoCompartment | null;
   notes?: string;
 }
+
+// Restaurant types
+export interface Restaurant {
+  id: number;
+  name: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  phone?: string;
+  website?: string;
+  cuisine_type?: string;
+  price_range?: string;
+  hours_data?: string; // JSON string
+  happy_hour_info?: string; // JSON string
+  outdoor_seating: boolean;
+  has_bar: boolean;
+  takes_reservations: boolean;
+  good_for_groups: boolean;
+  kid_friendly: boolean;
+  rating?: number;
+  notes?: string;
+  tags?: string;
+  image_url?: string;
+  last_scraped?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RestaurantFilters {
+  cuisine_type?: string;
+  outdoor_seating?: boolean;
+  has_bar?: boolean;
+  kid_friendly?: boolean;
+  price_range?: string;
+}

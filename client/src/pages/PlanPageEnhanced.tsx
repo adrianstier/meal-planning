@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { format, startOfWeek, addDays, parseISO, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart, Undo2, Redo2, LayoutGrid, List, Minimize2, BookOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart, Undo2, Redo2, LayoutGrid, List, Minimize2, BookOpen, Trash2, Minus, Users } from 'lucide-react';
+import { scaleIngredients, calculateServingMultiplier } from '../utils/ingredientScaler';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import {
@@ -11,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
-import { useWeekPlan, useGenerateWeekPlan, useApplyGeneratedPlan, useDeletePlanItem, useAddPlanItem } from '../hooks/usePlan';
+import { useWeekPlan, useGenerateWeekPlan, useApplyGeneratedPlan, useDeletePlanItem, useAddPlanItem, useClearWeekPlan } from '../hooks/usePlan';
 import { useGenerateShoppingList } from '../hooks/useShopping';
 import { useMeals } from '../hooks/useMeals';
 import { useDragDrop } from '../contexts/DragDropContext';
@@ -25,6 +26,7 @@ import CompactDayCard from '../components/features/plan/CompactDayCard';
 import type { MealPlan } from '../types/api';
 
 type ViewMode = 'week' | 'list' | 'compact';
+type MealDisplayMode = 'dinners' | '3-meals' | 'all';
 
 const PlanPageEnhanced: React.FC = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -35,11 +37,16 @@ const PlanPageEnhanced: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return (localStorage.getItem('planViewMode') as ViewMode) || 'compact';
   });
+
+  const [mealDisplayMode, setMealDisplayMode] = useState<MealDisplayMode>(() => {
+    return (localStorage.getItem('mealDisplayMode') as MealDisplayMode) || 'all';
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState<any[]>([]);
   const [selectedMeal, setSelectedMeal] = useState<MealPlan | null>(null);
+  const [adjustedServings, setAdjustedServings] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{
     date: string;
     mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner';
@@ -49,7 +56,6 @@ const PlanPageEnhanced: React.FC = () => {
   const [bentoChildName, setBentoChildName] = useState('');
   const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(() => {
     const stored = localStorage.getItem('recipeBrowserOpen');
-    console.log('Initial recipeBrowserOpen state:', stored);
     return stored === 'true' || stored === null; // Default to true if never set
   });
 
@@ -64,13 +70,16 @@ const PlanPageEnhanced: React.FC = () => {
   const generateShoppingList = useGenerateShoppingList();
   const deletePlanItem = useDeletePlanItem();
   const addPlanItem = useAddPlanItem();
+  const clearWeekPlan = useClearWeekPlan();
   const { draggedRecipe } = useDragDrop();
 
   // Handle drop event
   const handleDrop = async (date: string, mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner', e: React.DragEvent) => {
     e.preventDefault();
 
-    if (!draggedRecipe) return;
+    if (!draggedRecipe) {
+      return;
+    }
 
     try {
       // Map frontend meal types to backend types
@@ -93,6 +102,11 @@ const PlanPageEnhanced: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('planViewMode', viewMode);
   }, [viewMode]);
+
+  // Save meal display mode preference
+  useEffect(() => {
+    localStorage.setItem('mealDisplayMode', mealDisplayMode);
+  }, [mealDisplayMode]);
 
   // Save recipe browser state
   useEffect(() => {
@@ -270,6 +284,18 @@ const PlanPageEnhanced: React.FC = () => {
     }
   };
 
+  const handleClearWeek = async () => {
+    const totalMeals = weekPlan?.length || 0;
+    if (window.confirm(`Are you sure you want to clear all ${totalMeals} meals from this week? This action cannot be undone.`)) {
+      try {
+        await clearWeekPlan.mutateAsync(currentWeekStart);
+      } catch (error) {
+        console.error('Failed to clear week:', error);
+        alert('Failed to clear meals. Please try again.');
+      }
+    }
+  };
+
   const handleCopyMeal = (meal: MealPlan) => {
     // TODO: Show dialog to select target date
     alert('Copy meal feature - select a date to copy to');
@@ -367,6 +393,14 @@ const PlanPageEnhanced: React.FC = () => {
     );
   }
 
+  // Helper to determine which meals to show based on display mode
+  const shouldShowMeal = (mealType: string): boolean => {
+    if (mealDisplayMode === 'all') return true;
+    if (mealDisplayMode === 'dinners') return mealType === 'dinner';
+    if (mealDisplayMode === '3-meals') return ['breakfast', 'lunch', 'dinner'].includes(mealType);
+    return false;
+  };
+
   const renderDayCard = (day: typeof weekDays[0]) => {
     const dayMeals = mealsByDate[day.date] || {
       breakfast: [],
@@ -400,6 +434,7 @@ const PlanPageEnhanced: React.FC = () => {
         </CardHeader>
         <CardContent className="flex-1 space-y-3 text-sm">
           {/* Breakfast */}
+          {shouldShowMeal('breakfast') && (
           <div
             className="space-y-1 p-2 rounded transition-colors"
             onDrop={(e) => handleDrop(day.date, 'breakfast', e)}
@@ -429,6 +464,7 @@ const PlanPageEnhanced: React.FC = () => {
                   meal={meal}
                   onClick={() => {
                     setSelectedMeal(meal);
+                    setAdjustedServings(null);
                     setViewDialogOpen(true);
                   }}
                   onDelete={() => handleDeleteMeal(meal.id)}
@@ -447,8 +483,52 @@ const PlanPageEnhanced: React.FC = () => {
               />
             )}
           </div>
+          )}
+
+          {/* Morning Snack */}
+          {shouldShowMeal('morning_snack') && dayMeals.morning_snack.length > 0 && (
+            <div
+              className="space-y-1 p-2 rounded transition-colors"
+              onDrop={(e) => handleDrop(day.date, 'morning_snack', e)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('bg-primary/10');
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('bg-primary/10');
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-xs text-muted-foreground">Morning Snack 🍎</h4>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => handleAddMeal(day.date, 'morning_snack')}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+              {dayMeals.morning_snack.map((meal) => (
+                <MealCard
+                  key={meal.id}
+                  meal={meal}
+                  onClick={() => {
+                    setSelectedMeal(meal);
+                    setAdjustedServings(null);
+                    setViewDialogOpen(true);
+                  }}
+                  onDelete={() => handleDeleteMeal(meal.id)}
+                  onCopy={() => handleCopyMeal(meal)}
+                  onMove={() => handleMoveMeal(meal)}
+                  onSwap={() => handleSwapMeal(meal)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Lunch */}
+          {shouldShowMeal('lunch') && (
           <div
             className="space-y-1 p-2 rounded transition-colors"
             onDrop={(e) => handleDrop(day.date, 'lunch', e)}
@@ -478,6 +558,7 @@ const PlanPageEnhanced: React.FC = () => {
                   meal={meal}
                   onClick={() => {
                     setSelectedMeal(meal);
+                    setAdjustedServings(null);
                     setViewDialogOpen(true);
                   }}
                   onDelete={() => handleDeleteMeal(meal.id)}
@@ -496,8 +577,52 @@ const PlanPageEnhanced: React.FC = () => {
               />
             )}
           </div>
+          )}
+
+          {/* Afternoon Snack */}
+          {shouldShowMeal('afternoon_snack') && dayMeals.afternoon_snack.length > 0 && (
+            <div
+              className="space-y-1 p-2 rounded transition-colors"
+              onDrop={(e) => handleDrop(day.date, 'afternoon_snack', e)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('bg-primary/10');
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('bg-primary/10');
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-xs text-muted-foreground">Afternoon Snack 🍊</h4>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => handleAddMeal(day.date, 'afternoon_snack')}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+              {dayMeals.afternoon_snack.map((meal) => (
+                <MealCard
+                  key={meal.id}
+                  meal={meal}
+                  onClick={() => {
+                    setSelectedMeal(meal);
+                    setAdjustedServings(null);
+                    setViewDialogOpen(true);
+                  }}
+                  onDelete={() => handleDeleteMeal(meal.id)}
+                  onCopy={() => handleCopyMeal(meal)}
+                  onMove={() => handleMoveMeal(meal)}
+                  onSwap={() => handleSwapMeal(meal)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Dinner */}
+          {shouldShowMeal('dinner') && (
           <div
             className="space-y-1 p-2 rounded transition-colors"
             onDrop={(e) => handleDrop(day.date, 'dinner', e)}
@@ -527,6 +652,7 @@ const PlanPageEnhanced: React.FC = () => {
                   meal={meal}
                   onClick={() => {
                     setSelectedMeal(meal);
+                    setAdjustedServings(null);
                     setViewDialogOpen(true);
                   }}
                   onDelete={() => handleDeleteMeal(meal.id)}
@@ -545,87 +671,6 @@ const PlanPageEnhanced: React.FC = () => {
               />
             )}
           </div>
-
-          {/* Morning Snack */}
-          {dayMeals.morning_snack.length > 0 && (
-            <div
-              className="space-y-1 p-2 rounded transition-colors"
-              onDrop={(e) => handleDrop(day.date, 'morning_snack', e)}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.currentTarget.classList.add('bg-primary/10');
-              }}
-              onDragLeave={(e) => {
-                e.currentTarget.classList.remove('bg-primary/10');
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-xs text-muted-foreground">Morning Snack</h4>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleAddMeal(day.date, 'morning_snack')}
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
-              {dayMeals.morning_snack.map((meal) => (
-                <MealCard
-                  key={meal.id}
-                  meal={meal}
-                  onClick={() => {
-                    setSelectedMeal(meal);
-                    setViewDialogOpen(true);
-                  }}
-                  onDelete={() => handleDeleteMeal(meal.id)}
-                  onCopy={() => handleCopyMeal(meal)}
-                  onMove={() => handleMoveMeal(meal)}
-                  onSwap={() => handleSwapMeal(meal)}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Afternoon Snack */}
-          {dayMeals.afternoon_snack.length > 0 && (
-            <div
-              className="space-y-1 p-2 rounded transition-colors"
-              onDrop={(e) => handleDrop(day.date, 'afternoon_snack', e)}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.currentTarget.classList.add('bg-primary/10');
-              }}
-              onDragLeave={(e) => {
-                e.currentTarget.classList.remove('bg-primary/10');
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-xs text-muted-foreground">Afternoon Snack</h4>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleAddMeal(day.date, 'afternoon_snack')}
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
-              {dayMeals.afternoon_snack.map((meal) => (
-                <MealCard
-                  key={meal.id}
-                  meal={meal}
-                  onClick={() => {
-                    setSelectedMeal(meal);
-                    setViewDialogOpen(true);
-                  }}
-                  onDelete={() => handleDeleteMeal(meal.id)}
-                  onCopy={() => handleCopyMeal(meal)}
-                  onMove={() => handleMoveMeal(meal)}
-                  onSwap={() => handleSwapMeal(meal)}
-                />
-              ))}
-            </div>
           )}
         </CardContent>
       </Card>
@@ -648,7 +693,7 @@ const PlanPageEnhanced: React.FC = () => {
           <Card>
         <CardHeader>
           <div className="flex flex-col gap-4">
-            {/* Title and Actions Row */}
+            {/* Title Row */}
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Weekly Meal Plan</CardTitle>
@@ -657,13 +702,51 @@ const PlanPageEnhanced: React.FC = () => {
                   {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
                 </CardDescription>
               </div>
+            </div>
+
+            {/* Meal Display Mode Toggle - Prominent Row */}
+            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+              <span className="text-sm font-medium text-muted-foreground">Show:</span>
+              <div className="flex items-center gap-1 border rounded-md p-1 bg-background">
+                <Button
+                  variant={mealDisplayMode === 'dinners' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-3"
+                  onClick={() => setMealDisplayMode('dinners')}
+                  title="Dinners Only"
+                >
+                  Dinners Only
+                </Button>
+                <Button
+                  variant={mealDisplayMode === '3-meals' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-3"
+                  onClick={() => setMealDisplayMode('3-meals')}
+                  title="3 Meals (Breakfast, Lunch, Dinner)"
+                >
+                  3 Meals
+                </Button>
+                <Button
+                  variant={mealDisplayMode === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-3"
+                  onClick={() => setMealDisplayMode('all')}
+                  title="All Meals + Snacks"
+                >
+                  All Meals + Snacks
+                </Button>
+              </div>
+            </div>
+
+            {/* Controls Row */}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              {/* Left side - View controls */}
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Recipe Browser Toggle */}
                 <Button
                   variant={recipeBrowserOpen ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => {
-                    console.log('Recipes button clicked, current state:', recipeBrowserOpen);
                     setRecipeBrowserOpen(!recipeBrowserOpen);
                   }}
                   className="h-8"
@@ -679,7 +762,7 @@ const PlanPageEnhanced: React.FC = () => {
                     size="sm"
                     className="h-7 px-2"
                     onClick={() => setViewMode('week')}
-                   
+                    title="Week Grid View"
                   >
                     <LayoutGrid className="h-3.5 w-3.5" />
                   </Button>
@@ -688,7 +771,7 @@ const PlanPageEnhanced: React.FC = () => {
                     size="sm"
                     className="h-7 px-2"
                     onClick={() => setViewMode('list')}
-                   
+                    title="List View"
                   >
                     <List className="h-3.5 w-3.5" />
                   </Button>
@@ -697,7 +780,7 @@ const PlanPageEnhanced: React.FC = () => {
                     size="sm"
                     className="h-7 px-2"
                     onClick={() => setViewMode('compact')}
-                   
+                    title="Compact View"
                   >
                     <Minimize2 className="h-3.5 w-3.5" />
                   </Button>
@@ -711,7 +794,7 @@ const PlanPageEnhanced: React.FC = () => {
                     className="h-8 w-8"
                     onClick={handleUndo}
                     disabled={historyIndex <= 0}
-                   
+                    title="Undo"
                   >
                     <Undo2 className="h-4 w-4" />
                   </Button>
@@ -721,17 +804,19 @@ const PlanPageEnhanced: React.FC = () => {
                     className="h-8 w-8"
                     onClick={handleRedo}
                     disabled={historyIndex >= history.length - 1}
-                   
+                    title="Redo"
                   >
                     <Redo2 className="h-4 w-4" />
                   </Button>
                 </div>
+              </div>
 
+              {/* Right side - Actions and Navigation */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="default"
                   onClick={handleGenerateWeek}
                   disabled={generateWeekPlan.isPending}
-                 
                 >
                   <Sparkles className="mr-2 h-4 w-4" />
                   {generateWeekPlan.isPending ? 'Generating...' : 'Generate Week'}
@@ -744,15 +829,26 @@ const PlanPageEnhanced: React.FC = () => {
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   {generateShoppingList.isPending ? 'Generating...' : 'Shopping List'}
                 </Button>
-                <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
-                  <ChevronLeft className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  onClick={handleClearWeek}
+                  disabled={clearWeekPlan.isPending || !weekPlan || weekPlan.length === 0}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {clearWeekPlan.isPending ? 'Clearing...' : 'Clear Week'}
                 </Button>
-                <Button variant="outline" onClick={goToThisWeek}>
-                  This Week
-                </Button>
-                <Button variant="outline" size="icon" onClick={goToNextWeek}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1 border-l pl-2 ml-1">
+                  <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" onClick={goToThisWeek}>
+                    This Week
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={goToNextWeek}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -845,6 +941,42 @@ const PlanPageEnhanced: React.FC = () => {
         </CardHeader>
       </Card>
 
+      {/* Empty State Banner */}
+      {(!weekPlan || weekPlan.length === 0) && (
+        <Card className="bg-muted/30 border-2 border-dashed">
+          <CardContent className="pt-8 pb-8">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <Sparkles className="h-12 w-12 text-muted-foreground/40" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Your Meal Plan is Empty</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Get started by dragging recipes from the Recipe Browser (click <BookOpen className="inline h-4 w-4" /> Recipes button above) or click "Generate Week" to auto-populate your plan with delicious meals
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <Button
+                  onClick={() => setRecipeBrowserOpen(true)}
+                  variant="outline"
+                  size="lg"
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Browse Recipes
+                </Button>
+                <Button
+                  onClick={() => setGenerateDialogOpen(true)}
+                  size="lg"
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate Week
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Weekly Grid / List / Compact View */}
       {(() => {
         if (viewMode === 'compact') {
@@ -868,8 +1000,10 @@ const PlanPageEnhanced: React.FC = () => {
                   onDrop={handleDrop}
                   onMealClick={(meal) => {
                     setSelectedMeal(meal);
+                    setAdjustedServings(null);
                     setViewDialogOpen(true);
                   }}
+                  mealDisplayMode={mealDisplayMode}
                 />
               ))}
             </div>
@@ -911,6 +1045,63 @@ const PlanPageEnhanced: React.FC = () => {
               </div>
             </DialogDescription>
           </DialogHeader>
+
+          {/* Serving Adjustment Controls */}
+          {selectedMeal?.servings && selectedMeal.servings > 0 && (
+            <div className="bg-muted/30 p-4 rounded-lg border">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm font-medium">Adjust Portions:</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      const current = adjustedServings || selectedMeal.servings!;
+                      const newValue = Math.max(1, current - 1);
+                      setAdjustedServings(newValue);
+                    }}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center min-w-[120px]">
+                    <div className="text-2xl font-bold">
+                      {adjustedServings || selectedMeal.servings}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {adjustedServings && adjustedServings !== selectedMeal.servings
+                        ? `(original: ${selectedMeal.servings})`
+                        : 'servings'}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      const current = adjustedServings || selectedMeal.servings!;
+                      setAdjustedServings(current + 1);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {adjustedServings && adjustedServings !== selectedMeal.servings && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAdjustedServings(null)}
+                    className="text-xs"
+                  >
+                    Reset
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
           <div className="space-y-6">
             {selectedMeal?.tags && (
               <div>
@@ -929,10 +1120,22 @@ const PlanPageEnhanced: React.FC = () => {
             )}
             {selectedMeal?.ingredients && (
               <div>
-                <h3 className="font-semibold mb-2">Ingredients</h3>
+                <h3 className="font-semibold mb-2">
+                  Ingredients
+                  {adjustedServings && adjustedServings !== selectedMeal.servings && (
+                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                      (scaled for {adjustedServings} servings)
+                    </span>
+                  )}
+                </h3>
                 <div className="bg-muted p-4 rounded-lg">
                   <pre className="whitespace-pre-wrap font-sans text-sm">
-                    {selectedMeal.ingredients}
+                    {adjustedServings && selectedMeal.servings && adjustedServings !== selectedMeal.servings
+                      ? scaleIngredients(
+                          selectedMeal.ingredients,
+                          calculateServingMultiplier(selectedMeal.servings, adjustedServings)
+                        )
+                      : selectedMeal.ingredients}
                   </pre>
                 </div>
               </div>

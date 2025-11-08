@@ -22,7 +22,10 @@ def verify_password(password, password_hash):
         salt, pwd_hash = password_hash.split('$')
         test_hash = hashlib.sha256((password + salt).encode()).hexdigest()
         return test_hash == pwd_hash
-    except:
+    except (ValueError, AttributeError, TypeError) as e:
+        # ValueError: invalid hash format
+        # AttributeError: password_hash is None
+        # TypeError: password_hash is not a string
         return False
 
 

@@ -164,6 +164,14 @@ def setup_database():
     except Exception as e:
         print(f"⚠️  Could not run multi-user migration: {e}")
 
+    # Add user_id to scheduled_meals
+    print("\n🔄 Running scheduled_meals user_id migration...")
+    try:
+        from database.migrations.add_multi_user_support import run_migration
+        run_migration(db.db_path)
+    except Exception as e:
+        print(f"⚠️  Could not run scheduled_meals migration: {e}")
+
     # Reset admin password to known value (for deployment consistency)
     print("\n🔄 Resetting admin password to known value...")
     try:

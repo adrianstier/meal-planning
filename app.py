@@ -458,7 +458,7 @@ def create_meal():
             meal_id = cursor.lastrowid
 
             # Return the created meal
-            cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
+            cursor.execute("SELECT * FROM meals WHERE id = ? AND user_id = ?", (meal_id, user_id))
             meal = dict(cursor.fetchone())
 
         return jsonify({'success': True, 'data': meal}), 201
@@ -1244,7 +1244,7 @@ def create_restaurant():
         conn.commit()
 
         # Fetch the created restaurant
-        cursor.execute("SELECT * FROM restaurants WHERE id = ?", (restaurant_id,))
+        cursor.execute("SELECT * FROM restaurants WHERE id = ? AND user_id = ?", (restaurant_id, user_id))
         restaurant = dict(cursor.fetchone())
         conn.close()
 
@@ -1323,7 +1323,7 @@ def update_restaurant(restaurant_id):
         conn.commit()
 
         # Fetch the updated restaurant
-        cursor.execute("SELECT * FROM restaurants WHERE id = ?", (restaurant_id,))
+        cursor.execute("SELECT * FROM restaurants WHERE id = ? AND user_id = ?", (restaurant_id, user_id))
         restaurant = dict(cursor.fetchone())
         conn.close()
 
@@ -1748,7 +1748,7 @@ Generate typical hours for this type of establishment. Return ONLY valid JSON, n
                 conn.commit()
 
                 # Fetch updated restaurant
-                cursor.execute("SELECT * FROM restaurants WHERE id = ?", (restaurant_id,))
+                cursor.execute("SELECT * FROM restaurants WHERE id = ? AND user_id = ?", (restaurant_id, user_id))
                 updated_restaurant = dict(cursor.fetchone())
                 conn.close()
 
@@ -2134,9 +2134,9 @@ def suggest_meals():
 
                 query += f""" AND m.id NOT IN (
                     SELECT DISTINCT meal_id FROM meal_history
-                    WHERE {date_column} >= ?
+                    WHERE {date_column} >= ? AND user_id = ?
                 )"""
-                params.append(cutoff_date)
+                params.extend([cutoff_date, user_id])
 
             # Also exclude recently scheduled meals
             query += """ AND m.id NOT IN (
@@ -2684,9 +2684,9 @@ def add_leftover():
 
         cursor.execute("""
             INSERT INTO leftovers_inventory (
-                meal_id, cooked_date, servings_remaining, expires_date, notes
-            ) VALUES (?, ?, ?, ?, ?)
-        """, (meal_id, cooked_date, servings, expires_date, notes))
+                meal_id, cooked_date, servings_remaining, expires_date, notes, user_id
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """, (meal_id, cooked_date, servings, expires_date, notes, user_id))
 
         leftover_id = cursor.lastrowid
         conn.commit()
@@ -2704,8 +2704,8 @@ def add_leftover():
                 CAST(julianday(l.expires_date) - julianday('now') AS INTEGER) as days_until_expiry
             FROM leftovers_inventory l
             JOIN meals m ON l.meal_id = m.id
-            WHERE l.id = ?
-        """, (leftover_id,))
+            WHERE l.id = ? AND l.user_id = ?
+        """, (leftover_id, user_id))
 
         leftover = dict(cursor.fetchone())
         conn.close()

@@ -70,10 +70,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Desktop User Menu - Large screens only */}
           <div className="hidden lg:flex items-center gap-3 xl:gap-4 ml-auto">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               <User className="h-4 w-4" />
               <span className="hidden xl:inline">{user?.display_name || user?.username}</span>
-            </div>
+            </Link>
             <Button
               variant="ghost"
               size="sm"
@@ -133,6 +136,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </Link>
                 );
               })}
+              <Link
+                to="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                  location.pathname === '/profile'
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-accent/50 hover:text-accent-foreground"
+                )}
+              >
+                <User className="h-5 w-5" />
+                Profile
+              </Link>
               <Button
                 variant="ghost"
                 onClick={() => {

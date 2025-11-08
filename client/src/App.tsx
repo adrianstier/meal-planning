@@ -13,6 +13,7 @@ import LeftoversPage from './pages/LeftoversPage';
 import SchoolMenuPage from './pages/SchoolMenuPage';
 import ListsPage from './pages/ListsPage';
 import RestaurantsPage from './pages/RestaurantsPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -106,6 +107,13 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <RestaurantsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Layout>
+              <ProfilePage />
             </Layout>
           </ProtectedRoute>
         } />

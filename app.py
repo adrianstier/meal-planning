@@ -252,6 +252,77 @@ def get_me():
     })
 
 
+@app.route('/api/auth/profile', methods=['PUT'])
+@login_required
+def update_profile():
+    """Update user profile"""
+    try:
+        user_id = get_current_user_id()
+        data = request.json
+
+        display_name = data.get('display_name')
+        email = data.get('email')
+
+        if not display_name and not email:
+            return jsonify({
+                'success': False,
+                'error': 'No fields to update'
+            }), 400
+
+        conn = sqlite3.connect(db.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Build update query dynamically based on provided fields
+        updates = []
+        params = []
+
+        if display_name:
+            updates.append('display_name = ?')
+            params.append(display_name)
+
+        if email:
+            # Check if email already exists for another user
+            cursor.execute('SELECT id FROM users WHERE email = ? AND id != ?', (email, user_id))
+            if cursor.fetchone():
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Email already in use'
+                }), 400
+            updates.append('email = ?')
+            params.append(email)
+
+        # Add user_id for WHERE clause
+        params.append(user_id)
+
+        # Execute update
+        query = f"UPDATE users SET {', '.join(updates)} WHERE id = ?"
+        cursor.execute(query, params)
+        conn.commit()
+
+        # Get updated user
+        cursor.execute("""
+            SELECT id, username, email, display_name, created_at, last_login
+            FROM users
+            WHERE id = ?
+        """, (user_id,))
+        updated_user = dict(cursor.fetchone())
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'user': updated_user,
+            'message': 'Profile updated successfully'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/migrate', methods=['POST'])
 def run_migrations():
     """Manually run database migrations"""

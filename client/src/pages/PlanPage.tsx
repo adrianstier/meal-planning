@@ -15,6 +15,7 @@ import { useWeekPlan, useGenerateWeekPlan, useApplyGeneratedPlan } from '../hook
 import { useGenerateShoppingList } from '../hooks/useShopping';
 import { useMeals } from '../hooks/useMeals';
 import AddMealDialog from '../components/features/plan/AddMealDialog';
+import { OnboardingTour } from '../components/OnboardingTour';
 import type { MealPlan } from '../types/api';
 
 const PlanPage: React.FC = () => {
@@ -260,6 +261,7 @@ const PlanPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <Button
+                data-tour-id="generate-week"
                 variant="default"
                 onClick={handleGenerateWeek}
                 disabled={generateWeekPlan.isPending}
@@ -268,6 +270,7 @@ const PlanPage: React.FC = () => {
                 {generateWeekPlan.isPending ? 'Generating...' : 'Generate Week'}
               </Button>
               <Button
+                data-tour-id="shopping-list"
                 variant="outline"
                 onClick={handleGenerateShoppingList}
                 disabled={generateShoppingList.isPending}
@@ -278,7 +281,7 @@ const PlanPage: React.FC = () => {
               <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" onClick={goToThisWeek}>
+              <Button data-tour-id="this-week" variant="outline" onClick={goToThisWeek}>
                 This Week
               </Button>
               <Button variant="outline" size="icon" onClick={goToNextWeek}>
@@ -375,10 +378,13 @@ const PlanPage: React.FC = () => {
 
           const isTodayCard = isToday(parseISO(day.date));
 
+          const isFirstDay = day.date === weekDays[0].date;
+
           return (
             <Card
               key={day.date}
               className={`flex flex-col ${isTodayCard ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              data-tour-id={isFirstDay ? "week-day-card" : undefined}
             >
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">
@@ -656,6 +662,41 @@ const PlanPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        tourKey="plan-page"
+        steps={[
+          {
+            id: "welcome",
+            target: "[data-tour-id='generate-week']",
+            title: "Welcome to Your Meal Planner!",
+            content: "Let's take a quick tour of the key features. Click 'Generate Week' to automatically create a full week of meals based on your recipes.",
+            position: "bottom"
+          },
+          {
+            id: "shopping",
+            target: "[data-tour-id='shopping-list']",
+            title: "Generate Shopping Lists",
+            content: "Once your week is planned, click here to automatically generate a shopping list with all ingredients organized by category.",
+            position: "bottom"
+          },
+          {
+            id: "navigation",
+            target: "[data-tour-id='this-week']",
+            title: "Navigate Between Weeks",
+            content: "Use these buttons to view different weeks. 'This Week' brings you back to the current week.",
+            position: "bottom"
+          },
+          {
+            id: "day-card",
+            target: "[data-tour-id='week-day-card']",
+            title: "Daily Meal Cards",
+            content: "Each day shows breakfast, lunch, dinner, and snacks. Click the + button to manually add meals to any slot.",
+            position: "right"
+          },
+        ]}
+      />
     </div>
   );
 };

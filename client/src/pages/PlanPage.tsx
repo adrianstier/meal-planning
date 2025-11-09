@@ -250,19 +250,33 @@ const PlanPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header with Week Navigation */}
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-4">
+          {/* Week Navigation Row */}
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Weekly Meal Plan</CardTitle>
-              <CardDescription>
-                {format(parseISO(currentWeekStart), 'MMM d')} -{' '}
-                {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
-              </CardDescription>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="min-w-[280px] text-center">
+                <CardTitle className="text-lg">
+                  {format(parseISO(currentWeekStart), 'MMM d')} -{' '}
+                  {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
+                </CardTitle>
+              </div>
+              <Button variant="outline" size="icon" onClick={goToNextWeek}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button data-tour-id="this-week" variant="outline" size="sm" onClick={goToThisWeek}>
+                Today
+              </Button>
             </div>
+
+            {/* Action Buttons */}
             <div className="flex items-center gap-2">
               <Button
                 data-tour-id="generate-week"
                 variant="default"
+                size="sm"
                 onClick={handleGenerateWeek}
                 disabled={generateWeekPlan.isPending}
               >
@@ -272,29 +286,22 @@ const PlanPage: React.FC = () => {
               <Button
                 data-tour-id="shopping-list"
                 variant="outline"
+                size="sm"
                 onClick={handleGenerateShoppingList}
                 disabled={generateShoppingList.isPending}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                {generateShoppingList.isPending ? 'Generating...' : 'Shopping List'}
-              </Button>
-              <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button data-tour-id="this-week" variant="outline" onClick={goToThisWeek}>
-                This Week
-              </Button>
-              <Button variant="outline" size="icon" onClick={goToNextWeek}>
-                <ChevronRight className="h-4 w-4" />
+                Shopping List
               </Button>
             </div>
           </div>
-          {/* Cuisine Filter */}
-          {uniqueCuisines.length > 0 && (
-            <div className="mt-4 pt-4 border-t">
+          {/* Generation Options */}
+          <div className="pt-4 border-t space-y-3">
+            {/* Cuisine Filter */}
+            {uniqueCuisines.length > 0 && (
               <div className="flex items-start gap-3">
-                <div className="text-sm font-medium text-muted-foreground min-w-[80px] pt-1.5">
-                  Cuisines:
+                <div className="text-sm font-medium text-muted-foreground min-w-[100px] pt-1">
+                  Filter Cuisines:
                 </div>
                 <div className="flex flex-wrap gap-2 flex-1">
                   {uniqueCuisines.map((cuisine) => (
@@ -315,25 +322,19 @@ const PlanPage: React.FC = () => {
                       onClick={() => setSelectedCuisines([])}
                       className="h-7 text-xs text-muted-foreground"
                     >
-                      Clear All
+                      Clear
                     </Button>
                   )}
                 </div>
               </div>
-              {selectedCuisines.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-2 ml-[92px]">
-                  Generating meals from: {selectedCuisines.join(', ')}
-                </p>
-              )}
-            </div>
-          )}
-          {/* Bento Box Generation Options */}
-          <div className="mt-4 pt-4 border-t">
+            )}
+
+            {/* Bento Box Options */}
             <div className="flex items-start gap-3">
-              <div className="text-sm font-medium text-muted-foreground min-w-[80px] pt-1.5">
-                Bento Boxes:
+              <div className="text-sm font-medium text-muted-foreground min-w-[100px] pt-1">
+                Bento Lunches:
               </div>
-              <div className="flex flex-col gap-3 flex-1">
+              <div className="flex flex-col gap-2 flex-1">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -341,23 +342,17 @@ const PlanPage: React.FC = () => {
                     onChange={(e) => setGenerateBentos(e.target.checked)}
                     className="h-4 w-4 rounded border-gray-300"
                   />
-                  <span className="text-sm">Generate bento box lunches for the week</span>
+                  <span className="text-sm">Generate bento boxes (Mon-Fri)</span>
                 </label>
                 {generateBentos && (
-                  <div className="ml-6">
-                    <label className="flex flex-col gap-1.5">
-                      <span className="text-xs text-muted-foreground">Child's name (optional)</span>
-                      <input
-                        type="text"
-                        value={bentoChildName}
-                        onChange={(e) => setBentoChildName(e.target.value)}
-                        placeholder="e.g., Emma"
-                        className="text-sm px-3 py-1.5 rounded-md border border-input bg-background"
-                      />
-                    </label>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Will create 5 bento box plans (Mon-Fri) with varied items from your collection
-                    </p>
+                  <div className="ml-6 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={bentoChildName}
+                      onChange={(e) => setBentoChildName(e.target.value)}
+                      placeholder="Child's name (optional)"
+                      className="text-sm px-3 py-1.5 rounded-md border border-input bg-background w-48"
+                    />
                   </div>
                 )}
               </div>

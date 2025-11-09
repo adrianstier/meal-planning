@@ -94,19 +94,27 @@ def migrate(db_path='meal_planner.db'):
         """)
         print("✅ Added index on leftovers_inventory.consumed_at")
 
-        # Composite index for meal history queries
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_meal_history_meal_date
-            ON meal_history(meal_id, cooked_date)
-        """)
-        print("✅ Added composite index on meal_history(meal_id, cooked_date)")
+        # Composite index for meal history queries (if table exists)
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='meal_history'")
+        if cursor.fetchone():
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_meal_history_meal_date
+                ON meal_history(meal_id, cooked_date)
+            """)
+            print("✅ Added composite index on meal_history(meal_id, cooked_date)")
+        else:
+            print("⚠️  Skipping meal_history index (table doesn't exist yet)")
 
-        # Index for bento plans date queries
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_bento_plans_date
-            ON bento_plans(date)
-        """)
-        print("✅ Added index on bento_plans.date")
+        # Index for bento plans date queries (if table exists)
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='bento_plans'")
+        if cursor.fetchone():
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_bento_plans_date
+                ON bento_plans(date)
+            """)
+            print("✅ Added index on bento_plans.date")
+        else:
+            print("⚠️  Skipping bento_plans index (table doesn't exist yet)")
 
         conn.commit()
         print("\n✅ All performance indexes added successfully!")

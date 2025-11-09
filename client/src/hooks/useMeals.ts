@@ -60,7 +60,22 @@ export const useDeleteMeal = () => {
 
 export const useParseRecipe = () => {
   return useMutation({
-    mutationFn: (recipeText: string) => mealsApi.parseRecipe(recipeText),
+    mutationFn: async (recipeText: string) => {
+      try {
+        const response = await mealsApi.parseRecipe(recipeText);
+        return response;
+      } catch (error) {
+        // Ensure errors are properly thrown so React Query catches them
+        console.error('Parse recipe mutation error:', error);
+        throw error;
+      }
+    },
+    // Add retry configuration - don't retry on parse errors
+    retry: false,
+    // Add mutation metadata for debugging
+    onError: (error) => {
+      console.error('Recipe parse failed:', error);
+    },
   });
 };
 

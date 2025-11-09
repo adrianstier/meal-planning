@@ -56,7 +56,7 @@ export const mealsApi = {
   create: (meal: Partial<Meal>) => api.post<Meal>('/api/meals', meal),
   update: (id: number, meal: Partial<Meal>) => api.put<Meal>(`/api/meals/${id}`, meal),
   delete: (id: number) => api.delete(`/api/meals/${id}`),
-  parseRecipe: (text: string) => api.post<Meal>('/api/meals/parse', { recipe_text: text }),
+  parseRecipe: (text: string) => api.post<Meal>('/api/meals/parse', { recipe_text: text }, { timeout: 90000 }), // 90 second timeout for recipe parsing
   search: (query: string) => api.get<Meal[]>(`/api/meals/search?q=${encodeURIComponent(query)}`),
   favorite: (id: number) => api.post(`/api/meals/${id}/favorite`),
   unfavorite: (id: number) => api.delete(`/api/meals/${id}/favorite`),

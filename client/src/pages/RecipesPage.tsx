@@ -132,6 +132,11 @@ const RecipesPage: React.FC = () => {
   };
 
   const handleParseFromUrl = async () => {
+    if (!recipeUrl.trim()) {
+      alert('Please enter a recipe URL');
+      return;
+    }
+
     try {
       // For now, we'll just use the same parsing endpoint with the URL as text
       // The backend might need to be updated to fetch URL content
@@ -182,7 +187,10 @@ const RecipesPage: React.FC = () => {
       setRecipeUrl('');
     } catch (error) {
       console.error('Failed to parse recipe from URL:', error);
-      alert(`Failed to parse recipe from URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Ensure dialog state is reset even on error
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to parse recipe from URL: ${errorMessage}`);
+      // Don't close the dialog so user can try again
     }
   };
 

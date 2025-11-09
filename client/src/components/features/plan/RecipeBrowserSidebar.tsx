@@ -60,7 +60,7 @@ const RecipeBrowserSidebar: React.FC<RecipeBrowserSidebarProps> = ({ meals, isOp
   return (
     <div
       className={`border-r border-border bg-background overflow-hidden flex flex-col h-full transition-all duration-300 ease-in-out ${
-        isOpen ? 'w-96' : 'w-0'
+        isOpen ? 'w-64' : 'w-0'
       }`}
       style={{ flexShrink: 0 }}
     >

@@ -56,7 +56,7 @@ const PlanPageEnhanced: React.FC = () => {
   const [bentoChildName, setBentoChildName] = useState('');
   const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(() => {
     const stored = localStorage.getItem('recipeBrowserOpen');
-    return stored === 'true' || stored === null; // Default to true if never set
+    return stored === 'true' || stored === null; // Default to open but narrower
   });
 
   // Undo/Redo state

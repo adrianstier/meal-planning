@@ -1,9 +1,11 @@
-// Force rebuild - 2025-11-04 Enhanced UX
+// Force rebuild - 2025-11-04 Enhanced UX with Error Tracking
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DragDropProvider } from './contexts/DragDropContext';
+import ErrorBoundary from './components/ErrorBoundary';
+import ErrorLogViewer from './components/ErrorLogViewer';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import PlanPageEnhanced from './pages/PlanPageEnhanced';
@@ -124,13 +126,16 @@ function AppContent() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <DragDropProvider>
-          <AppContent />
-        </DragDropProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <DragDropProvider>
+            <AppContent />
+            <ErrorLogViewer />
+          </DragDropProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

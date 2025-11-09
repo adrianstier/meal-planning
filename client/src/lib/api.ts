@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { errorLogger } from '../utils/errorLogger';
 import type {
   Meal,
   MealPlan,
@@ -29,9 +30,35 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Interceptor to unwrap Flask API responses { success: true, data: ... }
+// Request interceptor to log outgoing requests
+api.interceptors.request.use(
+  (config) => {
+    // Log requests in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`📤 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
+        data: config.data,
+        params: config.params,
+      });
+    }
+    return config;
+  },
+  (error) => {
+    errorLogger.logNetworkError(error, { phase: 'request' });
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to unwrap Flask API responses and log errors
 api.interceptors.response.use(
   (response) => {
+    // Log successful responses in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`📥 API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+        status: response.status,
+        data: response.data,
+      });
+    }
+
     // If response has success field, unwrap the data
     if (response.data && typeof response.data === 'object' && 'success' in response.data) {
       return { ...response, data: response.data.data };
@@ -40,11 +67,30 @@ api.interceptors.response.use(
   },
   (error) => {
     // Extract error message from Flask API response { success: false, error: "message" }
+    const originalMessage = error.message;
     if (error.response?.data?.error) {
       error.message = error.response.data.error;
     } else if (error.response?.data?.message) {
       error.message = error.response.data.message;
     }
+
+    // Log the API error with detailed context
+    errorLogger.logApiError(
+      error,
+      error.config?.url || 'unknown',
+      error.config?.method?.toUpperCase() || 'UNKNOWN',
+      error.config?.data
+    );
+
+    // Add helpful context to error for debugging
+    error.context = {
+      endpoint: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      originalMessage,
+      apiBaseUrl: API_BASE_URL,
+    };
+
     return Promise.reject(error);
   }
 );

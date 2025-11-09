@@ -1,0 +1,293 @@
+/**
+ * Centralized error logging and tracking utility
+ * Provides detailed error information for debugging in development and production
+ */
+
+export interface ErrorLog {
+  timestamp: string;
+  type: 'api' | 'parse' | 'auth' | 'network' | 'validation' | 'unknown';
+  message: string;
+  stack?: string;
+  context?: Record<string, any>;
+  userAgent?: string;
+  url?: string;
+  env: 'development' | 'production';
+}
+
+class ErrorLogger {
+  private logs: ErrorLog[] = [];
+  private maxLogs = 100;
+  private readonly STORAGE_KEY = 'meal_planner_error_logs';
+
+  constructor() {
+    // Load existing logs from localStorage
+    this.loadLogs();
+  }
+
+  /**
+   * Log an error with context
+   */
+  log(
+    error: Error | string,
+    type: ErrorLog['type'] = 'unknown',
+    context?: Record<string, any>
+  ): void {
+    const errorMessage = error instanceof Error ? error.message : error;
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    const errorLog: ErrorLog = {
+      timestamp: new Date().toISOString(),
+      type,
+      message: errorMessage,
+      stack: errorStack,
+      context: {
+        ...context,
+        // Add useful debugging info
+        currentPath: window.location.pathname,
+        searchParams: window.location.search,
+      },
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      env: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+    };
+
+    // Log to console in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.group(`🔴 Error [${type}]`);
+      console.error('Message:', errorMessage);
+      if (errorStack) console.error('Stack:', errorStack);
+      if (context) console.error('Context:', context);
+      console.groupEnd();
+    }
+
+    // Add to logs array
+    this.logs.push(errorLog);
+
+    // Keep only the last maxLogs entries
+    if (this.logs.length > this.maxLogs) {
+      this.logs = this.logs.slice(-this.maxLogs);
+    }
+
+    // Persist to localStorage
+    this.saveLogs();
+  }
+
+  /**
+   * Log API-specific errors with detailed context
+   */
+  logApiError(
+    error: any,
+    endpoint: string,
+    method: string = 'GET',
+    requestData?: any
+  ): void {
+    const context = {
+      endpoint,
+      method,
+      requestData,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      responseData: error.response?.data,
+      apiBaseUrl: process.env.REACT_APP_API_URL || 'not set',
+    };
+
+    this.log(error, 'api', context);
+  }
+
+  /**
+   * Log parsing errors (recipe, school menu, etc.)
+   */
+  logParseError(
+    error: any,
+    parseType: 'recipe' | 'school-menu' | 'url',
+    input: string
+  ): void {
+    const context = {
+      parseType,
+      inputLength: input.length,
+      inputPreview: input.substring(0, 200),
+      isUrl: input.trim().startsWith('http'),
+    };
+
+    this.log(error, 'parse', context);
+  }
+
+  /**
+   * Log authentication errors
+   */
+  logAuthError(error: any, action: 'login' | 'logout' | 'session'): void {
+    const context = {
+      action,
+      withCredentials: true, // We use withCredentials for session cookies
+    };
+
+    this.log(error, 'auth', context);
+  }
+
+  /**
+   * Log network errors
+   */
+  logNetworkError(error: any, context?: Record<string, any>): void {
+    this.log(error, 'network', {
+      ...context,
+      online: navigator.onLine,
+      connectionType: (navigator as any).connection?.effectiveType,
+    });
+  }
+
+  /**
+   * Log validation errors
+   */
+  logValidationError(
+    field: string,
+    value: any,
+    constraint: string,
+    message?: string
+  ): void {
+    this.log(
+      new Error(message || `Validation failed for ${field}`),
+      'validation',
+      {
+        field,
+        value: typeof value === 'string' ? value : JSON.stringify(value),
+        constraint,
+      }
+    );
+  }
+
+  /**
+   * Get all error logs
+   */
+  getLogs(): ErrorLog[] {
+    return [...this.logs];
+  }
+
+  /**
+   * Get recent errors (last N)
+   */
+  getRecentLogs(count: number = 10): ErrorLog[] {
+    return this.logs.slice(-count);
+  }
+
+  /**
+   * Get errors by type
+   */
+  getLogsByType(type: ErrorLog['type']): ErrorLog[] {
+    return this.logs.filter((log) => log.type === type);
+  }
+
+  /**
+   * Get error statistics
+   */
+  getStats() {
+    const stats = {
+      total: this.logs.length,
+      byType: {} as Record<string, number>,
+      last24h: 0,
+      lastHour: 0,
+    };
+
+    const now = new Date().getTime();
+    const hour = 60 * 60 * 1000;
+    const day = 24 * hour;
+
+    this.logs.forEach((log) => {
+      // Count by type
+      stats.byType[log.type] = (stats.byType[log.type] || 0) + 1;
+
+      // Count recent errors
+      const logTime = new Date(log.timestamp).getTime();
+      if (now - logTime < hour) stats.lastHour++;
+      if (now - logTime < day) stats.last24h++;
+    });
+
+    return stats;
+  }
+
+  /**
+   * Export logs as JSON for debugging
+   */
+  exportLogs(): string {
+    return JSON.stringify(this.logs, null, 2);
+  }
+
+  /**
+   * Clear all logs
+   */
+  clearLogs(): void {
+    this.logs = [];
+    this.saveLogs();
+  }
+
+  /**
+   * Save logs to localStorage
+   */
+  private saveLogs(): void {
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.logs));
+    } catch (error) {
+      console.warn('Failed to save error logs to localStorage:', error);
+    }
+  }
+
+  /**
+   * Load logs from localStorage
+   */
+  private loadLogs(): void {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (stored) {
+        this.logs = JSON.parse(stored);
+      }
+    } catch (error) {
+      console.warn('Failed to load error logs from localStorage:', error);
+      this.logs = [];
+    }
+  }
+
+  /**
+   * Create a formatted error message for user display
+   */
+  formatUserMessage(error: any, friendlyMessage?: string): string {
+    const isDev = process.env.NODE_ENV !== 'production';
+    const errorMsg = error instanceof Error ? error.message : String(error);
+
+    if (friendlyMessage) {
+      return isDev ? `${friendlyMessage}\n\nDebug: ${errorMsg}` : friendlyMessage;
+    }
+
+    // Default friendly messages by error type
+    if (errorMsg.includes('Network Error') || errorMsg.includes('Failed to fetch')) {
+      return isDev
+        ? `Network error - please check your connection.\n\nDebug: ${errorMsg}`
+        : 'Network error - please check your connection.';
+    }
+
+    if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
+      return isDev
+        ? `Authentication failed - please log in again.\n\nDebug: ${errorMsg}`
+        : 'Authentication failed - please log in again.';
+    }
+
+    if (errorMsg.includes('timeout')) {
+      return isDev
+        ? `Request timed out - please try again.\n\nDebug: ${errorMsg}`
+        : 'Request timed out - please try again.';
+    }
+
+    // In development, show full error. In production, show generic message
+    return isDev ? `Error: ${errorMsg}` : 'An error occurred. Please try again.';
+  }
+}
+
+// Export singleton instance
+export const errorLogger = new ErrorLogger();
+
+// Export utility function for easy use
+export const logError = (
+  error: Error | string,
+  type?: ErrorLog['type'],
+  context?: Record<string, any>
+) => errorLogger.log(error, type, context);
+
+export default errorLogger;

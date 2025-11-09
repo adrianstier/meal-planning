@@ -142,6 +142,9 @@ const RecipesPage: React.FC = () => {
       // The backend might need to be updated to fetch URL content
       const result = await parseRecipe.mutateAsync(recipeUrl);
 
+      console.log('Parse result:', result);
+      console.log('Parse result.data:', result.data);
+
       const parsedData = result.data;
 
       setParsedRecipe(parsedData);

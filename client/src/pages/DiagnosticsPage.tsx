@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, RefreshCw, Download, Trash2, AlertCircle, TrendingUp, Clock, Bug } from 'lucide-react';
+import { AlertTriangle, CheckCircle, RefreshCw, Download, Trash2, AlertCircle, TrendingUp, Clock, Bug, Sparkles, Copy, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -111,6 +111,67 @@ const DiagnosticsPage: React.FC = () => {
     }
   };
 
+  const exportForClaude = async () => {
+    try {
+      const response = await api.get('/api/errors/export-for-claude');
+      const report = response.data.markdown_report;
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(report);
+      alert('Error report copied to clipboard! You can now paste it to Claude Code.');
+
+      // Also download as file
+      const blob = new Blob([report], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `error-report-${new Date().toISOString()}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export errors:', error);
+      alert('Failed to export errors');
+    }
+  };
+
+  const analyzeWithAI = async () => {
+    if (errors.length === 0) {
+      alert('No errors to analyze');
+      return;
+    }
+
+    const errorIds = errors.slice(0, 10).map(e => e.id); // Analyze top 10
+    const confirmed = window.confirm(`Analyze ${errorIds.length} most recent errors with Claude AI? This will use AI API credits.`);
+
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      const response = await api.post('/api/errors/analyze', { error_ids: errorIds });
+      const analysis = response.data.analysis;
+
+      // Show analysis in a dialog or download
+      const blob = new Blob([analysis], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ai-analysis-${new Date().toISOString()}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert('AI analysis complete! Check your downloads folder.');
+    } catch (error: any) {
+      console.error('Failed to analyze errors:', error);
+      alert(error.response?.data?.error || 'Failed to analyze errors');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getErrorTypeColor = (type: string) => {
     switch (type) {
       case 'api':
@@ -140,7 +201,24 @@ const DiagnosticsPage: React.FC = () => {
             Monitor and debug application errors
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="default"
+            onClick={exportForClaude}
+            disabled={errors.length === 0}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Copy for Claude
+          </Button>
+          <Button
+            variant="outline"
+            onClick={analyzeWithAI}
+            disabled={errors.length === 0}
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            AI Analysis
+          </Button>
           <Button variant="outline" onClick={downloadLocalLogs}>
             <Download className="mr-2 h-4 w-4" />
             Export Logs
@@ -154,6 +232,37 @@ const DiagnosticsPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Quick Actions Card */}
+      {stats && stats.unresolved > 0 && (
+        <Card className="border-orange-200 bg-orange-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              Quick Actions
+            </CardTitle>
+            <CardDescription>
+              Get help debugging {stats.unresolved} unresolved error{stats.unresolved > 1 ? 's' : ''}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" onClick={exportForClaude}>
+                <FileText className="mr-2 h-4 w-4" />
+                Export Report for Claude Code
+              </Button>
+              <Button size="sm" variant="outline" onClick={analyzeWithAI}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Get AI Analysis
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              💡 Tip: Click "Copy for Claude" to get a formatted error report you can paste directly into Claude Code for instant debugging help!
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

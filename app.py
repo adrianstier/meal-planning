@@ -3912,6 +3912,192 @@ def get_error_stats():
         return jsonify({'success': False, 'error': 'Failed to fetch error stats'}), 500
 
 
+@app.route('/api/errors/analyze', methods=['POST'])
+@login_required
+def analyze_errors_with_ai():
+    """Use Claude AI to analyze errors and provide debugging insights"""
+    try:
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            return jsonify({'success': False, 'error': 'AI analysis requires ANTHROPIC_API_KEY'}), 500
+
+        data = request.get_json()
+        error_ids = data.get('error_ids', [])
+
+        if not error_ids:
+            return jsonify({'success': False, 'error': 'No error IDs provided'}), 400
+
+        # Fetch the requested errors
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+            placeholders = ','.join(['?' for _ in error_ids])
+            cursor.execute(f"""
+                SELECT * FROM error_logs
+                WHERE id IN ({placeholders})
+                ORDER BY timestamp DESC
+            """, error_ids)
+            errors = [dict(row) for row in cursor.fetchall()]
+
+        if not errors:
+            return jsonify({'success': False, 'error': 'No errors found'}), 404
+
+        # Prepare error summary for Claude
+        error_summary = []
+        for error in errors:
+            error_info = {
+                'id': error['id'],
+                'type': error['error_type'],
+                'message': error['message'],
+                'stack_trace': error['stack_trace'],
+                'component': error['component'],
+                'url': error['url'],
+                'timestamp': error['timestamp']
+            }
+
+            # Parse metadata if available
+            if error.get('metadata'):
+                try:
+                    error_info['metadata'] = json.loads(error['metadata'])
+                except:
+                    pass
+
+            error_summary.append(error_info)
+
+        # Call Claude AI for analysis
+        client = anthropic.Anthropic(api_key=api_key)
+
+        prompt = f"""You are a debugging assistant. Analyze these production errors from a Family Meal Planning web application and provide actionable insights.
+
+Errors to analyze:
+{json.dumps(error_summary, indent=2)}
+
+Please provide:
+1. **Root Cause Analysis**: What's likely causing each error?
+2. **Priority**: Which errors should be fixed first and why?
+3. **Suggested Fixes**: Specific code changes or approaches to resolve each error
+4. **Patterns**: Are there any common patterns across these errors?
+5. **Prevention**: How to prevent similar errors in the future?
+
+Format your response in clear sections with markdown."""
+
+        message = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        analysis = message.content[0].text
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'analysis': analysis,
+                'error_count': len(errors),
+                'analyzed_ids': error_ids
+            }
+        })
+
+    except Exception as e:
+        print(f"Failed to analyze errors: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Failed to analyze errors: {str(e)}'}), 500
+
+
+@app.route('/api/errors/export-for-claude', methods=['GET'])
+@login_required
+def export_errors_for_claude():
+    """Export errors in a format optimized for Claude Code debugging"""
+    try:
+        # Get filters
+        limit = request.args.get('limit', 20, type=int)
+        limit = min(limit, 100)  # Cap at 100
+        resolved = request.args.get('resolved', 'false')
+
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+
+            query = """
+                SELECT id, timestamp, error_type, message, stack_trace, component, url, metadata
+                FROM error_logs
+                WHERE resolved = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """
+
+            cursor.execute(query, (1 if resolved == 'true' else 0, limit))
+            errors = [dict(row) for row in cursor.fetchall()]
+
+        # Format for Claude Code
+        claude_report = {
+            'report_generated': datetime.now().isoformat(),
+            'total_errors': len(errors),
+            'application': 'Family Meal Planner',
+            'errors': []
+        }
+
+        for error in errors:
+            # Parse metadata
+            metadata = {}
+            if error.get('metadata'):
+                try:
+                    metadata = json.loads(error['metadata'])
+                except:
+                    pass
+
+            claude_report['errors'].append({
+                'error_id': error['id'],
+                'timestamp': error['timestamp'],
+                'type': error['error_type'],
+                'message': error['message'],
+                'stack_trace': error['stack_trace'],
+                'component': error['component'],
+                'url': error['url'],
+                'context': metadata.get('currentPath'),
+                'metadata': metadata
+            })
+
+        # Create a formatted text report for easy copying
+        text_report = f"""# Error Report for Claude Code Debugging
+Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Total Errors: {len(errors)}
+
+## Error Summary
+"""
+
+        for i, err in enumerate(claude_report['errors'], 1):
+            text_report += f"""
+---
+### Error #{i} (ID: {err['error_id']})
+- **Type:** {err['type']}
+- **Time:** {err['timestamp']}
+- **Component:** {err['component'] or 'N/A'}
+- **Message:** {err['message']}
+- **URL:** {err['url'] or 'N/A'}
+
+**Stack Trace:**
+```
+{err['stack_trace'] or 'No stack trace available'}
+```
+
+**Context:**
+{json.dumps(err['metadata'], indent=2) if err['metadata'] else 'No additional context'}
+"""
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'structured': claude_report,
+                'text_report': text_report,
+                'markdown_report': text_report
+            }
+        })
+
+    except Exception as e:
+        print(f"Failed to export errors: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Failed to export errors'}), 500
+
+
 # ============================================================================
 # CATCH-ALL ROUTE FOR REACT ROUTER
 # ============================================================================

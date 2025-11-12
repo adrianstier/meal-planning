@@ -3285,6 +3285,21 @@ def serve_service_worker():
     """Serve service-worker.js with correct MIME type"""
     return send_from_directory('templates', 'service-worker.js', mimetype='application/javascript')
 
+@app.route('/favicon.ico')
+def serve_favicon():
+    """Serve favicon.ico"""
+    return send_from_directory('templates', 'favicon.ico', mimetype='image/x-icon')
+
+@app.route('/logo192.png')
+def serve_logo192():
+    """Serve logo192.png for PWA"""
+    return send_from_directory('templates', 'logo192.png', mimetype='image/png')
+
+@app.route('/logo512.png')
+def serve_logo512():
+    """Serve logo512.png for PWA"""
+    return send_from_directory('templates', 'logo512.png', mimetype='image/png')
+
 # ============================================================================
 # BENTO BOX API ENDPOINTS
 # ============================================================================

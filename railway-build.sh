@@ -18,9 +18,12 @@ rm -rf templates/static
 mkdir -p templates
 cp -r client/build/static templates/
 
-echo "📄 Copying index.html and manifest to templates folder..."
+echo "📄 Copying index.html, manifest, and assets to templates folder..."
 cp client/build/index.html templates/index.html
 cp client/build/manifest.json templates/manifest.json 2>/dev/null || true
+cp client/build/favicon.ico templates/favicon.ico 2>/dev/null || true
+cp client/build/logo192.png templates/logo192.png 2>/dev/null || true
+cp client/build/logo512.png templates/logo512.png 2>/dev/null || true
 
 echo "🔄 Running database migrations..."
 python3 setup.py || echo "⚠️  Setup script encountered issues (may be normal if DB already initialized)"

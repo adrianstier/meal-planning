@@ -8,3 +8,4 @@ recipe-scrapers==14.51.0
 Pillow==10.0.0
 beautifulsoup4==4.12.0
 certifi==2023.7.22
+stripe>=8.0.0

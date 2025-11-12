@@ -52,7 +52,9 @@ url_scraper_error = None
 try:
     api_key = os.getenv('ANTHROPIC_API_KEY')
     if api_key:
-        recipe_parser = RecipeParser(api_key)
+        # Save images to templates/static/recipe_images so they're served by Flask
+        recipe_parser = RecipeParser(api_key, image_folder='templates/static/recipe_images')
+        print("✅ Recipe parser initialized with image folder: templates/static/recipe_images")
     else:
         recipe_parser = None
         recipe_parser_error = "No ANTHROPIC_API_KEY found"

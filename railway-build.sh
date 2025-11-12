@@ -14,9 +14,24 @@ npm run build
 cd ..
 
 echo "📦 Copying build files..."
+# Preserve recipe_images folder if it exists
+if [ -d "templates/static/recipe_images" ]; then
+  echo "📸 Preserving existing recipe images..."
+  mv templates/static/recipe_images /tmp/recipe_images_backup
+fi
+
 rm -rf templates/static
 mkdir -p templates
 cp -r client/build/static templates/
+
+# Restore recipe_images folder
+if [ -d "/tmp/recipe_images_backup" ]; then
+  mkdir -p templates/static/recipe_images
+  mv /tmp/recipe_images_backup/* templates/static/recipe_images/ 2>/dev/null || true
+  rm -rf /tmp/recipe_images_backup
+else
+  mkdir -p templates/static/recipe_images
+fi
 
 echo "📄 Copying index.html, manifest, and assets to templates folder..."
 cp client/build/index.html templates/index.html

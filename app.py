@@ -4176,6 +4176,49 @@ def serve_react(path):
 
 
 # ============================================================================
+# ENSURE ERROR_LOGS TABLE EXISTS (runs on module load for Gunicorn)
+# ============================================================================
+# This must run outside __main__ to work with Gunicorn in production
+try:
+    with db_connection(db) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='error_logs'")
+        if not cursor.fetchone():
+            print("🔧 Creating error_logs table (missing from migrations)...")
+            cursor.execute("""
+                CREATE TABLE error_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    error_type VARCHAR(50) NOT NULL,
+                    message TEXT NOT NULL,
+                    stack_trace TEXT,
+                    component VARCHAR(255),
+                    url VARCHAR(500),
+                    user_id INTEGER,
+                    session_id VARCHAR(255),
+                    browser_info TEXT,
+                    metadata TEXT,
+                    resolved BOOLEAN DEFAULT 0,
+                    resolved_at DATETIME,
+                    resolved_by VARCHAR(255),
+                    notes TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+                )
+            """)
+            cursor.execute("CREATE INDEX idx_error_logs_timestamp ON error_logs(timestamp DESC)")
+            cursor.execute("CREATE INDEX idx_error_logs_type ON error_logs(error_type)")
+            cursor.execute("CREATE INDEX idx_error_logs_resolved ON error_logs(resolved)")
+            cursor.execute("CREATE INDEX idx_error_logs_user ON error_logs(user_id)")
+            conn.commit()
+            print("✅ error_logs table created successfully!")
+        else:
+            print("✓ error_logs table already exists")
+except Exception as e:
+    print(f"⚠️ Error checking/creating error_logs table: {e}")
+    traceback.print_exc()
+
+
+# ============================================================================
 # RUN SERVER
 # ============================================================================
 
@@ -4184,45 +4227,6 @@ if __name__ == '__main__':
     if not os.path.exists(db.db_path):
         print("📊 Initializing database...")
         db.initialize_database()
-
-    # Ensure error_logs table exists (emergency fix for production)
-    try:
-        with db_connection(db) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='error_logs'")
-            if not cursor.fetchone():
-                print("🔧 Creating error_logs table (missing from migrations)...")
-                cursor.execute("""
-                    CREATE TABLE error_logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        error_type VARCHAR(50) NOT NULL,
-                        message TEXT NOT NULL,
-                        stack_trace TEXT,
-                        component VARCHAR(255),
-                        url VARCHAR(500),
-                        user_id INTEGER,
-                        session_id VARCHAR(255),
-                        browser_info TEXT,
-                        metadata TEXT,
-                        resolved BOOLEAN DEFAULT 0,
-                        resolved_at DATETIME,
-                        resolved_by VARCHAR(255),
-                        notes TEXT,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-                    )
-                """)
-                cursor.execute("CREATE INDEX idx_error_logs_timestamp ON error_logs(timestamp DESC)")
-                cursor.execute("CREATE INDEX idx_error_logs_type ON error_logs(error_type)")
-                cursor.execute("CREATE INDEX idx_error_logs_resolved ON error_logs(resolved)")
-                cursor.execute("CREATE INDEX idx_error_logs_user ON error_logs(user_id)")
-                conn.commit()
-                print("✅ error_logs table created successfully!")
-            else:
-                print("✓ error_logs table already exists")
-    except Exception as e:
-        print(f"⚠️ Error checking/creating error_logs table: {e}")
-        traceback.print_exc()
 
         # Load additional meals
         if os.path.exists('additional_meals.sql'):

@@ -14,4 +14,5 @@ echo "🔄 Resetting admin password to known value..."
 python3 database/migrations/reset_admin_password.py "$DB_PATH" || echo "⚠️  Password reset skipped"
 
 echo "✅ Migrations complete! Starting gunicorn..."
-exec gunicorn app:app
+# Increase timeout to 180 seconds for AI recipe parsing (default is 30s)
+exec gunicorn app:app --timeout 180 --workers 1 --log-level info

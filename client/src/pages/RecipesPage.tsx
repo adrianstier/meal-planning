@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { RecipeParsingProgress } from '../components/features/recipes/RecipeParsingProgress';
 import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
 import StarRating from '../components/StarRating';
@@ -729,15 +730,21 @@ const RecipesPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Textarea
-              placeholder="Paste your recipe here... Include the name, ingredients, and instructions."
-              value={recipeText}
-              onChange={(e) => setRecipeText(e.target.value)}
-              className="min-h-[300px]"
-            />
+            {parseRecipe.isPending ? (
+              <RecipeParsingProgress
+                isVisible={parseRecipe.isPending}
+              />
+            ) : (
+              <Textarea
+                placeholder="Paste your recipe here... Include the name, ingredients, and instructions."
+                value={recipeText}
+                onChange={(e) => setRecipeText(e.target.value)}
+                className="min-h-[300px]"
+              />
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setParseDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setParseDialogOpen(false)} disabled={parseRecipe.isPending}>
               Cancel
             </Button>
             <Button
@@ -760,22 +767,36 @@ const RecipesPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="recipe-url">Recipe URL</Label>
-              <Input
-                id="recipe-url"
-                type="url"
-                placeholder="https://example.com/recipe"
-                value={recipeUrl}
-                onChange={(e) => setRecipeUrl(e.target.value)}
+            {parseRecipe.isPending ? (
+              <RecipeParsingProgress
+                isVisible={parseRecipe.isPending}
               />
-              <p className="text-xs text-muted-foreground">
-                Note: Some sites like NY Times Cooking require a subscription. If you get an error, copy and paste the recipe text instead.
-              </p>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="recipe-url">Recipe URL</Label>
+                <Input
+                  id="recipe-url"
+                  type="url"
+                  placeholder="https://example.com/recipe"
+                  value={recipeUrl}
+                  onChange={(e) => setRecipeUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && recipeUrl.trim()) {
+                      handleParseFromUrl();
+                    }
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  💡 <strong>Supported sites:</strong> AllRecipes, FoodNetwork, BonAppetit, Epicurious, Serious Eats, and 100+ more!
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Note: Some sites like NY Times Cooking require a subscription. If you get an error, copy and paste the recipe text instead.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUrlDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setUrlDialogOpen(false)} disabled={parseRecipe.isPending}>
               Cancel
             </Button>
             <Button

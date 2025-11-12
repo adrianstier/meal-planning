@@ -4098,7 +4098,7 @@ Total Errors: {len(errors)}
         return jsonify({'success': False, 'error': 'Failed to export errors'}), 500
 
 
-@app.route('/api/errors/setup-table', methods=['POST'])
+@app.route('/api/errors/setup-table', methods=['POST', 'GET'])
 def setup_error_logs_table():
     """
     Emergency endpoint to create error_logs table if it doesn't exist
@@ -4115,6 +4115,7 @@ def setup_error_logs_table():
                 return jsonify({'success': True, 'message': 'Table already exists'})
 
             # Create table
+            print("🔧 Creating error_logs table...")
             cursor.execute("""
                 CREATE TABLE error_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -4143,6 +4144,7 @@ def setup_error_logs_table():
             cursor.execute("CREATE INDEX idx_error_logs_user ON error_logs(user_id)")
 
             conn.commit()
+            print("✅ error_logs table created successfully!")
 
             return jsonify({'success': True, 'message': 'Table created successfully'})
 

@@ -114,11 +114,17 @@ const DiagnosticsPage: React.FC = () => {
   const exportForClaude = async () => {
     try {
       const response = await api.get('/api/errors/export-for-claude');
-      const report = response.data.markdown_report;
+
+      // Backend returns data nested in response.data.data
+      const report = response.data?.data?.markdown_report || response.data?.markdown_report;
+
+      if (!report) {
+        throw new Error('No report data received from server');
+      }
 
       // Copy to clipboard
       await navigator.clipboard.writeText(report);
-      alert('Error report copied to clipboard! You can now paste it to Claude Code.');
+      alert('✅ Error report copied to clipboard! Paste it in Claude Code to get instant debugging help.');
 
       // Also download as file
       const blob = new Blob([report], { type: 'text/markdown' });
@@ -130,9 +136,10 @@ const DiagnosticsPage: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to export errors:', error);
-      alert('Failed to export errors');
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to export errors';
+      alert(`❌ Error: ${errorMsg}`);
     }
   };
 

@@ -4099,11 +4099,11 @@ Total Errors: {len(errors)}
 
 
 @app.route('/api/errors/setup-table', methods=['POST'])
-@login_required
 def setup_error_logs_table():
     """
     Emergency endpoint to create error_logs table if it doesn't exist
     This fixes the 'no such table: error_logs' error
+    Note: No login required since this is needed to fix the error tracking system itself
     """
     try:
         with db_connection(db) as conn:

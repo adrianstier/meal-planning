@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: meal-planning
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: "pip install -r requirements.txt && chmod +x railway-build.sh && ./railway-build.sh"
+    startCommand: "python setup.py && gunicorn app:app --timeout 180 --workers 1 --log-level info"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: RENDER
+        value: "true"

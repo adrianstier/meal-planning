@@ -55,6 +55,8 @@ python3 database/migrations/add_bento_tables.py "$DB_PATH" || echo "⚠️  Bent
 python3 database/migrations/add_performance_indexes.py "$DB_PATH" || echo "⚠️  Performance indexes migration skipped"
 python3 database/migrations/add_multi_user_support.py "$DB_PATH" || echo "⚠️  Multi-user migration skipped"
 python3 database/migrations/add_error_logs.py "$DB_PATH" || echo "⚠️  Error logs migration skipped"
+python3 database/migrations/add_subscriptions.py "$DB_PATH" || echo "⚠️  Subscriptions migration skipped"
+python3 database/migrations/add_nutrition_tracking.py "$DB_PATH" || echo "⚠️  Nutrition tracking migration skipped"
 
 echo "🔧 Running emergency error_logs table creation..."
 chmod +x create_error_table.sh

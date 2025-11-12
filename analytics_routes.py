@@ -35,8 +35,9 @@ def _check_subscription_access(user_id: int) -> tuple[bool, str]:
         from subscription_manager import get_subscription_manager
         sub_manager = get_subscription_manager()
         return sub_manager.can_use_feature(user_id, 'analytics')
-    except Exception:
-        return True, None
+    except Exception as e:
+        # Fail closed - deny access if subscription check fails
+        return False, f"Unable to verify subscription: {str(e)}"
 
 
 # =============================================================================
@@ -98,7 +99,7 @@ def get_dashboard():
     cursor.execute("""
         SELECT COUNT(*) as meals_cooked
         FROM meal_history
-        WHERE user_id = ? AND date_eaten >= ?
+        WHERE user_id = ? AND cooked_date >= ?
     """, (user_id, start_date))
     meals_cooked = cursor.fetchone()['meals_cooked']
 
@@ -129,7 +130,7 @@ def get_dashboard():
             m.prep_time_minutes + m.cook_time_minutes as total_time
         FROM meal_history mh
         JOIN meals m ON mh.meal_id = m.id
-        WHERE mh.user_id = ? AND mh.date_eaten >= ?
+        WHERE mh.user_id = ? AND mh.cooked_date >= ?
         GROUP BY m.id
         ORDER BY times_cooked DESC
         LIMIT 10
@@ -144,7 +145,7 @@ def get_dashboard():
             COUNT(mh.id) as times_cooked
         FROM meal_history mh
         JOIN meals m ON mh.meal_id = m.id
-        WHERE mh.user_id = ? AND mh.date_eaten >= ?
+        WHERE mh.user_id = ? AND mh.cooked_date >= ?
         GROUP BY m.cuisine
         ORDER BY times_cooked DESC
     """, (user_id, start_date))
@@ -161,7 +162,7 @@ def get_dashboard():
             COUNT(mh.id) as times_cooked
         FROM meal_history mh
         JOIN meals m ON mh.meal_id = m.id
-        WHERE mh.user_id = ? AND mh.rating >= 7 AND mh.date_eaten >= ?
+        WHERE mh.user_id = ? AND mh.rating >= 7 AND mh.cooked_date >= ?
         GROUP BY m.id
         HAVING COUNT(mh.id) >= 2  -- At least cooked twice
         ORDER BY avg_rating DESC, times_cooked DESC
@@ -175,12 +176,12 @@ def get_dashboard():
         SELECT
             'cooked' as activity_type,
             m.name as meal_name,
-            mh.date_eaten as activity_date,
+            mh.cooked_date as activity_date,
             mh.rating
         FROM meal_history mh
         JOIN meals m ON mh.meal_id = m.id
         WHERE mh.user_id = ?
-        ORDER BY mh.date_eaten DESC
+        ORDER BY mh.cooked_date DESC
         LIMIT 20
     """, (user_id,))
 
@@ -191,7 +192,7 @@ def get_dashboard():
         SELECT AVG(m.prep_time_minutes + m.cook_time_minutes) as avg_time
         FROM meal_history mh
         JOIN meals m ON mh.meal_id = m.id
-        WHERE mh.user_id = ? AND mh.date_eaten >= ?
+        WHERE mh.user_id = ? AND mh.cooked_date >= ?
     """, (user_id, start_date))
 
     avg_time = cursor.fetchone()['avg_time']
@@ -253,7 +254,7 @@ def get_savings():
     cursor.execute("""
         SELECT COUNT(*) as meals_cooked
         FROM meal_history
-        WHERE user_id = ? AND date_eaten >= ?
+        WHERE user_id = ? AND cooked_date >= ?
     """, (user_id, start_date))
 
     meals_cooked = cursor.fetchone()['meals_cooked']
@@ -327,11 +328,11 @@ def get_cooking_frequency():
 
     cursor.execute("""
         SELECT
-            DATE(date_eaten) as cook_date,
+            DATE(cooked_date) as cook_date,
             COUNT(*) as meals_count
         FROM meal_history
-        WHERE user_id = ? AND date_eaten >= ?
-        GROUP BY DATE(date_eaten)
+        WHERE user_id = ? AND cooked_date >= ?
+        GROUP BY DATE(cooked_date)
         ORDER BY cook_date ASC
     """, (user_id, start_date))
 
@@ -361,12 +362,12 @@ def get_rating_trends():
 
     cursor.execute("""
         SELECT
-            DATE(date_eaten) as date,
+            DATE(cooked_date) as date,
             AVG(rating) as avg_rating,
             COUNT(*) as meals_rated
         FROM meal_history
-        WHERE user_id = ? AND date_eaten >= ? AND rating IS NOT NULL
-        GROUP BY DATE(date_eaten)
+        WHERE user_id = ? AND cooked_date >= ? AND rating IS NOT NULL
+        GROUP BY DATE(cooked_date)
         ORDER BY date ASC
     """, (user_id, start_date))
 
@@ -378,7 +379,7 @@ def get_rating_trends():
             AVG(rating) as overall_avg,
             COUNT(*) as total_rated
         FROM meal_history
-        WHERE user_id = ? AND date_eaten >= ? AND rating IS NOT NULL
+        WHERE user_id = ? AND cooked_date >= ? AND rating IS NOT NULL
     """, (user_id, start_date))
 
     stats = dict(cursor.fetchone())
@@ -437,7 +438,7 @@ def get_insights():
     cursor.execute("""
         SELECT COUNT(DISTINCT meal_id) as unique_meals, COUNT(*) as total_meals
         FROM meal_history
-        WHERE user_id = ? AND date_eaten >= DATE('now', '-30 days')
+        WHERE user_id = ? AND cooked_date >= DATE('now', '-30 days')
     """, (user_id,))
 
     variety = cursor.fetchone()
@@ -481,9 +482,9 @@ def get_insights():
 
     # Insight 4: Streak tracking
     cursor.execute("""
-        SELECT COUNT(DISTINCT DATE(date_eaten)) as days_cooked
+        SELECT COUNT(DISTINCT DATE(cooked_date)) as days_cooked
         FROM meal_history
-        WHERE user_id = ? AND date_eaten >= DATE('now', '-7 days')
+        WHERE user_id = ? AND cooked_date >= DATE('now', '-7 days')
     """, (user_id,))
 
     streak = cursor.fetchone()
@@ -530,7 +531,7 @@ def export_analytics():
 
     cursor.execute("""
         SELECT
-            mh.date_eaten,
+            mh.cooked_date,
             m.name as meal_name,
             m.cuisine,
             mh.rating,
@@ -538,8 +539,8 @@ def export_analytics():
             m.prep_time_minutes + m.cook_time_minutes as total_time
         FROM meal_history mh
         JOIN meals m ON mh.meal_id = m.id
-        WHERE mh.user_id = ? AND mh.date_eaten >= ?
-        ORDER BY mh.date_eaten DESC
+        WHERE mh.user_id = ? AND mh.cooked_date >= ?
+        ORDER BY mh.cooked_date DESC
     """, (user_id, start_date))
 
     rows = cursor.fetchall()
@@ -551,7 +552,7 @@ def export_analytics():
     output.write("Date,Meal Name,Cuisine,Rating,Servings,Time (minutes)\n")
 
     for row in rows:
-        output.write(f"{row['date_eaten']},{row['meal_name']},{row['cuisine'] or 'N/A'},{row['rating'] or 'N/A'},{row['servings']},{row['total_time'] or 'N/A'}\n")
+        output.write(f"{row['cooked_date']},{row['meal_name']},{row['cuisine'] or 'N/A'},{row['rating'] or 'N/A'},{row['servings']},{row['total_time'] or 'N/A'}\n")
 
     csv_data = output.getvalue()
     output.close()

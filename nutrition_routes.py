@@ -36,9 +36,9 @@ def _check_subscription_access(user_id: int) -> tuple[bool, str]:
         from subscription_manager import get_subscription_manager
         sub_manager = get_subscription_manager()
         return sub_manager.can_use_feature(user_id, 'nutrition_tracking')
-    except Exception:
-        # If subscription system not configured, allow access
-        return True, None
+    except Exception as e:
+        # Fail closed - deny access if subscription check fails
+        return False, f"Unable to verify subscription: {str(e)}"
 
 
 # =============================================================================
@@ -96,6 +96,14 @@ def log_nutrition():
     meal_type = data.get('meal_type', 'dinner')
     servings = data.get('servings', 1.0)
 
+    # Validate meal_type
+    valid_meal_types = ['breakfast', 'lunch', 'dinner', 'snack']
+    if meal_type not in valid_meal_types:
+        return jsonify({
+            'success': False,
+            'error': f'meal_type must be one of: {", ".join(valid_meal_types)}'
+        }), 400
+
     # Nutrition data
     calories = data.get('calories', 0)
     protein_g = data.get('protein_g', 0)
@@ -104,6 +112,25 @@ def log_nutrition():
     fiber_g = data.get('fiber_g', 0)
     sugar_g = data.get('sugar_g', 0)
     sodium_mg = data.get('sodium_mg', 0)
+
+    # Validate no negative values
+    nutrition_values = {
+        'calories': calories,
+        'protein_g': protein_g,
+        'carbs_g': carbs_g,
+        'fat_g': fat_g,
+        'fiber_g': fiber_g,
+        'sugar_g': sugar_g,
+        'sodium_mg': sodium_mg,
+        'servings': servings
+    }
+
+    for name, value in nutrition_values.items():
+        if value < 0:
+            return jsonify({
+                'success': False,
+                'error': f'{name} cannot be negative (got {value})'
+            }), 400
 
     conn = _get_connection()
     cursor = conn.cursor()

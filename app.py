@@ -15,6 +15,9 @@ from auth import (
     authenticate_user, create_user, get_current_user,
     get_current_user_id, login_required
 )
+from stripe_routes import stripe_bp
+from nutrition_routes import nutrition_bp
+from analytics_routes import analytics_bp
 import os
 from dotenv import load_dotenv
 import random
@@ -39,6 +42,16 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('RAILWAY_ENVIRONMENT') is not None  # HTTPS only in production
 
 CORS(app, supports_credentials=True)
+
+# Register all blueprint routes
+app.register_blueprint(stripe_bp)
+print("✅ Stripe payment routes registered at /api/stripe/*")
+
+app.register_blueprint(nutrition_bp)
+print("✅ Nutrition tracking routes registered at /api/nutrition/*")
+
+app.register_blueprint(analytics_bp)
+print("✅ Analytics dashboard routes registered at /api/analytics/*")
 
 # Initialize database
 db = MealPlannerDB()

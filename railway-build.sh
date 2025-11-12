@@ -41,4 +41,8 @@ python3 database/migrations/add_performance_indexes.py "$DB_PATH" || echo "⚠�
 python3 database/migrations/add_multi_user_support.py "$DB_PATH" || echo "⚠️  Multi-user migration skipped"
 python3 database/migrations/add_error_logs.py "$DB_PATH" || echo "⚠️  Error logs migration skipped"
 
+echo "🔧 Running emergency error_logs table creation..."
+chmod +x create_error_table.sh
+bash create_error_table.sh || echo "⚠️  Emergency table creation had issues"
+
 echo "✅ Build complete!"

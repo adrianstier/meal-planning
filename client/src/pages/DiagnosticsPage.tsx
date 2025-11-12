@@ -44,6 +44,19 @@ const DiagnosticsPage: React.FC = () => {
   const [resolveNotes, setResolveNotes] = useState('');
   const [filterResolved, setFilterResolved] = useState(false);
 
+  const setupErrorTable = async () => {
+    try {
+      const response = await api.post('/api/errors/setup-table');
+      if (response.data.success) {
+        alert('✅ Error tracking table created! Refreshing page...');
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Failed to setup table:', error);
+      alert(`❌ Failed to setup table: ${error.response?.data?.error || error.message}`);
+    }
+  };
+
   const fetchErrors = async () => {
     try {
       setLoading(true);
@@ -51,9 +64,20 @@ const DiagnosticsPage: React.FC = () => {
         `/api/errors?limit=200&resolved=${filterResolved ? 'true' : 'false'}`
       );
       setErrors(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch errors:', error);
-      errorLogger.logApiError(error, '/api/errors', 'GET');
+
+      // Check if it's a "no such table" error
+      if (error.response?.data?.error?.includes('no such table: error_logs')) {
+        const setup = window.confirm(
+          '⚠️ Error tracking table not found. Would you like to create it now?'
+        );
+        if (setup) {
+          await setupErrorTable();
+        }
+      } else {
+        errorLogger.logApiError(error, '/api/errors', 'GET');
+      }
     } finally {
       setLoading(false);
     }
@@ -63,8 +87,14 @@ const DiagnosticsPage: React.FC = () => {
     try {
       const response = await api.get<ErrorStats>('/api/errors/stats');
       setStats(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch error stats:', error);
+
+      // Check if it's a "no such table" error
+      if (error.response?.data?.error?.includes('no such table: error_logs')) {
+        // Already handled in fetchErrors
+        return;
+      }
     }
   };
 

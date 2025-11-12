@@ -4098,6 +4098,60 @@ Total Errors: {len(errors)}
         return jsonify({'success': False, 'error': 'Failed to export errors'}), 500
 
 
+@app.route('/api/errors/setup-table', methods=['POST'])
+@login_required
+def setup_error_logs_table():
+    """
+    Emergency endpoint to create error_logs table if it doesn't exist
+    This fixes the 'no such table: error_logs' error
+    """
+    try:
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+
+            # Check if table exists
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='error_logs'")
+            if cursor.fetchone():
+                return jsonify({'success': True, 'message': 'Table already exists'})
+
+            # Create table
+            cursor.execute("""
+                CREATE TABLE error_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    error_type VARCHAR(50) NOT NULL,
+                    message TEXT NOT NULL,
+                    stack_trace TEXT,
+                    component VARCHAR(255),
+                    url VARCHAR(500),
+                    user_id INTEGER,
+                    session_id VARCHAR(255),
+                    browser_info TEXT,
+                    metadata TEXT,
+                    resolved BOOLEAN DEFAULT 0,
+                    resolved_at DATETIME,
+                    resolved_by VARCHAR(255),
+                    notes TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+                )
+            """)
+
+            # Create indexes
+            cursor.execute("CREATE INDEX idx_error_logs_timestamp ON error_logs(timestamp DESC)")
+            cursor.execute("CREATE INDEX idx_error_logs_type ON error_logs(error_type)")
+            cursor.execute("CREATE INDEX idx_error_logs_resolved ON error_logs(resolved)")
+            cursor.execute("CREATE INDEX idx_error_logs_user ON error_logs(user_id)")
+
+            conn.commit()
+
+            return jsonify({'success': True, 'message': 'Table created successfully'})
+
+    except Exception as e:
+        print(f"Failed to setup error_logs table: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ============================================================================
 # CATCH-ALL ROUTE FOR REACT ROUTER
 # ============================================================================

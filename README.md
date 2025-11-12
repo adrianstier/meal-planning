@@ -313,6 +313,20 @@ When planning meals, the AI considers:
 - Recent meals (avoids repetition)
 - Kid-friendly ratings
 
+## 🎯 Project Roadmap
+
+This project is on a **path to building a profitable SaaS business**. See our comprehensive roadmap:
+
+- **[IMPROVEMENT_ROADMAP.md](IMPROVEMENT_ROADMAP.md)** - Technical improvements and feature priorities
+- **[METRICS.md](METRICS.md)** - Success metrics and KPIs tracking
+- **`.claude/`** - Claude Code configuration for staying focused on goals
+
+**Current Phase**: Phase 1 - Make It Bulletproof (Months 1-2)
+
+**Ultimate Goal**: $100K MRR → $3-5M exit or $50K/month passive income
+
+**Use `/roadmap` command in Claude Code** to see current priorities and next steps.
+
 ## Contributing
 
 This is a personal family project, but suggestions and bug reports are welcome via GitHub issues.

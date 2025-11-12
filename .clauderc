@@ -1,0 +1,11 @@
+# Claude Code Configuration
+# This file is loaded automatically when Claude Code opens this project
+
+# Show roadmap reminder on startup
+CLAUDE_STARTUP_MESSAGE="🎯 Building toward $100K MRR | Current Phase: Make It Bulletproof | Run /roadmap for details"
+
+# Enable roadmap-focused suggestions
+CLAUDE_CONTEXT_FILES="IMPROVEMENT_ROADMAP.md,METRICS.md,QUICK_START_ROADMAP.md"
+
+# Remind to check metrics
+CLAUDE_WEEKLY_REMINDER="Check METRICS.md and update progress"

@@ -1,5 +1,5 @@
 // Force rebuild - 2025-11-04 Enhanced UX with Error Tracking
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -16,6 +16,8 @@ import SchoolMenuPage from './pages/SchoolMenuPage';
 import ListsPage from './pages/ListsPage';
 import RestaurantsPage from './pages/RestaurantsPage';
 import ProfilePage from './pages/ProfilePage';
+import DiagnosticsPage from './pages/DiagnosticsPage';
+import { errorLogger } from './utils/errorLogger';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -119,12 +121,51 @@ function AppContent() {
             </Layout>
           </ProtectedRoute>
         } />
+        <Route path="/diagnostics" element={
+          <ProtectedRoute>
+            <Layout>
+              <DiagnosticsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
       </Routes>
     </Router>
   );
 }
 
 function App() {
+  useEffect(() => {
+    // Global error handler for uncaught errors
+    const handleError = (event: ErrorEvent) => {
+      errorLogger.log(event.error || event.message, 'unknown', {
+        component: 'global',
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      });
+    };
+
+    // Global handler for unhandled promise rejections
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      errorLogger.log(
+        event.reason instanceof Error ? event.reason : String(event.reason),
+        'unknown',
+        {
+          component: 'global',
+          type: 'unhandledRejection',
+        }
+      );
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

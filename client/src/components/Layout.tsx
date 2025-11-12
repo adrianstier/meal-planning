@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Calendar, BookOpen, UtensilsCrossed, GraduationCap, ListChecks, Package, LogOut, User, Menu, X, Utensils } from 'lucide-react';
+import { Calendar, BookOpen, UtensilsCrossed, GraduationCap, ListChecks, Package, LogOut, User, Menu, X, Utensils, Bug } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 
@@ -17,6 +17,7 @@ const navItems = [
   { path: '/school-menu', label: 'School Menu', icon: GraduationCap },
   { path: '/lists', label: 'Lists', icon: ListChecks },
   { path: '/restaurants', label: 'Restaurants', icon: Utensils },
+  { path: '/diagnostics', label: 'Diagnostics', icon: Bug },
 ];
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {

@@ -70,6 +70,57 @@ class ErrorLogger {
 
     // Persist to localStorage
     this.saveLogs();
+
+    // Send to backend for persistent storage (async, don't block)
+    this.sendToBackend(errorLog);
+  }
+
+  /**
+   * Send error log to backend API
+   */
+  private async sendToBackend(errorLog: ErrorLog): Promise<void> {
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || (
+        process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5001'
+      );
+
+      const response = await fetch(`${API_BASE_URL}/api/errors/log`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          error_type: errorLog.type,
+          message: errorLog.message,
+          stack_trace: errorLog.stack,
+          component: errorLog.context?.component,
+          url: errorLog.url,
+          browser_info: {
+            userAgent: errorLog.userAgent,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+            viewport: {
+              width: window.innerWidth,
+              height: window.innerHeight,
+            },
+            language: navigator.language,
+            platform: navigator.platform,
+          },
+          metadata: {
+            ...errorLog.context,
+            env: errorLog.env,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn('Failed to send error to backend:', response.status);
+      }
+    } catch (err) {
+      // Silently fail - don't create error loops
+      console.warn('Error sending log to backend:', err);
+    }
   }
 
   /**

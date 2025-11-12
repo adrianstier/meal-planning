@@ -39,5 +39,6 @@ python3 database/migrations/add_cuisine.py "$DB_PATH" || echo "⚠️  Cuisine m
 python3 database/migrations/add_bento_tables.py "$DB_PATH" || echo "⚠️  Bento tables migration skipped"
 python3 database/migrations/add_performance_indexes.py "$DB_PATH" || echo "⚠️  Performance indexes migration skipped"
 python3 database/migrations/add_multi_user_support.py "$DB_PATH" || echo "⚠️  Multi-user migration skipped"
+python3 database/migrations/add_error_logs.py "$DB_PATH" || echo "⚠️  Error logs migration skipped"
 
 echo "✅ Build complete!"

@@ -3724,6 +3724,195 @@ def generate_weekly_bento_plans():
 
 
 # ============================================================================
+# ERROR LOGGING & DIAGNOSTICS API ENDPOINTS
+# ============================================================================
+
+@app.route('/api/errors/log', methods=['POST'])
+def log_error():
+    """Log frontend or backend errors for diagnostics"""
+    try:
+        data = request.get_json()
+
+        # Extract error details
+        error_type = data.get('error_type', 'unknown')
+        message = data.get('message', 'No message provided')
+        stack_trace = data.get('stack_trace')
+        component = data.get('component')
+        url = data.get('url')
+        browser_info = json.dumps(data.get('browser_info', {}))
+        metadata = json.dumps(data.get('metadata', {}))
+
+        # Get user info if authenticated
+        user_id = None
+        try:
+            user_id = get_current_user_id()
+        except:
+            pass  # Not authenticated, that's okay
+
+        # Get session ID
+        session_id = session.get('session_id', request.headers.get('X-Session-ID'))
+
+        # Insert error log
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO error_logs
+                (error_type, message, stack_trace, component, url, user_id, session_id, browser_info, metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (error_type, message, stack_trace, component, url, user_id, session_id, browser_info, metadata))
+            conn.commit()
+            error_id = cursor.lastrowid
+
+        print(f"🔴 Error logged [ID: {error_id}]: {error_type} - {message}")
+
+        return jsonify({'success': True, 'error_id': error_id})
+    except Exception as e:
+        print(f"Failed to log error: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Failed to log error'}), 500
+
+
+@app.route('/api/errors', methods=['GET'])
+@login_required
+def get_errors():
+    """Get recent errors for diagnostics (admin only)"""
+    try:
+        # Optional filters
+        limit = request.args.get('limit', 100, type=int)
+        limit = min(limit, 500)  # Cap at 500
+
+        resolved = request.args.get('resolved')
+        error_type = request.args.get('type')
+
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+
+            # Build query
+            query = "SELECT * FROM error_logs WHERE 1=1"
+            params = []
+
+            if resolved is not None:
+                query += " AND resolved = ?"
+                params.append(1 if resolved == 'true' else 0)
+
+            if error_type:
+                query += " AND error_type = ?"
+                params.append(error_type)
+
+            query += " ORDER BY timestamp DESC LIMIT ?"
+            params.append(limit)
+
+            cursor.execute(query, params)
+            errors = [dict(row) for row in cursor.fetchall()]
+
+        # Parse JSON fields
+        for error in errors:
+            if error.get('browser_info'):
+                try:
+                    error['browser_info'] = json.loads(error['browser_info'])
+                except:
+                    pass
+            if error.get('metadata'):
+                try:
+                    error['metadata'] = json.loads(error['metadata'])
+                except:
+                    pass
+
+        return jsonify({'success': True, 'data': errors})
+    except Exception as e:
+        print(f"Failed to fetch errors: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Failed to fetch errors'}), 500
+
+
+@app.route('/api/errors/<int:error_id>/resolve', methods=['PUT'])
+@login_required
+def resolve_error(error_id):
+    """Mark an error as resolved"""
+    try:
+        data = request.get_json()
+        notes = data.get('notes', '')
+
+        user = get_current_user()
+        resolved_by = user.get('username', 'unknown')
+
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE error_logs
+                SET resolved = 1, resolved_at = CURRENT_TIMESTAMP, resolved_by = ?, notes = ?
+                WHERE id = ?
+            """, (resolved_by, notes, error_id))
+            conn.commit()
+
+        return jsonify({'success': True, 'message': 'Error marked as resolved'})
+    except Exception as e:
+        print(f"Failed to resolve error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to resolve error'}), 500
+
+
+@app.route('/api/errors/stats', methods=['GET'])
+@login_required
+def get_error_stats():
+    """Get error statistics for dashboard"""
+    try:
+        with db_connection(db) as conn:
+            cursor = conn.cursor()
+
+            # Total errors
+            cursor.execute("SELECT COUNT(*) as total FROM error_logs")
+            total = cursor.fetchone()['total']
+
+            # Unresolved errors
+            cursor.execute("SELECT COUNT(*) as unresolved FROM error_logs WHERE resolved = 0")
+            unresolved = cursor.fetchone()['unresolved']
+
+            # Errors by type
+            cursor.execute("""
+                SELECT error_type, COUNT(*) as count
+                FROM error_logs
+                WHERE resolved = 0
+                GROUP BY error_type
+                ORDER BY count DESC
+            """)
+            by_type = [dict(row) for row in cursor.fetchall()]
+
+            # Recent errors (last 24 hours)
+            cursor.execute("""
+                SELECT COUNT(*) as recent
+                FROM error_logs
+                WHERE timestamp > datetime('now', '-24 hours')
+            """)
+            recent_24h = cursor.fetchone()['recent']
+
+            # Most common errors
+            cursor.execute("""
+                SELECT message, COUNT(*) as count
+                FROM error_logs
+                WHERE resolved = 0
+                GROUP BY message
+                ORDER BY count DESC
+                LIMIT 5
+            """)
+            top_errors = [dict(row) for row in cursor.fetchall()]
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'total': total,
+                'unresolved': unresolved,
+                'recent_24h': recent_24h,
+                'by_type': by_type,
+                'top_errors': top_errors
+            }
+        })
+    except Exception as e:
+        print(f"Failed to fetch error stats: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Failed to fetch error stats'}), 500
+
+
+# ============================================================================
 # CATCH-ALL ROUTE FOR REACT ROUTER
 # ============================================================================
 # Note: Flask automatically serves files from templates/static at /static/

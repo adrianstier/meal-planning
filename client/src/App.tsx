@@ -18,6 +18,7 @@ import RestaurantsPage from './pages/RestaurantsPage';
 import ProfilePage from './pages/ProfilePage';
 import DiagnosticsPage from './pages/DiagnosticsPage';
 import PricingPage from './pages/PricingPage';
+import CSABoxPage from './pages/CSABoxPage';
 import { errorLogger } from './utils/errorLogger';
 
 // Create a client
@@ -83,6 +84,13 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <BentoPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/csa" element={
+          <ProtectedRoute>
+            <Layout>
+              <CSABoxPage />
             </Layout>
           </ProtectedRoute>
         } />

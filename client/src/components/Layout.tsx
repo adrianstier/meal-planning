@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Calendar, BookOpen, UtensilsCrossed, GraduationCap, ListChecks, Package, LogOut, User, Menu, X, Utensils, Bug } from 'lucide-react';
+import { Calendar, BookOpen, UtensilsCrossed, GraduationCap, ListChecks, Package, LogOut, User, Menu, X, Utensils, Bug, Sprout } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 
@@ -12,6 +12,7 @@ interface LayoutProps {
 const navItems = [
   { path: '/plan', label: 'Plan', icon: Calendar },
   { path: '/recipes', label: 'Recipes', icon: BookOpen },
+  { path: '/csa', label: 'CSA Box', icon: Sprout },
   { path: '/bento', label: 'Bento', icon: Package },
   { path: '/leftovers', label: 'Leftovers', icon: UtensilsCrossed },
   { path: '/school-menu', label: 'School Menu', icon: GraduationCap },

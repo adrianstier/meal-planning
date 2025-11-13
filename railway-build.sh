@@ -59,6 +59,7 @@ python3 database/migrations/add_subscriptions.py "$DB_PATH" || echo "⚠️  Sub
 python3 database/migrations/add_nutrition_tracking.py "$DB_PATH" || echo "⚠️  Nutrition tracking migration skipped"
 python3 database/migrations/add_restaurants.py "$DB_PATH" || echo "⚠️  Restaurants migration skipped"
 python3 database/migrations/add_user_id_to_leftovers_inventory.py "$DB_PATH" || echo "⚠️  Leftovers inventory migration skipped"
+python3 database/migrations/add_csa_boxes.py "$DB_PATH" || echo "⚠️  CSA boxes migration skipped"
 
 echo "🔧 Running emergency error_logs table creation..."
 chmod +x create_error_table.sh

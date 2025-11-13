@@ -18,6 +18,7 @@ from auth import (
 from stripe_routes import stripe_bp
 from nutrition_routes import nutrition_bp
 from analytics_routes import analytics_bp
+from csa_routes import csa_bp
 import os
 from dotenv import load_dotenv
 import random
@@ -52,6 +53,9 @@ print("✅ Nutrition tracking routes registered at /api/nutrition/*")
 
 app.register_blueprint(analytics_bp)
 print("✅ Analytics dashboard routes registered at /api/analytics/*")
+
+app.register_blueprint(csa_bp)
+print("✅ CSA box management routes registered at /api/csa/*")
 
 # Initialize database
 db = MealPlannerDB()

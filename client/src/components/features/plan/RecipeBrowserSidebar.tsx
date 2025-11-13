@@ -27,7 +27,7 @@ const RecipeBrowserSidebar: React.FC<RecipeBrowserSidebarProps> = ({ meals, isOp
   const filteredMeals = useMemo(() => {
     if (!meals) return [];
 
-    // First, deduplicate meals by ID to prevent duplicates from showing
+    // DEDUP FIX: Remove duplicate meal entries by ID
     const uniqueMeals = Array.from(
       new Map(meals.map(meal => [meal.id, meal])).values()
     );

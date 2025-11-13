@@ -43,6 +43,21 @@ const DiagnosticsPage: React.FC = () => {
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [resolveNotes, setResolveNotes] = useState('');
   const [filterResolved, setFilterResolved] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<string | null>(null);
+
+  const cleanupDuplicates = async () => {
+    try {
+      setCleanupResult('Running cleanup...');
+      const response = await api.post('/api/admin/cleanup-duplicates');
+      if (response.data.success) {
+        setCleanupResult(`✅ Success! Deleted ${response.data.deleted} duplicate meals.\n\n${JSON.stringify(response.data.details, null, 2)}`);
+      } else {
+        setCleanupResult(`❌ Error: ${response.data.error}`);
+      }
+    } catch (error: any) {
+      setCleanupResult(`❌ Failed: ${error.message}`);
+    }
+  };
 
   const setupErrorTable = async () => {
     try {
@@ -256,6 +271,13 @@ const DiagnosticsPage: React.FC = () => {
             <Sparkles className="mr-2 h-4 w-4" />
             AI Analysis
           </Button>
+          <Button
+            variant="destructive"
+            onClick={cleanupDuplicates}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Cleanup Duplicates
+          </Button>
           <Button variant="outline" onClick={downloadLocalLogs}>
             <Download className="mr-2 h-4 w-4" />
             Export Logs
@@ -296,6 +318,23 @@ const DiagnosticsPage: React.FC = () => {
             <p className="text-xs text-muted-foreground mt-3">
               💡 Tip: Click "Copy for Claude" to get a formatted error report you can paste directly into Claude Code for instant debugging help!
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cleanup Result Card */}
+      {cleanupResult && (
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-blue-600" />
+              Cleanup Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-sm whitespace-pre-wrap font-mono bg-white p-4 rounded border">
+              {cleanupResult}
+            </pre>
           </CardContent>
         </Card>
       )}

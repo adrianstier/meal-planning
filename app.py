@@ -146,6 +146,17 @@ def add_security_headers(response):
 
 
 # ============================================================================
+# UTILITY PAGES
+# ============================================================================
+
+@app.route('/cleanup')
+@login_required
+def cleanup_page():
+    """Serve the duplicate cleanup utility page"""
+    return render_template('run_cleanup.html')
+
+
+# ============================================================================
 # API ENDPOINTS
 # ============================================================================
 

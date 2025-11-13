@@ -17,6 +17,7 @@ import ListsPage from './pages/ListsPage';
 import RestaurantsPage from './pages/RestaurantsPage';
 import ProfilePage from './pages/ProfilePage';
 import DiagnosticsPage from './pages/DiagnosticsPage';
+import PricingPage from './pages/PricingPage';
 import { errorLogger } from './utils/errorLogger';
 
 // Create a client
@@ -118,6 +119,13 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <ProfilePage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/pricing" element={
+          <ProtectedRoute>
+            <Layout>
+              <PricingPage />
             </Layout>
           </ProtectedRoute>
         } />

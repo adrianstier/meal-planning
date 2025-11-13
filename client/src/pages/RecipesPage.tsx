@@ -890,6 +890,8 @@ const RecipesPage: React.FC = () => {
                 <Input
                   id="cook_time"
                   type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={formData.cook_time_minutes || ''}
                   onChange={(e) =>
                     setFormData({
@@ -905,6 +907,8 @@ const RecipesPage: React.FC = () => {
                 <Input
                   id="servings"
                   type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={formData.servings || ''}
                   onChange={(e) =>
                     setFormData({

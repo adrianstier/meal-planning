@@ -34,7 +34,7 @@ test.describe('Mobile Responsive Layout', () => {
     expect(viewport.width).toBeLessThanOrEqual(428); // iPhone 12 width
 
     // Check page loads
-    await expect(page).toHaveTitle(/Meal Planning/i);
+    await expect(page).toHaveTitle(/Family Meal Planner/i);
 
     // Check no horizontal scrolling (common mobile issue)
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -45,8 +45,8 @@ test.describe('Mobile Responsive Layout', () => {
   test('navigation menu works on mobile', async ({ page }) => {
     await page.goto(BASE_URL);
 
-    // Look for mobile menu (hamburger icon)
-    const mobileMenu = page.locator('button[aria-label*="menu"], button.mobile-menu, .hamburger, [class*="mobile-nav"]').first();
+    // Look for mobile menu (hamburger icon) - updated for actual implementation
+    const mobileMenu = page.locator('button:has(svg.lucide-menu), button:has-text("Menu")').first();
 
     if (await mobileMenu.isVisible()) {
       // Click to open menu
@@ -368,7 +368,7 @@ test.describe('Cross-Device Compatibility', () => {
       await page.goto(BASE_URL);
 
       // Basic smoke test
-      await expect(page).toHaveTitle(/Meal Planning/i);
+      await expect(page).toHaveTitle(/Family Meal Planner/i);
 
       // Check no console errors
       const errors = [];

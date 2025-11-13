@@ -77,6 +77,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full"
               placeholder="Enter your username"
+              autoComplete="username"
             />
           </div>
 
@@ -93,6 +94,7 @@ export default function LoginPage() {
                   disabled={loading}
                   className="w-full"
                   placeholder="Enter your email"
+                  autoComplete="email"
                 />
               </div>
 
@@ -107,6 +109,7 @@ export default function LoginPage() {
                   disabled={loading}
                   className="w-full"
                   placeholder="Enter your display name"
+                  autoComplete="name"
                 />
               </div>
             </>
@@ -124,6 +127,7 @@ export default function LoginPage() {
               className="w-full"
               placeholder="Enter your password"
               minLength={6}
+              autoComplete={isLogin ? "current-password" : "new-password"}
             />
           </div>
 

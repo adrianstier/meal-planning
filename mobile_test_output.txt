@@ -1,0 +1,218 @@
+
+Running 20 tests using 5 workers
+
+Checking 0 buttons for mobile tap targets...
+Found 0 buttons smaller than 44x44
+⚠️  Could not find registration link on mobile
+⚠️  No mobile menu detected - may need to add hamburger menu
+✅ H1 font size: 30px
+✅ Body font size: 16px
+  ✓   3 [mobile-safari] › tests/mobile.spec.js:91:3 › Mobile Responsive Layout › buttons are tappable on mobile (min 44x44 touch target) (1.4s)
+  ✓   1 [mobile-safari] › tests/mobile.spec.js:126:3 › Mobile User Registration › can register new user on mobile (1.5s)
+  ✓   5 [mobile-safari] › tests/mobile.spec.js:45:3 › Mobile Responsive Layout › navigation menu works on mobile (1.5s)
+  ✓   4 [mobile-safari] › tests/mobile.spec.js:69:3 › Mobile Responsive Layout › text is readable on mobile (font sizes) (1.6s)
+Found 0 number inputs (should trigger numeric keyboard on mobile)
+  ✓   8 [mobile-safari] › tests/mobile.spec.js:231:3 › Mobile Recipe Creation › recipe form inputs are mobile-friendly (381ms)
+✅ Email input has correct type="email"
+  ✓   6 [mobile-safari] › tests/mobile.spec.js:166:3 › Mobile User Registration › form inputs are accessible on mobile keyboard (937ms)
+⚠️  No pricing elements found
+  ✓   9 [mobile-safari] › tests/mobile.spec.js:248:3 › Mobile Pricing Page › pricing tiers display correctly on mobile (1.3s)
+Checking 0 images for mobile optimization...
+✅ Images appear optimized for mobile
+⏱️  Page load time: 559ms
+Found 0 CTA buttons on pricing page
+  ✓  10 [mobile-safari] › tests/mobile.spec.js:282:3 › Mobile Pricing Page › checkout buttons work on mobile (1.2s)
+  ✓  12 [mobile-safari] › tests/mobile.spec.js:325:3 › Mobile Performance › images are optimized for mobile (258ms)
+  ✓  11 [mobile-safari] › tests/mobile.spec.js:312:3 › Mobile Performance › page loads within acceptable time on mobile (747ms)
+  ✘   2 [mobile-safari] › tests/mobile.spec.js:29:3 › Mobile Responsive Layout › homepage loads and is responsive on mobile (6.4s)
+  ✘  14 [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on iPhone SE (5.2s)
+  ✘  13 [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on iPhone 12 (5.2s)
+  ✘  15 [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on Pixel 5 (5.2s)
+Viewport meta: width=device-width,initial-scale=1
+✅ Viewport meta tag configured correctly
+  ✓  19 [mobile-safari] › tests/mobile.spec.js:451:3 › Mobile-Specific Features › viewport meta tag is set correctly (604ms)
+  ✓  17 [mobile-safari] › tests/mobile.spec.js:401:3 › Touch Interactions › swipe gestures work if implemented (613ms)
+  ✓  18 [mobile-safari] › tests/mobile.spec.js:424:3 › Touch Interactions › dropdown menus work with touch (628ms)
+✅ PWA manifest found: /manifest.json
+  ✓  20 [mobile-safari] › tests/mobile.spec.js:466:3 › Mobile-Specific Features › app is installable as PWA on mobile (294ms)
+  ✘  16 [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on Galaxy S9+ (5.4s)
+  ✘   7 [mobile-safari] › tests/mobile.spec.js:197:3 › Mobile Recipe Creation › can create recipe on mobile (30.1s)
+
+
+  1) [mobile-safari] › tests/mobile.spec.js:29:3 › Mobile Responsive Layout › homepage loads and is responsive on mobile 
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveTitle[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/Meal Planning/i[39m
+    Received string:  [31m"Family Meal Planner"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toHaveTitle" with timeout 5000ms[22m
+    [2m    9 × unexpected value "Family Meal Planner"[22m
+
+
+      35 |
+      36 |     // Check page loads
+    > 37 |     await expect(page).toHaveTitle(/Meal Planning/i);
+         |                        ^
+      38 |
+      39 |     // Check no horizontal scrolling (common mobile issue)
+      40 |     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+        at /Users/adrianstiermbp2023/meal-planning/tests/mobile.spec.js:37:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/tests-mobile-Mobile-Respon-932cb-and-is-responsive-on-mobile-mobile-safari/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/tests-mobile-Mobile-Respon-932cb-and-is-responsive-on-mobile-mobile-safari/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/tests-mobile-Mobile-Respon-932cb-and-is-responsive-on-mobile-mobile-safari/error-context.md
+
+  2) [mobile-safari] › tests/mobile.spec.js:197:3 › Mobile Recipe Creation › can create recipe on mobile 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.waitForTimeout: Target page, context or browser has been closed
+
+      200 |     // First login (using test account)
+      201 |     await page.click('a:has-text("Login"), button:has-text("Login")').catch(() => {});
+    > 202 |     await page.waitForTimeout(500);
+          |                ^
+      203 |
+      204 |     // Try to find add recipe button
+      205 |     const addRecipeBtn = page.locator('button:has-text("Add Recipe"), a:has-text("Add Recipe"), button:has-text("New Recipe"), [aria-label*="add recipe"]').first();
+        at /Users/adrianstiermbp2023/meal-planning/tests/mobile.spec.js:202:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/tests-mobile-Mobile-Recipe-4633d-can-create-recipe-on-mobile-mobile-safari/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/tests-mobile-Mobile-Recipe-4633d-can-create-recipe-on-mobile-mobile-safari/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/tests-mobile-Mobile-Recipe-4633d-can-create-recipe-on-mobile-mobile-safari/error-context.md
+
+  3) [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on iPhone 12 
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveTitle[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/Meal Planning/i[39m
+    Received string:  [31m"Family Meal Planner"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toHaveTitle" with timeout 5000ms[22m
+    [2m    9 × unexpected value "Family Meal Planner"[22m
+
+
+      369 |
+      370 |       // Basic smoke test
+    > 371 |       await expect(page).toHaveTitle(/Meal Planning/i);
+          |                          ^
+      372 |
+      373 |       // Check no console errors
+      374 |       const errors = [];
+        at /Users/adrianstiermbp2023/meal-planning/tests/mobile.spec.js:371:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/tests-mobile-Cross-Device--7f0d2-lity-app-works-on-iPhone-12-mobile-safari/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/tests-mobile-Cross-Device--7f0d2-lity-app-works-on-iPhone-12-mobile-safari/error-context.md
+
+  4) [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on iPhone SE 
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveTitle[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/Meal Planning/i[39m
+    Received string:  [31m"Family Meal Planner"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toHaveTitle" with timeout 5000ms[22m
+    [2m    9 × unexpected value "Family Meal Planner"[22m
+
+
+      369 |
+      370 |       // Basic smoke test
+    > 371 |       await expect(page).toHaveTitle(/Meal Planning/i);
+          |                          ^
+      372 |
+      373 |       // Check no console errors
+      374 |       const errors = [];
+        at /Users/adrianstiermbp2023/meal-planning/tests/mobile.spec.js:371:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/tests-mobile-Cross-Device--57fe2-lity-app-works-on-iPhone-SE-mobile-safari/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/tests-mobile-Cross-Device--57fe2-lity-app-works-on-iPhone-SE-mobile-safari/error-context.md
+
+  5) [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on Pixel 5 
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveTitle[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/Meal Planning/i[39m
+    Received string:  [31m"Family Meal Planner"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toHaveTitle" with timeout 5000ms[22m
+    [2m    9 × unexpected value "Family Meal Planner"[22m
+
+
+      369 |
+      370 |       // Basic smoke test
+    > 371 |       await expect(page).toHaveTitle(/Meal Planning/i);
+          |                          ^
+      372 |
+      373 |       // Check no console errors
+      374 |       const errors = [];
+        at /Users/adrianstiermbp2023/meal-planning/tests/mobile.spec.js:371:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/tests-mobile-Cross-Device-Compatibility-app-works-on-Pixel-5-mobile-safari/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/tests-mobile-Cross-Device-Compatibility-app-works-on-Pixel-5-mobile-safari/error-context.md
+
+  6) [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on Galaxy S9+ 
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveTitle[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/Meal Planning/i[39m
+    Received string:  [31m"Family Meal Planner"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toHaveTitle" with timeout 5000ms[22m
+    [2m    9 × unexpected value "Family Meal Planner"[22m
+
+
+      369 |
+      370 |       // Basic smoke test
+    > 371 |       await expect(page).toHaveTitle(/Meal Planning/i);
+          |                          ^
+      372 |
+      373 |       // Check no console errors
+      374 |       const errors = [];
+        at /Users/adrianstiermbp2023/meal-planning/tests/mobile.spec.js:371:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/tests-mobile-Cross-Device--b4c0d-ity-app-works-on-Galaxy-S9--mobile-safari/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/tests-mobile-Cross-Device--b4c0d-ity-app-works-on-Galaxy-S9--mobile-safari/error-context.md
+
+  6 failed
+    [mobile-safari] › tests/mobile.spec.js:29:3 › Mobile Responsive Layout › homepage loads and is responsive on mobile 
+    [mobile-safari] › tests/mobile.spec.js:197:3 › Mobile Recipe Creation › can create recipe on mobile 
+    [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on iPhone 12 
+    [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on iPhone SE 
+    [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on Pixel 5 
+    [mobile-safari] › tests/mobile.spec.js:362:5 › Cross-Device Compatibility › app works on Galaxy S9+ 
+  14 passed (35.1s)

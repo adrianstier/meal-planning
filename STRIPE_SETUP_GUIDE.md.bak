@@ -95,8 +95,8 @@ Edit your `.env` file:
 
 ```bash
 # Stripe Configuration
-STRIPE_SECRET_KEY=sk_test_4eC39HqLyjWDarjtT1zdp7dc  # Replace with your key
-STRIPE_WEBHOOK_SECRET=whsec_xxx  # We'll add this after webhook setup
+STRIPE_SECRET_KEY=sk_test_YOUR_KEY_HERE  # Replace with your actual test key from Stripe Dashboard
+STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET  # We'll add this after webhook setup
 ```
 
 **Where to find these:**

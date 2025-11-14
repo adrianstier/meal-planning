@@ -359,33 +359,35 @@ const RecipesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6 max-w-[1800px] mx-auto">
       {/* Header */}
-      <Card>
+      <Card className="shadow-lg border-muted/40 transition-all duration-300 hover:shadow-xl">
         <CardHeader>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <CardTitle>Recipes</CardTitle>
-              <CardDescription>Manage your recipe collection</CardDescription>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div className="space-y-1">
+              <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Recipes
+              </CardTitle>
+              <CardDescription className="text-base">Manage your recipe collection</CardDescription>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button>
+                <Button className="transition-all duration-200 hover:scale-105 hover:shadow-lg bg-gradient-to-r from-primary to-primary/90 w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Recipe
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setAddDialogOpen(true)}>
+                <DropdownMenuItem onClick={() => setAddDialogOpen(true)} className="cursor-pointer transition-colors">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Manually
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setParseDialogOpen(true)}>
+                <DropdownMenuItem onClick={() => setParseDialogOpen(true)} className="cursor-pointer transition-colors">
                   <Sparkles className="mr-2 h-4 w-4" />
                   Parse from Text
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setUrlDialogOpen(true)}>
+                <DropdownMenuItem onClick={() => setUrlDialogOpen(true)} className="cursor-pointer transition-colors">
                   <Link className="mr-2 h-4 w-4" />
                   Parse from URL
                 </DropdownMenuItem>
@@ -394,20 +396,20 @@ const RecipesPage: React.FC = () => {
           </div>
 
           {/* Search and Filters */}
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex flex-col gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search recipes, ingredients, or tags..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-10 h-11 text-base transition-all duration-200 focus:shadow-md"
               />
             </div>
 
             <div className="flex gap-2 flex-wrap">
               <Select value={prepTimeFilter} onValueChange={setPrepTimeFilter}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[140px] h-10 transition-all duration-200 hover:shadow-sm">
                   <Clock className="mr-2 h-4 w-4" />
                   <SelectValue />
                 </SelectTrigger>
@@ -420,7 +422,7 @@ const RecipesPage: React.FC = () => {
               </Select>
 
               <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[140px] h-10 transition-all duration-200 hover:shadow-sm">
                   <ChefHat className="mr-2 h-4 w-4" />
                   <SelectValue />
                 </SelectTrigger>
@@ -433,7 +435,7 @@ const RecipesPage: React.FC = () => {
               </Select>
 
               <Select value={tagFilter} onValueChange={setTagFilter}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[160px] h-10 transition-all duration-200 hover:shadow-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -446,7 +448,7 @@ const RecipesPage: React.FC = () => {
               </Select>
 
               <Select value={cuisineFilter} onValueChange={setCuisineFilter}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[160px] h-10 transition-all duration-200 hover:shadow-sm">
                   <SelectValue placeholder="All cuisines" />
                 </SelectTrigger>
                 <SelectContent>
@@ -460,7 +462,7 @@ const RecipesPage: React.FC = () => {
               </Select>
 
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[160px] h-10 transition-all duration-200 hover:shadow-sm">
                   <ArrowUpDown className="mr-2 h-4 w-4" />
                   <SelectValue />
                 </SelectTrigger>
@@ -478,22 +480,32 @@ const RecipesPage: React.FC = () => {
 
       {/* Recipes by Type */}
       <Tabs defaultValue="dinner" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="breakfast">
-            Breakfast ({mealsByType.breakfast.length})
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 h-auto p-2 bg-muted/40">
+          <TabsTrigger value="breakfast" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5">
+            <span className="hidden sm:inline">🥐 Breakfast</span>
+            <span className="sm:hidden">🥐</span>
+            <span className="ml-1.5 font-semibold">({mealsByType.breakfast.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="lunch">
-            Lunch ({mealsByType.lunch.length})
+          <TabsTrigger value="lunch" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5">
+            <span className="hidden sm:inline">🥗 Lunch</span>
+            <span className="sm:hidden">🥗</span>
+            <span className="ml-1.5 font-semibold">({mealsByType.lunch.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="dinner">
-            Dinner ({mealsByType.dinner.length})
+          <TabsTrigger value="dinner" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5">
+            <span className="hidden sm:inline">🍽️ Dinner</span>
+            <span className="sm:hidden">🍽️</span>
+            <span className="ml-1.5 font-semibold">({mealsByType.dinner.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="snack">
-            Snacks ({mealsByType.snack.length})
+          <TabsTrigger value="snack" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5">
+            <span className="hidden sm:inline">🍎 Snacks</span>
+            <span className="sm:hidden">🍎</span>
+            <span className="ml-1.5 font-semibold">({mealsByType.snack.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="favorites">
+          <TabsTrigger value="favorites" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5 col-span-2 sm:col-span-1">
             <Heart className="h-4 w-4 mr-1.5 fill-red-500 text-red-500" />
-            Favorites ({mealsByType.favorites.length})
+            <span className="hidden sm:inline">Favorites</span>
+            <span className="sm:hidden">Favs</span>
+            <span className="ml-1.5 font-semibold">({mealsByType.favorites.length})</span>
           </TabsTrigger>
         </TabsList>
 
@@ -510,7 +522,7 @@ const RecipesPage: React.FC = () => {
                   : `No ${type} recipes yet. Add one to get started!`}
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {mealsByType[type].map((meal) => (
                   <Card
                     key={meal.id}
@@ -523,18 +535,18 @@ const RecipesPage: React.FC = () => {
                     onDragEnd={() => {
                       setDraggedRecipe(null);
                     }}
-                    className="flex flex-col cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow overflow-hidden"
+                    className="flex flex-col cursor-grab active:cursor-grabbing hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden border-muted/40 shadow-md"
                     onClick={() => {
                       setSelectedMeal(meal);
                       setViewDialogOpen(true);
                     }}
                   >
-                    <div className="aspect-video w-full overflow-hidden bg-muted flex items-center justify-center">
+                    <div className="aspect-video w-full overflow-hidden bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center relative group">
                       {meal.image_url ? (
                         <img
                           src={meal.image_url}
                           alt={meal.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                           onError={(e) => {
                             // Hide broken image, show placeholder instead
                             e.currentTarget.style.display = 'none';
@@ -544,10 +556,16 @@ const RecipesPage: React.FC = () => {
                         />
                       ) : null}
                       <div className={`image-placeholder ${meal.image_url ? 'hidden' : ''} text-muted-foreground flex flex-col items-center justify-center p-4`}>
-                        <svg className="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-16 h-16 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <span className="text-xs">No image</span>
+                        <span className="text-xs opacity-60">No image</span>
+                      </div>
+                      {/* Hover overlay for drag hint */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                        <span className="text-white text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
+                          Click to view • Drag to plan
+                        </span>
                       </div>
                     </div>
                     {meal.source_url && (
@@ -556,11 +574,11 @@ const RecipesPage: React.FC = () => {
                           href={meal.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                          className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200 hover:gap-2"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
-                          View Original Recipe
+                          <span className="font-medium">View Original Recipe</span>
                         </a>
                       </div>
                     )}

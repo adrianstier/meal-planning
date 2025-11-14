@@ -415,20 +415,28 @@ const PlanPageEnhanced: React.FC = () => {
     return (
       <Card
         key={day.date}
-        className={`flex flex-col ${isTodayCard ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+        className={`flex flex-col transition-all duration-300 hover:shadow-lg ${
+          isTodayCard
+            ? 'ring-2 ring-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-md'
+            : 'hover:shadow-md border-muted/40'
+        }`}
       >
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">
             <div className="hidden md:block">
-              {day.dayName}
-              {isTodayCard && <span className="ml-2 text-xs font-normal text-primary">(Today)</span>}
+              <span className="font-bold">{day.dayName}</span>
+              {isTodayCard && (
+                <span className="ml-2 text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full">
+                  Today
+                </span>
+              )}
             </div>
             <div className="md:hidden">
-              {day.dayShort}
+              <span className="font-bold">{day.dayShort}</span>
               {isTodayCard && <span className="ml-1 text-xs font-normal text-primary">•</span>}
             </div>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="font-medium">
             {day.month} {day.dayNum}
           </CardDescription>
         </CardHeader>
@@ -436,25 +444,25 @@ const PlanPageEnhanced: React.FC = () => {
           {/* Breakfast */}
           {shouldShowMeal('breakfast') && (
           <div
-            className="space-y-1 p-2 rounded transition-colors"
+            className="space-y-1 p-2 rounded-lg transition-all duration-200 hover:bg-accent/30"
             onDrop={(e) => handleDrop(day.date, 'breakfast', e)}
             onDragOver={(e) => {
               e.preventDefault();
-              e.currentTarget.classList.add('bg-primary/10');
+              e.currentTarget.classList.add('bg-primary/10', 'shadow-sm');
             }}
             onDragLeave={(e) => {
-              e.currentTarget.classList.remove('bg-primary/10');
+              e.currentTarget.classList.remove('bg-primary/10', 'shadow-sm');
             }}
           >
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-xs text-muted-foreground">Breakfast</h4>
+              <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">🥐 Breakfast</h4>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-7 w-7 hover:bg-primary/10 transition-all duration-200"
                 onClick={() => handleAddMeal(day.date, 'breakfast')}
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
             {dayMeals.breakfast.length > 0 ? (
@@ -533,25 +541,25 @@ const PlanPageEnhanced: React.FC = () => {
           {/* Lunch */}
           {shouldShowMeal('lunch') && (
           <div
-            className="space-y-1 p-2 rounded transition-colors"
+            className="space-y-1 p-2 rounded-lg transition-all duration-200 hover:bg-accent/30"
             onDrop={(e) => handleDrop(day.date, 'lunch', e)}
             onDragOver={(e) => {
               e.preventDefault();
-              e.currentTarget.classList.add('bg-primary/10');
+              e.currentTarget.classList.add('bg-primary/10', 'shadow-sm');
             }}
             onDragLeave={(e) => {
-              e.currentTarget.classList.remove('bg-primary/10');
+              e.currentTarget.classList.remove('bg-primary/10', 'shadow-sm');
             }}
           >
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-xs text-muted-foreground">Lunch</h4>
+              <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">🥗 Lunch</h4>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-7 w-7 hover:bg-primary/10 transition-all duration-200"
                 onClick={() => handleAddMeal(day.date, 'lunch')}
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
             {dayMeals.lunch.length > 0 ? (
@@ -630,25 +638,25 @@ const PlanPageEnhanced: React.FC = () => {
           {/* Dinner */}
           {shouldShowMeal('dinner') && (
           <div
-            className="space-y-1 p-2 rounded transition-colors"
+            className="space-y-1 p-2 rounded-lg transition-all duration-200 hover:bg-accent/30"
             onDrop={(e) => handleDrop(day.date, 'dinner', e)}
             onDragOver={(e) => {
               e.preventDefault();
-              e.currentTarget.classList.add('bg-primary/10');
+              e.currentTarget.classList.add('bg-primary/10', 'shadow-sm');
             }}
             onDragLeave={(e) => {
-              e.currentTarget.classList.remove('bg-primary/10');
+              e.currentTarget.classList.remove('bg-primary/10', 'shadow-sm');
             }}
           >
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-xs text-muted-foreground">Dinner</h4>
+              <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">🍽️ Dinner</h4>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-7 w-7 hover:bg-primary/10 transition-all duration-200"
                 onClick={() => handleAddMeal(day.date, 'dinner')}
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
             {dayMeals.dinner.length > 0 ? (
@@ -696,17 +704,19 @@ const PlanPageEnhanced: React.FC = () => {
       />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="space-y-6 p-6">
+      <div className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="space-y-6 p-4 sm:p-6 max-w-[1800px] mx-auto">
           {/* Header with Week Navigation */}
-          <Card>
+          <Card className="shadow-lg border-muted/40 transition-all duration-300 hover:shadow-xl">
         <CardHeader>
           <div className="flex flex-col gap-4">
             {/* Title Row */}
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Weekly Meal Plan</CardTitle>
-                <CardDescription>
+              <div className="space-y-1">
+                <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                  Weekly Meal Plan
+                </CardTitle>
+                <CardDescription className="text-base">
                   {format(parseISO(currentWeekStart), 'MMM d')} -{' '}
                   {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
                 </CardDescription>
@@ -714,13 +724,13 @@ const PlanPageEnhanced: React.FC = () => {
             </div>
 
             {/* Meal Display Mode Toggle - Prominent Row */}
-            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-              <span className="text-sm font-medium text-muted-foreground">Show:</span>
-              <div className="flex items-center gap-1 border rounded-md p-1 bg-background">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border border-muted/40 transition-all duration-300 hover:shadow-sm">
+              <span className="text-sm font-semibold text-foreground/80">Show:</span>
+              <div className="flex items-center gap-1.5 border rounded-lg p-1 bg-background shadow-sm w-full sm:w-auto">
                 <Button
                   variant={mealDisplayMode === 'dinners' ? 'default' : 'ghost'}
                   size="sm"
-                  className="h-8 px-3"
+                  className="h-9 px-3 sm:px-4 transition-all duration-200 flex-1 sm:flex-none"
                   onClick={() => setMealDisplayMode('dinners')}
                   title="Dinners Only"
                 >
@@ -729,7 +739,7 @@ const PlanPageEnhanced: React.FC = () => {
                 <Button
                   variant={mealDisplayMode === '3-meals' ? 'default' : 'ghost'}
                   size="sm"
-                  className="h-8 px-3"
+                  className="h-9 px-3 sm:px-4 transition-all duration-200 flex-1 sm:flex-none"
                   onClick={() => setMealDisplayMode('3-meals')}
                   title="3 Meals (Breakfast, Lunch, Dinner)"
                 >
@@ -738,19 +748,19 @@ const PlanPageEnhanced: React.FC = () => {
                 <Button
                   variant={mealDisplayMode === 'all' ? 'default' : 'ghost'}
                   size="sm"
-                  className="h-8 px-3"
+                  className="h-9 px-3 sm:px-4 transition-all duration-200 flex-1 sm:flex-none whitespace-nowrap"
                   onClick={() => setMealDisplayMode('all')}
                   title="All Meals + Snacks"
                 >
-                  All Meals + Snacks
+                  All + Snacks
                 </Button>
               </div>
             </div>
 
             {/* Controls Row */}
-            <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
               {/* Left side - View controls */}
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                 {/* Recipe Browser Toggle */}
                 <Button
                   variant={recipeBrowserOpen ? 'default' : 'outline'}
@@ -758,18 +768,19 @@ const PlanPageEnhanced: React.FC = () => {
                   onClick={() => {
                     setRecipeBrowserOpen(!recipeBrowserOpen);
                   }}
-                  className="h-10 px-4"
+                  className="h-10 px-4 transition-all duration-200 hover:scale-105 hover:shadow-md"
                 >
                   <BookOpen className="mr-2 h-4 w-4" />
-                  Recipes
+                  <span className="hidden sm:inline">Recipes</span>
+                  <span className="sm:hidden">Browse</span>
                 </Button>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center gap-1 border rounded-md p-1.5 bg-background shadow-sm">
+                <div className="flex items-center gap-1 border rounded-lg p-1.5 bg-background shadow-sm transition-all duration-200 hover:shadow-md">
                   <Button
                     variant={viewMode === 'week' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-9 w-9 p-0"
+                    className="h-9 w-9 p-0 transition-all duration-200"
                     onClick={() => setViewMode('week')}
                     title="Week Grid View"
                   >
@@ -778,7 +789,7 @@ const PlanPageEnhanced: React.FC = () => {
                   <Button
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-9 w-9 p-0"
+                    className="h-9 w-9 p-0 transition-all duration-200"
                     onClick={() => setViewMode('list')}
                     title="List View"
                   >
@@ -787,7 +798,7 @@ const PlanPageEnhanced: React.FC = () => {
                   <Button
                     variant={viewMode === 'compact' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-9 w-9 p-0"
+                    className="h-9 w-9 p-0 transition-all duration-200"
                     onClick={() => setViewMode('compact')}
                     title="Compact View"
                   >
@@ -796,24 +807,24 @@ const PlanPageEnhanced: React.FC = () => {
                 </div>
 
                 {/* Undo/Redo */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 border rounded-lg p-1 bg-background shadow-sm transition-all duration-200 hover:shadow-md">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
-                    className="h-10 w-10"
+                    className="h-9 w-9 transition-all duration-200"
                     onClick={handleUndo}
                     disabled={historyIndex <= 0}
-                    title="Undo"
+                    title="Undo (Cmd+Z)"
                   >
                     <Undo2 className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
-                    className="h-10 w-10"
+                    className="h-9 w-9 transition-all duration-200"
                     onClick={handleRedo}
                     disabled={historyIndex >= history.length - 1}
-                    title="Redo"
+                    title="Redo (Cmd+Shift+Z)"
                   >
                     <Redo2 className="h-4 w-4" />
                   </Button>
@@ -821,12 +832,12 @@ const PlanPageEnhanced: React.FC = () => {
               </div>
 
               {/* Right side - Actions and Navigation */}
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
                 <Button
                   variant="default"
                   onClick={handleGenerateWeek}
                   disabled={generateWeekPlan.isPending}
-                  className="h-10 px-4 shadow-sm"
+                  className="h-10 px-4 shadow-md transition-all duration-200 hover:scale-105 hover:shadow-lg bg-gradient-to-r from-primary to-primary/90"
                 >
                   <Sparkles className="mr-2 h-4 w-4" />
                   {generateWeekPlan.isPending ? 'Generating...' : 'Generate Week'}
@@ -835,28 +846,30 @@ const PlanPageEnhanced: React.FC = () => {
                   variant="outline"
                   onClick={handleGenerateShoppingList}
                   disabled={generateShoppingList.isPending}
-                  className="h-10 px-4"
+                  className="h-10 px-4 transition-all duration-200 hover:scale-105 hover:shadow-md hover:bg-primary/5"
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
-                  {generateShoppingList.isPending ? 'Generating...' : 'Shopping List'}
+                  <span className="hidden sm:inline">{generateShoppingList.isPending ? 'Generating...' : 'Shopping List'}</span>
+                  <span className="sm:hidden">{generateShoppingList.isPending ? 'Loading...' : 'Shop'}</span>
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleClearWeek}
                   disabled={clearWeekPlan.isPending || !weekPlan || weekPlan.length === 0}
-                  className="text-destructive hover:text-destructive h-10 px-4"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 px-4 transition-all duration-200 hover:scale-105 hover:shadow-md"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  {clearWeekPlan.isPending ? 'Clearing...' : 'Clear Week'}
+                  {clearWeekPlan.isPending ? 'Clearing...' : 'Clear'}
                 </Button>
-                <div className="flex items-center gap-1 border-l pl-3 ml-2">
-                  <Button variant="outline" size="icon" onClick={goToPreviousWeek} className="h-10 w-10">
+                <div className="flex items-center gap-2 border-l border-muted pl-3 ml-2">
+                  <Button variant="outline" size="icon" onClick={goToPreviousWeek} className="h-10 w-10 transition-all duration-200 hover:scale-110 hover:shadow-md" title="Previous Week">
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <Button variant="outline" onClick={goToThisWeek} className="h-10 px-4">
-                    This Week
+                  <Button variant="outline" onClick={goToThisWeek} className="h-10 px-4 transition-all duration-200 hover:scale-105 hover:shadow-md">
+                    <span className="hidden sm:inline">This Week</span>
+                    <span className="sm:hidden">Today</span>
                   </Button>
-                  <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-10 w-10">
+                  <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-10 w-10 transition-all duration-200 hover:scale-110 hover:shadow-md" title="Next Week">
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
@@ -870,9 +883,9 @@ const PlanPageEnhanced: React.FC = () => {
 
             {/* Cuisine Filter */}
             {uniqueCuisines.length > 0 && (
-              <div className="pt-4 border-t">
-                <div className="flex items-start gap-3">
-                  <div className="text-sm font-medium text-muted-foreground min-w-[80px] pt-1.5">
+              <div className="pt-4 border-t border-muted/40">
+                <div className="flex flex-col sm:flex-row items-start gap-3">
+                  <div className="text-sm font-semibold text-foreground/80 min-w-[80px] pt-1.5">
                     Cuisines:
                   </div>
                   <div className="flex flex-wrap gap-2 flex-1">
@@ -882,7 +895,7 @@ const PlanPageEnhanced: React.FC = () => {
                         variant={selectedCuisines.includes(cuisine || '') ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => toggleCuisine(cuisine || '')}
-                        className="h-9 text-sm px-3"
+                        className="h-9 text-sm px-3 transition-all duration-200 hover:scale-105 hover:shadow-sm"
                       >
                         {cuisine}
                       </Button>
@@ -892,7 +905,7 @@ const PlanPageEnhanced: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => setSelectedCuisines([])}
-                        className="h-7 text-xs text-muted-foreground"
+                        className="h-9 text-xs text-muted-foreground hover:text-foreground transition-all duration-200"
                       >
                         Clear All
                       </Button>
@@ -900,8 +913,8 @@ const PlanPageEnhanced: React.FC = () => {
                   </div>
                 </div>
                 {selectedCuisines.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-2 ml-[92px]">
-                    Generating meals from: {selectedCuisines.join(', ')}
+                  <p className="text-xs text-muted-foreground mt-3 sm:ml-[92px] bg-muted/30 px-3 py-2 rounded-lg inline-block">
+                    ✨ Generating meals from: <span className="font-medium text-foreground/70">{selectedCuisines.join(', ')}</span>
                   </p>
                 )}
               </div>
@@ -945,8 +958,12 @@ const PlanPageEnhanced: React.FC = () => {
             </div>
 
             {/* Keyboard Shortcuts Hint */}
-            <div className="text-xs text-muted-foreground pt-2 border-t">
-              <span className="font-medium">Keyboard shortcuts:</span> ← → (navigate weeks) • G (generate) • T (this week) • V (view mode) • Cmd+Z (undo) • Cmd+Shift+Z (redo)
+            <div className="text-xs text-muted-foreground pt-3 border-t border-muted/40">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-muted/20 px-3 py-2 rounded-lg">
+                <span className="font-semibold text-foreground/70">⌨️ Shortcuts:</span>
+                <span className="hidden sm:inline">← → (navigate weeks) • G (generate) • T (this week) • V (view mode) • Cmd+Z (undo) • Cmd+Shift+Z (redo)</span>
+                <span className="sm:hidden">← → • G • T • V • Cmd+Z</span>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -954,32 +971,39 @@ const PlanPageEnhanced: React.FC = () => {
 
       {/* Empty State Banner */}
       {(!weekPlan || weekPlan.length === 0) && (
-        <Card className="bg-muted/30 border-2 border-dashed">
-          <CardContent className="pt-8 pb-8">
-            <div className="text-center space-y-4">
+        <Card className="bg-gradient-to-br from-muted/40 to-muted/20 border-2 border-dashed border-muted-foreground/30 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-primary/40">
+          <CardContent className="pt-12 pb-12">
+            <div className="text-center space-y-6">
               <div className="flex justify-center">
-                <Sparkles className="h-12 w-12 text-muted-foreground/40" />
+                <div className="relative">
+                  <Sparkles className="h-16 w-16 text-primary/60 animate-pulse" />
+                  <div className="absolute inset-0 h-16 w-16 bg-primary/20 rounded-full blur-xl" />
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Your Meal Plan is Empty</h3>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Get started by dragging recipes from the Recipe Browser (click <BookOpen className="inline h-4 w-4" /> Recipes button above) or click "Generate Week" to auto-populate your plan with delicious meals
+              <div className="space-y-3">
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Your Meal Plan is Empty
+                </h3>
+                <p className="text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                  Get started by dragging recipes from the Recipe Browser (click <BookOpen className="inline h-4 w-4 mb-1" /> Recipes button above) or click "Generate Week" to auto-populate your plan with delicious meals
                 </p>
               </div>
-              <div className="flex items-center justify-center gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                 <Button
                   onClick={() => setRecipeBrowserOpen(true)}
                   variant="outline"
                   size="lg"
+                  className="transition-all duration-200 hover:scale-105 hover:shadow-lg w-full sm:w-auto"
                 >
-                  <BookOpen className="mr-2 h-4 w-4" />
+                  <BookOpen className="mr-2 h-5 w-5" />
                   Browse Recipes
                 </Button>
                 <Button
                   onClick={() => setGenerateDialogOpen(true)}
                   size="lg"
+                  className="transition-all duration-200 hover:scale-105 hover:shadow-lg bg-gradient-to-r from-primary to-primary/90 w-full sm:w-auto"
                 >
-                  <Sparkles className="mr-2 h-4 w-4" />
+                  <Sparkles className="mr-2 h-5 w-5" />
                   Generate Week
                 </Button>
               </div>
@@ -992,7 +1016,7 @@ const PlanPageEnhanced: React.FC = () => {
       {(() => {
         if (viewMode === 'compact') {
           return (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
               {weekDays.map(day => (
                 <CompactDayCard
                   key={day.date}
@@ -1021,7 +1045,7 @@ const PlanPageEnhanced: React.FC = () => {
           );
         } else if (viewMode === 'week') {
           return (
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
               {weekDays.map(day => renderDayCard(day))}
             </div>
           );

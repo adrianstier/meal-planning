@@ -50,8 +50,12 @@ const DiagnosticsPage: React.FC = () => {
       setCleanupResult('Running cleanup...');
       const response = await api.post('/api/admin/cleanup-duplicates');
 
+      console.log('Cleanup response:', response);
+
       // Handle both unwrapped and wrapped responses
       const data = response.data?.data || response.data;
+
+      console.log('Cleanup data:', data);
 
       if (data && typeof data === 'object' && 'deleted' in data) {
         if (data.deleted === 0) {
@@ -60,11 +64,12 @@ const DiagnosticsPage: React.FC = () => {
           setCleanupResult(`✅ Success! Deleted ${data.deleted} duplicate meals.\n\n${JSON.stringify(data.details, null, 2)}`);
         }
       } else {
-        setCleanupResult(`❌ Error: ${data?.error || 'Unknown error'}`);
+        setCleanupResult(`❌ Error: ${JSON.stringify(data) || 'Unknown error'}`);
       }
     } catch (error: any) {
       console.error('Cleanup error:', error);
-      setCleanupResult(`❌ Failed: ${error.response?.data?.error || error.message}`);
+      console.error('Error response:', error.response);
+      setCleanupResult(`❌ Failed: ${JSON.stringify(error.response?.data) || error.message}`);
     }
   };
 

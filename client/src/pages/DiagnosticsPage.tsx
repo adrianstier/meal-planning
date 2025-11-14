@@ -44,6 +44,7 @@ const DiagnosticsPage: React.FC = () => {
   const [resolveNotes, setResolveNotes] = useState('');
   const [filterResolved, setFilterResolved] = useState(false);
   const [cleanupResult, setCleanupResult] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const cleanupDuplicates = async () => {
     try {
@@ -88,11 +89,14 @@ const DiagnosticsPage: React.FC = () => {
 
   const fetchErrors = async () => {
     try {
-      setLoading(true);
+      if (!isRefreshing) {
+        setLoading(true);
+      }
       const response = await api.get<ErrorLog[]>(
         `/api/errors?limit=200&resolved=${filterResolved ? 'true' : 'false'}`
       );
       setErrors(response.data);
+      console.log(`✅ Refreshed: Loaded ${response.data.length} errors`);
     } catch (error: any) {
       console.error('Failed to fetch errors:', error);
 
@@ -109,6 +113,7 @@ const DiagnosticsPage: React.FC = () => {
       }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -116,6 +121,7 @@ const DiagnosticsPage: React.FC = () => {
     try {
       const response = await api.get<ErrorStats>('/api/errors/stats');
       setStats(response.data);
+      console.log('✅ Refreshed: Stats updated', response.data);
     } catch (error: any) {
       console.error('Failed to fetch error stats:', error);
 
@@ -125,6 +131,16 @@ const DiagnosticsPage: React.FC = () => {
         return;
       }
     }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    console.log('🔄 Refreshing diagnostics data...');
+    await Promise.all([
+      fetchErrors(),
+      fetchStats()
+    ]);
+    console.log('✅ Refresh complete');
   };
 
   useEffect(() => {
@@ -320,12 +336,13 @@ const DiagnosticsPage: React.FC = () => {
             <Download className="mr-2 h-4 w-4" />
             Export Logs
           </Button>
-          <Button variant="outline" onClick={() => {
-            fetchErrors();
-            fetchStats();
-          }}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
       </div>

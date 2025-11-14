@@ -741,7 +741,7 @@ const PlanPageEnhanced: React.FC = () => {
             {/* Controls Row */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
               {/* Left side - View controls */}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
                 {/* Recipe Browser Toggle */}
                 <Button
                   variant={recipeBrowserOpen ? 'default' : 'outline'}
@@ -749,40 +749,40 @@ const PlanPageEnhanced: React.FC = () => {
                   onClick={() => {
                     setRecipeBrowserOpen(!recipeBrowserOpen);
                   }}
-                  className="h-8"
+                  className="h-10 px-4"
                 >
                   <BookOpen className="mr-2 h-4 w-4" />
                   Recipes
                 </Button>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center gap-1 border rounded-md p-1">
+                <div className="flex items-center gap-1 border rounded-md p-1.5 bg-background shadow-sm">
                   <Button
                     variant={viewMode === 'week' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-7 px-2"
+                    className="h-9 w-9 p-0"
                     onClick={() => setViewMode('week')}
                     title="Week Grid View"
                   >
-                    <LayoutGrid className="h-3.5 w-3.5" />
+                    <LayoutGrid className="h-4 w-4" />
                   </Button>
                   <Button
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-7 px-2"
+                    className="h-9 w-9 p-0"
                     onClick={() => setViewMode('list')}
                     title="List View"
                   >
-                    <List className="h-3.5 w-3.5" />
+                    <List className="h-4 w-4" />
                   </Button>
                   <Button
                     variant={viewMode === 'compact' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-7 px-2"
+                    className="h-9 w-9 p-0"
                     onClick={() => setViewMode('compact')}
                     title="Compact View"
                   >
-                    <Minimize2 className="h-3.5 w-3.5" />
+                    <Minimize2 className="h-4 w-4" />
                   </Button>
                 </div>
 
@@ -791,7 +791,7 @@ const PlanPageEnhanced: React.FC = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-10 w-10"
                     onClick={handleUndo}
                     disabled={historyIndex <= 0}
                     title="Undo"
@@ -801,7 +801,7 @@ const PlanPageEnhanced: React.FC = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-10 w-10"
                     onClick={handleRedo}
                     disabled={historyIndex >= history.length - 1}
                     title="Redo"
@@ -812,11 +812,12 @@ const PlanPageEnhanced: React.FC = () => {
               </div>
 
               {/* Right side - Actions and Navigation */}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
                 <Button
                   variant="default"
                   onClick={handleGenerateWeek}
                   disabled={generateWeekPlan.isPending}
+                  className="h-10 px-4 shadow-sm"
                 >
                   <Sparkles className="mr-2 h-4 w-4" />
                   {generateWeekPlan.isPending ? 'Generating...' : 'Generate Week'}
@@ -825,6 +826,7 @@ const PlanPageEnhanced: React.FC = () => {
                   variant="outline"
                   onClick={handleGenerateShoppingList}
                   disabled={generateShoppingList.isPending}
+                  className="h-10 px-4"
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   {generateShoppingList.isPending ? 'Generating...' : 'Shopping List'}
@@ -833,20 +835,20 @@ const PlanPageEnhanced: React.FC = () => {
                   variant="outline"
                   onClick={handleClearWeek}
                   disabled={clearWeekPlan.isPending || !weekPlan || weekPlan.length === 0}
-                  className="text-destructive hover:text-destructive"
+                  className="text-destructive hover:text-destructive h-10 px-4"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   {clearWeekPlan.isPending ? 'Clearing...' : 'Clear Week'}
                 </Button>
-                <div className="flex items-center gap-1 border-l pl-2 ml-1">
-                  <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
-                    <ChevronLeft className="h-4 w-4" />
+                <div className="flex items-center gap-1 border-l pl-3 ml-2">
+                  <Button variant="outline" size="icon" onClick={goToPreviousWeek} className="h-10 w-10">
+                    <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <Button variant="outline" onClick={goToThisWeek}>
+                  <Button variant="outline" onClick={goToThisWeek} className="h-10 px-4">
                     This Week
                   </Button>
-                  <Button variant="outline" size="icon" onClick={goToNextWeek}>
-                    <ChevronRight className="h-4 w-4" />
+                  <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-10 w-10">
+                    <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
@@ -871,7 +873,7 @@ const PlanPageEnhanced: React.FC = () => {
                         variant={selectedCuisines.includes(cuisine || '') ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => toggleCuisine(cuisine || '')}
-                        className="h-7 text-xs"
+                        className="h-9 text-sm px-3"
                       >
                         {cuisine}
                       </Button>

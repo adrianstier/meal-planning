@@ -69,14 +69,14 @@ const EmptyMealSlot: React.FC<EmptyMealSlotProps> = ({
   };
 
   return (
-    <div className="border-2 border-dashed border-muted-foreground/20 rounded-md p-3 hover:border-primary/40 hover:bg-accent/30 transition-all group">
+    <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4 hover:border-primary/50 hover:bg-accent/40 transition-all group hover:shadow-sm">
       <div className="w-full">
         <button
-          className="w-full text-left p-0 bg-transparent hover:bg-transparent flex items-center gap-2 text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors cursor-pointer border-0"
+          className="w-full text-left p-2 bg-transparent hover:bg-accent/20 rounded-md flex items-center gap-3 text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors cursor-pointer border-0 min-h-[44px]"
           onClick={onAdd}
         >
-          <Plus className="h-4 w-4" />
-          <span>{getMealTypeEmoji()} Add {getMealTypeLabel()}</span>
+          <Plus className="h-5 w-5 flex-shrink-0" />
+          <span className="text-base">{getMealTypeEmoji()} Add {getMealTypeLabel()}</span>
         </button>
 
         {suggestions.length > 0 && onSelectSuggestion && (
@@ -89,15 +89,15 @@ const EmptyMealSlot: React.FC<EmptyMealSlotProps> = ({
               {suggestions.map((meal) => (
                 <button
                   key={meal.id}
-                  className="w-full text-left px-2 py-1.5 text-xs rounded bg-primary/5 hover:bg-primary/15 border border-primary/10 hover:border-primary/30 transition-colors whitespace-normal"
+                  className="w-full text-left px-3 py-2.5 text-sm rounded-md bg-primary/5 hover:bg-primary/15 border border-primary/10 hover:border-primary/30 transition-all hover:shadow-sm whitespace-normal min-h-[44px]"
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectSuggestion(meal.id);
                   }}
                 >
-                  <div className="font-medium break-words">{meal.name}</div>
+                  <div className="font-medium break-words leading-snug">{meal.name}</div>
                   {meal.cook_time_minutes && meal.cook_time_minutes > 0 && (
-                    <div className="text-muted-foreground text-[10px]">
+                    <div className="text-muted-foreground text-xs mt-1">
                       {meal.cook_time_minutes} min
                       {meal.kid_rating && meal.kid_rating >= 4 && ' • ⭐ Kid favorite'}
                     </div>

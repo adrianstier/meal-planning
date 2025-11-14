@@ -1,0 +1,856 @@
+[
+  {
+    "persona": {
+      "name": "Sarah Martinez",
+      "type": "Busy Working Mom",
+      "techSavvy": "Medium"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 508,
+        "weekly_planning": 2678,
+        "shopping_list": 1037
+      },
+      "issuesFound": 0,
+      "successCount": 5,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly",
+      "Mobile navigation menu works correctly",
+      "No horizontal scroll on mobile"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 100,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "James Chen",
+      "type": "Single Dad",
+      "techSavvy": "High"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 509,
+        "weekly_planning": 2676,
+        "shopping_list": 1040
+      },
+      "issuesFound": 0,
+      "successCount": 5,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly",
+      "Mobile navigation menu works correctly",
+      "No horizontal scroll on mobile"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 100,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "Emily Rodriguez",
+      "type": "Stay-at-Home Parent",
+      "techSavvy": "Medium"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 508,
+        "weekly_planning": 2668,
+        "shopping_list": 1038
+      },
+      "issuesFound": 0,
+      "successCount": 5,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly",
+      "Mobile navigation menu works correctly",
+      "No horizontal scroll on mobile"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 100,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "Marcus Thompson",
+      "type": "Fitness Enthusiast",
+      "techSavvy": "High"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 508,
+        "weekly_planning": 2655,
+        "shopping_list": 1040
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "Linda Patel",
+      "type": "Diabetic Senior",
+      "techSavvy": "Low"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2664,
+        "shopping_list": 1037
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "Aisha Hassan",
+      "type": "Halal Observer",
+      "techSavvy": "Medium"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2661,
+        "shopping_list": 1042
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "Tyler Johnson",
+      "type": "College Student",
+      "techSavvy": "High"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2673,
+        "shopping_list": 1042
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 8",
+      "type": "Vegan Athlete"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 509,
+        "weekly_planning": 2678,
+        "shopping_list": 1036
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 9",
+      "type": "Keto Follower"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2661,
+        "shopping_list": 1041
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 10",
+      "type": "Meal Prep Beginner"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 506,
+        "weekly_planning": 2662,
+        "shopping_list": 1033
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 11",
+      "type": "Organic Only Parent"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2677,
+        "shopping_list": 1037
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 12",
+      "type": "Gluten-Free Family"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2662,
+        "shopping_list": 1039
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 13",
+      "type": "International Student"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 508,
+        "weekly_planning": 2660,
+        "shopping_list": 1039
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 14",
+      "type": "Empty Nester"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 506,
+        "weekly_planning": 2678,
+        "shopping_list": 1038
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 15",
+      "type": "New Vegetarian"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 508,
+        "weekly_planning": 2675,
+        "shopping_list": 1038
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 16",
+      "type": "Shift Worker"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 506,
+        "weekly_planning": 2661,
+        "shopping_list": 1041
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 17",
+      "type": "Food Blogger"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 510,
+        "weekly_planning": 2682,
+        "shopping_list": 1034
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 18",
+      "type": "Picky Eater Adult"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 508,
+        "weekly_planning": 2665,
+        "shopping_list": 1035
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 19",
+      "type": "Lactose Intolerant"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 508,
+        "weekly_planning": 2662,
+        "shopping_list": 1039
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 20",
+      "type": "Batch Cooker"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2667,
+        "shopping_list": 1037
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 21",
+      "type": "Restaurant Worker"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 508,
+        "weekly_planning": 2660,
+        "shopping_list": 1039
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 22",
+      "type": "Postpartum Mom"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 508,
+        "weekly_planning": 2679,
+        "shopping_list": 1038
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 23",
+      "type": "Gourmet Home Chef"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 509,
+        "weekly_planning": 2665,
+        "shopping_list": 1037
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 24",
+      "type": "Meal Kit Skeptic"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2666,
+        "shopping_list": 1031
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 25",
+      "type": "Sustainability Focused"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 506,
+        "weekly_planning": 2659,
+        "shopping_list": 1043
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 26",
+      "type": "Intermittent Faster"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 506,
+        "weekly_planning": 2654,
+        "shopping_list": 1039
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 27",
+      "type": "Family Caregiver"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 505,
+        "weekly_planning": 2671,
+        "shopping_list": 1009
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 28",
+      "type": "Competitive Eater"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2675,
+        "shopping_list": 1041
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  },
+  {
+    "persona": {
+      "name": "User 29",
+      "type": "Allergy Parent"
+    },
+    "metrics": {
+      "totalClicks": 3,
+      "timeToComplete": {
+        "recipe_search": 507,
+        "weekly_planning": 2644,
+        "shopping_list": 1040
+      },
+      "issuesFound": 0,
+      "successCount": 3,
+      "errorCount": 0
+    },
+    "issues": [],
+    "successes": [
+      "Successfully opened recipe browser",
+      "Recipe search was fast",
+      "Shopping list generated quickly"
+    ],
+    "errors": [],
+    "satisfaction": {
+      "score": 80,
+      "rating": "😊 Very Satisfied"
+    },
+    "recommendations": []
+  }
+]

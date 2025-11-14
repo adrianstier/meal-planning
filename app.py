@@ -4252,6 +4252,44 @@ except Exception as e:
 # ADMIN/CLEANUP ENDPOINTS
 # ============================================================================
 
+@app.route('/api/admin/fix-schema', methods=['POST'])
+@login_required
+def fix_database_schema():
+    """Fix missing tables and columns in production database"""
+    try:
+        user_id = get_current_user_id()
+
+        # Only allow admin users to run migrations
+        if user_id != 1:  # Assuming user_id 1 is admin
+            return jsonify({
+                'success': False,
+                'error': 'Admin access required'
+            }), 403
+
+        # Import and run the migration
+        import sys
+        sys.path.append('./database/migrations')
+        from fix_production_schema import fix_production_schema
+
+        fix_production_schema(db.db_path)
+
+        return jsonify({
+            'success': True,
+            'message': 'Database schema fixed successfully',
+            'fixed': [
+                'Restaurants table created/verified',
+                'Leftovers table has cooked_date column',
+                'Meal history table created/verified',
+                'All necessary indexes created'
+            ]
+        })
+
+    except Exception as e:
+        print(f"Failed to fix schema: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/admin/cleanup-duplicates', methods=['POST'])
 @login_required
 def cleanup_duplicates():

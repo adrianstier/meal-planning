@@ -292,6 +292,30 @@ const DiagnosticsPage: React.FC = () => {
             <Trash2 className="mr-2 h-4 w-4" />
             Cleanup Duplicates
           </Button>
+          <Button
+            variant="default"
+            onClick={async () => {
+              try {
+                const response = await api.post('/api/admin/fix-schema');
+                console.log('Schema fix response:', response);
+
+                const data = response.data?.data || response.data;
+                if (data && data.success) {
+                  alert(`✅ Schema Fixed!\n\n${data.fixed?.join('\n') || 'Database schema updated successfully'}`);
+                  window.location.reload();
+                } else {
+                  alert(`❌ Error: ${data?.error || 'Failed to fix schema'}`);
+                }
+              } catch (error: any) {
+                console.error('Schema fix error:', error);
+                alert(`❌ Failed: ${error.message}`);
+              }
+            }}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            Fix Database Schema
+          </Button>
           <Button variant="outline" onClick={downloadLocalLogs}>
             <Download className="mr-2 h-4 w-4" />
             Export Logs

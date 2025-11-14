@@ -18,7 +18,7 @@ import { useMeals } from '../hooks/useMeals';
 import { useDragDrop } from '../contexts/DragDropContext';
 import AddMealDialog from '../components/features/plan/AddMealDialog';
 import MealCard from '../components/features/plan/MealCard';
-import EmptyMealSlot from '../components/features/plan/EmptyMealSlot';
+import SmartDropZone from '../components/features/plan/SmartDropZone';
 import PlanSkeleton from '../components/features/plan/PlanSkeleton';
 import WeeklyVarietySummary from '../components/features/plan/WeeklyVarietySummary';
 import RecipeBrowserSidebar from '../components/features/plan/RecipeBrowserSidebar';
@@ -474,12 +474,15 @@ const PlanPageEnhanced: React.FC = () => {
                 />
               ))
             ) : (
-              <EmptyMealSlot
+              <SmartDropZone
                 mealType="breakfast"
+                dayOfWeek={day.dayName}
+                date={day.date}
                 onAdd={() => handleAddMeal(day.date, 'breakfast')}
                 onSelectSuggestion={(mealId) => handleQuickAddSuggestion(mealId, day.date, 'breakfast')}
                 availableMeals={meals}
-                dayOfWeek={day.dayName}
+                weekPlan={weekPlan}
+                onDrop={handleDrop}
               />
             )}
           </div>
@@ -568,12 +571,15 @@ const PlanPageEnhanced: React.FC = () => {
                 />
               ))
             ) : (
-              <EmptyMealSlot
+              <SmartDropZone
                 mealType="lunch"
+                dayOfWeek={day.dayName}
+                date={day.date}
                 onAdd={() => handleAddMeal(day.date, 'lunch')}
                 onSelectSuggestion={(mealId) => handleQuickAddSuggestion(mealId, day.date, 'lunch')}
                 availableMeals={meals}
-                dayOfWeek={day.dayName}
+                weekPlan={weekPlan}
+                onDrop={handleDrop}
               />
             )}
           </div>
@@ -662,12 +668,15 @@ const PlanPageEnhanced: React.FC = () => {
                 />
               ))
             ) : (
-              <EmptyMealSlot
+              <SmartDropZone
                 mealType="dinner"
+                dayOfWeek={day.dayName}
+                date={day.date}
                 onAdd={() => handleAddMeal(day.date, 'dinner')}
                 onSelectSuggestion={(mealId) => handleQuickAddSuggestion(mealId, day.date, 'dinner')}
                 availableMeals={meals}
-                dayOfWeek={day.dayName}
+                weekPlan={weekPlan}
+                onDrop={handleDrop}
               />
             )}
           </div>

@@ -3,6 +3,10 @@ Vercel Serverless Function Entry Point
 Wraps the Flask application for Vercel deployment
 """
 
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
 import sys
 import os
 import traceback
@@ -13,30 +17,27 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Set environment variable to indicate we're on Vercel
 os.environ['VERCEL'] = '1'
 
-from flask import Flask, jsonify
-from flask_cors import CORS
-
-# Create a debug app first
-debug_app = Flask(__name__)
-CORS(debug_app)
-
 initialization_error = None
+main_app = None
 
 try:
+    from flask_cors import CORS
+    CORS(app)
+
     from dotenv import load_dotenv
     load_dotenv()
 
     # Import the main Flask app
-    from app import app
+    from app import app as main_app
 
-    # Export for Vercel
-    handler = app
+    # Use the main app as the handler
+    handler = main_app
 
 except Exception as e:
     # Capture the full traceback
     initialization_error = traceback.format_exc()
 
-    @debug_app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+    @app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     def error_handler(path):
         return jsonify({
             'success': False,
@@ -45,4 +46,11 @@ except Exception as e:
             'path': path
         }), 500
 
-    handler = debug_app
+    @app.route('/', methods=['GET'])
+    def root():
+        return jsonify({
+            'status': 'error',
+            'error': initialization_error
+        }), 500
+
+    handler = app

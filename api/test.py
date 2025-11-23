@@ -1,9 +1,11 @@
-from flask import Flask, jsonify
+from http.server import BaseHTTPRequestHandler
+import json
 
-app = Flask(__name__)
-
-@app.route('/api/test')
-def test():
-    return jsonify({'status': 'ok', 'message': 'API is working'})
-
-handler = app
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        response = {'status': 'ok', 'message': 'API is working', 'path': self.path}
+        self.wfile.write(json.dumps(response).encode())
+        return

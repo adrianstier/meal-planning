@@ -11,6 +11,9 @@ CI=false npm run build
 cd ..
 
 echo "=== Copying build to templates ==="
+# Create templates/static directory if it doesn't exist (it's gitignored)
+mkdir -p templates/static
+
 # Copy static files (js, css, media) to templates/static
 rm -rf templates/static/js templates/static/css templates/static/media
 cp -r client/build/static/* templates/static/

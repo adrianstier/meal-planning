@@ -10,10 +10,23 @@ npm install
 CI=false npm run build
 cd ..
 
-echo "=== Copying build to templates/static ==="
-rm -rf templates/static/client
-mkdir -p templates/static/client
-cp -r client/build/* templates/static/client/
+echo "=== Copying build to templates ==="
+# Copy static files (js, css, media) to templates/static
+rm -rf templates/static/js templates/static/css templates/static/media
+cp -r client/build/static/* templates/static/
+
+# Copy root files to templates
+cp client/build/index.html templates/
+cp client/build/manifest.json templates/ 2>/dev/null || true
+cp client/build/favicon.ico templates/ 2>/dev/null || true
+cp client/build/logo192.png templates/ 2>/dev/null || true
+cp client/build/logo512.png templates/ 2>/dev/null || true
+cp client/build/robots.txt templates/ 2>/dev/null || true
+cp client/build/asset-manifest.json templates/ 2>/dev/null || true
 
 echo "=== Build complete ==="
-ls -la templates/static/client/
+echo "Static files:"
+ls -la templates/static/
+echo ""
+echo "Root files:"
+ls -la templates/index.html templates/manifest.json 2>/dev/null || true

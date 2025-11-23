@@ -14,7 +14,12 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Import the main Flask app - Vercel expects this to be named 'app'
+# Import the main Flask app
 from app import app
 
-# Vercel will automatically use 'app' as the WSGI application
+# Vercel Python runtime expects either:
+# 1. A WSGI app named 'app' (which we have)
+# 2. Or a handler function
+
+# Export the Flask app for Vercel's WSGI handler
+handler = app

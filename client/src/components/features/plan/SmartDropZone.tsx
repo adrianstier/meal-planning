@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Sparkles, Clock, Star, Flame, TrendingUp, Calendar, ChefHat } from 'lucide-react';
-import { Button } from '../../ui/button';
+import { Sparkles, Clock, Star, ChefHat } from 'lucide-react';
 import type { Meal, MealPlan } from '../../../types/api';
 import { cn } from '../../../lib/utils';
 
@@ -179,12 +178,12 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
   return (
     <div
       className={cn(
-        "relative group rounded-xl transition-all duration-200",
-        "border-2 border-dashed",
+        "relative rounded-lg transition-all duration-200",
+        "border border-dashed",
         isDragOver
-          ? `${mealInfo.borderColor} bg-gradient-to-br ${mealInfo.color} scale-[1.02] shadow-lg`
-          : "border-muted-foreground/20 hover:border-primary/40 hover:bg-accent/30",
-        "min-h-[140px]"
+          ? "border-primary/50 bg-primary/5 shadow-sm"
+          : "border-muted-foreground/30 hover:border-primary/40 hover:bg-muted/20",
+        "min-h-[120px]"
       )}
       onDrop={handleDropInternal}
       onDragOver={handleDragOverInternal}
@@ -192,50 +191,31 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
     >
       {/* Drag overlay */}
       {isDragOver && (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center z-10 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center z-10 pointer-events-none">
           <div className="text-center">
-            <ChefHat className="h-12 w-12 mx-auto mb-2 text-primary animate-bounce" />
-            <p className="text-lg font-semibold text-primary">Drop to add!</p>
+            <ChefHat className="h-10 w-10 mx-auto mb-2 text-primary animate-bounce" />
+            <p className="text-sm font-semibold text-primary">Drop to add</p>
           </div>
         </div>
       )}
 
-      <div className="p-3 space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{mealInfo.emoji}</span>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">{mealInfo.label}</h3>
-              <p className="text-xs text-muted-foreground">{mealInfo.hint}</p>
-            </div>
-          </div>
-          <Button
-            onClick={onAdd}
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-primary/20"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+      <div className="p-3 space-y-2.5">
 
         {/* Smart Suggestions */}
         {smartSuggestions.length > 0 && onSelectSuggestion && (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Sparkles className="h-3 w-3 text-amber-500" />
-              <span className="font-medium">Smart picks for you:</span>
+              <span className="font-medium">Suggestions</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {smartSuggestions.map((meal) => (
                 <button
                   key={meal.id}
                   className={cn(
-                    "group/card relative overflow-hidden rounded-lg p-2 text-left",
-                    "bg-gradient-to-br from-background to-accent/50",
-                    "border border-primary/10 hover:border-primary/30",
-                    "hover:shadow-md hover:scale-[1.02]",
+                    "group/card relative overflow-hidden rounded-md p-2 text-left",
+                    "bg-card border border-border",
+                    "hover:border-primary/40 hover:shadow-sm",
                     "transition-all duration-200",
                     "min-h-[60px]"
                   )}
@@ -244,19 +224,17 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
                     onSelectSuggestion(meal.id);
                   }}
                 >
-                  {/* Cuisine badge */}
-                  {meal.cuisine && (
-                    <div className="absolute top-1 right-1 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
-                      {meal.cuisine}
-                    </div>
-                  )}
-
                   <div className="space-y-1">
-                    <div className="font-medium text-xs leading-tight line-clamp-2 pr-12">
+                    {meal.cuisine && (
+                      <div className="text-[10px] font-medium text-muted-foreground">
+                        {meal.cuisine}
+                      </div>
+                    )}
+                    <div className="font-medium text-xs leading-tight line-clamp-2 group-hover/card:text-primary transition-colors">
                       {meal.name}
                     </div>
 
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                       {meal.cook_time_minutes && meal.cook_time_minutes > 0 && (
                         <div className="flex items-center gap-0.5">
                           <Clock className="h-2.5 w-2.5" />
@@ -271,9 +249,6 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
                       )}
                     </div>
                   </div>
-
-                  {/* Hover effect */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity pointer-events-none" />
                 </button>
               ))}
             </div>
@@ -283,8 +258,19 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
         {/* Empty state hint */}
         {smartSuggestions.length === 0 && (
           <div className="text-center py-4 text-muted-foreground">
-            <p className="text-xs">Drag a recipe here</p>
-            <p className="text-xs">or click + to browse</p>
+            <div className="mb-2 opacity-30">
+              <ChefHat className="h-8 w-8 mx-auto" />
+            </div>
+            <p className="text-xs mb-1">Drag a recipe here</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAdd();
+              }}
+              className="text-xs text-primary hover:underline font-medium"
+            >
+              or browse recipes
+            </button>
           </div>
         )}
       </div>

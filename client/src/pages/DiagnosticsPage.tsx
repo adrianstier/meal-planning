@@ -274,12 +274,12 @@ const DiagnosticsPage: React.FC = () => {
   const localStats = errorLogger.getStats();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Diagnostics & Error Tracking</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">Diagnostics & Error Tracking</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Monitor and debug application errors
           </p>
         </div>
@@ -395,7 +395,7 @@ const DiagnosticsPage: React.FC = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Errors</CardTitle>

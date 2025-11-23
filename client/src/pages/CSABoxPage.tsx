@@ -236,16 +236,16 @@ const CSABoxPage: React.FC = () => {
   const usedItems = boxItems.filter(item => item.is_used);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">CSA Box Manager</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">CSA Box Manager</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Track your CSA deliveries and find recipes that use your fresh ingredients
           </p>
         </div>
-        <Button onClick={() => setShowAddBox(true)}>
+        <Button onClick={() => setShowAddBox(true)} className="w-full sm:w-auto h-11 min-h-[44px]">
           <Plus className="h-4 w-4 mr-2" />
           New CSA Box
         </Button>
@@ -313,7 +313,7 @@ const CSABoxPage: React.FC = () => {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left: CSA Boxes List */}
         <div className="lg:col-span-1 space-y-4">
           <h2 className="text-xl font-semibold">Your CSA Boxes</h2>

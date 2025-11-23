@@ -40,7 +40,8 @@ app = Flask(__name__, static_folder='templates/static', static_url_path='/static
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = os.getenv('RAILWAY_ENVIRONMENT') is not None  # HTTPS only in production
+# HTTPS only in production (Vercel, Railway, or any production environment)
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('VERCEL') is not None or os.getenv('RAILWAY_ENVIRONMENT') is not None or os.getenv('NODE_ENV') == 'production'
 
 CORS(app, supports_credentials=True)
 

@@ -79,7 +79,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8 animate-fade-in">
+    <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8 animate-fade-in p-4 sm:p-6">
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">

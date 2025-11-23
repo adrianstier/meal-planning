@@ -241,21 +241,21 @@ const BentoPage: React.FC = () => {
   const sortedDates = Object.keys(plansByDate).sort();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-6 w-6" />
+              <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+                <Package className="h-5 w-5 sm:h-6 sm:w-6" />
                 Bento Box Planner
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm sm:text-base">
                 Plan varied, kid-friendly lunches for the week
               </CardDescription>
             </div>
-            <Button onClick={openAddDialog}>
+            <Button onClick={openAddDialog} className="w-full sm:w-auto h-11 min-h-[44px]">
               <Plus className="mr-2 h-4 w-4" />
               Add Bento Item
             </Button>
@@ -294,13 +294,13 @@ const BentoPage: React.FC = () => {
               </div>
             </CardHeader>
             {quickAddExpanded && (
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {categories.map(category => (
                     <div key={category.value} className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{category.emoji}</span>
-                        <h3 className="font-semibold">{category.label}</h3>
+                        <span className="text-lg sm:text-xl">{category.emoji}</span>
+                        <h3 className="font-semibold text-sm sm:text-base">{category.label}</h3>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {quickAddItems[category.value as keyof typeof quickAddItems].map((itemName) => {
@@ -333,8 +333,8 @@ const BentoPage: React.FC = () => {
                 Items you've added, organized by category
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <CardContent className="p-4 sm:p-6">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {itemsByCategory.map(category => (
                   <div key={category.value} className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -459,7 +459,7 @@ const BentoPage: React.FC = () => {
 
                       {plansByDate[date].map(plan => (
                         <div key={plan.id} className="space-y-3">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                             {[plan.compartment1, plan.compartment2, plan.compartment3, plan.compartment4].map((compartment, idx) => {
                               const catInfo = compartment ? getCategoryInfo(compartment.category) : null;
                               return (

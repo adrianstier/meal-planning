@@ -14,23 +14,37 @@ import {
   X,
   Utensils,
   Bug,
-  Sprout
+  Sprout,
+  ShoppingCart,
+  MoreHorizontal
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { path: '/plan', label: 'Plan', icon: Calendar, description: 'Weekly meal planning' },
+// Primary navigation - core workflow
+const primaryNavItems = [
+  { path: '/plan', label: 'Meal Plan', icon: Calendar, description: 'Weekly meal planning' },
   { path: '/recipes', label: 'Recipes', icon: BookOpen, description: 'Recipe library' },
+  { path: '/lists', label: 'Shopping List', icon: ShoppingCart, description: 'Shopping lists' },
+];
+
+// Secondary navigation - additional features
+const secondaryNavItems = [
   { path: '/csa', label: 'CSA Box', icon: Sprout, description: 'Seasonal produce' },
   { path: '/bento', label: 'Bento', icon: Package, description: 'Bento meal prep' },
   { path: '/leftovers', label: 'Leftovers', icon: UtensilsCrossed, description: 'Track leftovers' },
   { path: '/school-menu', label: 'School Menu', icon: GraduationCap, description: 'School lunches' },
-  { path: '/lists', label: 'Lists', icon: ListChecks, description: 'Shopping lists' },
   { path: '/restaurants', label: 'Restaurants', icon: Utensils, description: 'Restaurant finder' },
   { path: '/diagnostics', label: 'Diagnostics', icon: Bug, description: 'System diagnostics' },
 ];
@@ -82,14 +96,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Logo and Title */}
           <Link
             to="/plan"
-            className="flex items-center gap-2 mr-4 hover:opacity-80 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md"
+            className="flex items-center gap-2 mr-4 hover:opacity-80 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md flex-shrink-0"
             aria-label="Family Meal Planner - Home"
           >
             <UtensilsCrossed
               className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0"
               aria-hidden="true"
             />
-            <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight">
+            <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight whitespace-nowrap">
               <span className="hidden sm:inline">Family Meal Planner</span>
               <span className="sm:hidden">Meal Planner</span>
             </h1>
@@ -100,7 +114,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             className="hidden lg:flex flex-1 items-center gap-1 ml-4"
             aria-label="Main navigation"
           >
-            {navItems.map((item) => {
+            {primaryNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
 
@@ -124,6 +138,50 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </Link>
               );
             })}
+
+            {/* More Menu - Secondary Items */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-9 px-3 gap-2",
+                    secondaryNavItems.some(item => location.pathname === item.path)
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span>More</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <div className="px-2 py-1.5 text-sm font-semibold">Additional Features</div>
+                <DropdownMenuSeparator />
+                {secondaryNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <DropdownMenuItem key={item.path} asChild>
+                      <Link
+                        to={item.path}
+                        className={cn(
+                          "flex items-center gap-2 cursor-pointer",
+                          isActive && "bg-accent"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span>{item.label}</span>
+                          <span className="text-xs text-muted-foreground">{item.description}</span>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
 
           {/* Desktop User Menu */}
@@ -203,7 +261,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               aria-label="Mobile navigation"
             >
               <nav className="container max-h-[calc(100vh-4rem)] overflow-y-auto py-3 px-4 space-y-1">
-                {navItems.map((item) => {
+                {/* Primary Navigation */}
+                {primaryNavItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.path;
 
@@ -216,6 +275,41 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-150",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         "min-h-[44px]", // Touch-friendly target size
+                        isActive
+                          ? "bg-accent text-accent-foreground shadow-sm"
+                          : "text-foreground hover:bg-accent/50"
+                      )}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                      <div className="flex-1">
+                        <div>{item.label}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {item.description}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+
+                {/* Divider */}
+                <div className="h-px bg-border my-2" role="separator" />
+                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground">Additional Features</div>
+
+                {/* Secondary Navigation */}
+                {secondaryNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-150",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        "min-h-[44px]",
                         isActive
                           ? "bg-accent text-accent-foreground shadow-sm"
                           : "text-foreground hover:bg-accent/50"
@@ -282,10 +376,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <main
         id="main-content"
         className={cn(
-          "flex-1",
           isPlanPage
-            ? "overflow-hidden"
-            : "container py-6 px-4 sm:px-6 lg:py-8"
+            ? "flex-1 min-h-0 overflow-hidden" // min-h-0 allows flex child to shrink below content size
+            : "flex-1 container py-6 px-4 sm:px-6 lg:py-8"
         )}
         role="main"
       >

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Baby, Package, Utensils, MoreVertical, Trash2, Copy, ArrowRight, Repeat, Image as ImageIcon } from 'lucide-react';
+import { Clock, Baby, Package, Utensils, MoreVertical, Trash2, Copy, ArrowRight, Repeat } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { Button } from '../../ui/button';
-import { getCuisineColors, getCuisineEmoji } from '../../../utils/cuisineColors';
+import { getCuisineEmoji } from '../../../utils/cuisineColors';
 import type { MealPlan } from '../../../types/api';
 
 interface MealCardProps {
@@ -28,8 +28,6 @@ const MealCard: React.FC<MealCardProps> = ({
   onMove,
   onSwap,
 }) => {
-  const [imageError, setImageError] = useState(false);
-  const cuisineColors = getCuisineColors(meal.cuisine);
 
   // Helper to check if meal has specific tag
   const hasTag = (tag: string) => {
@@ -77,17 +75,32 @@ const MealCard: React.FC<MealCardProps> = ({
 
   return (
     <div
-      className={`group relative p-2 rounded-md ${cuisineColors.bg} border ${cuisineColors.border} hover:shadow-md cursor-pointer transition-all`}
+      className="group relative rounded border border-slate-200 bg-white hover:border-slate-300 cursor-pointer transition-colors overflow-hidden"
       onClick={onClick}
     >
-      {/* Quick Actions Menu */}
-      {(onDelete || onCopy || onMove || onSwap) && (
+      {/* Quick Delete Button - Simple X */}
+      {onDelete && (
+        <button
+          className="absolute top-1 right-1 h-4 w-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/95 shadow-sm hover:bg-red-50 hover:text-red-600"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          title="Remove from plan"
+          type="button"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      )}
+
+      {/* Quick Actions Menu - only if there are other actions */}
+      {(onCopy || onMove || onSwap) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 backdrop-blur-sm"
+              className="absolute top-1 right-1 h-6 w-6 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/95 shadow-sm hover:bg-slate-50"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreVertical className="h-3 w-3" />
@@ -112,7 +125,7 @@ const MealCard: React.FC<MealCardProps> = ({
                 Swap with another meal
               </DropdownMenuItem>
             )}
-            {(onDelete && (onCopy || onMove || onSwap)) && <DropdownMenuSeparator />}
+            {onDelete && <DropdownMenuSeparator />}
             {onDelete && (
               <DropdownMenuItem
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
@@ -126,42 +139,19 @@ const MealCard: React.FC<MealCardProps> = ({
         </DropdownMenu>
       )}
 
-      {/* Meal Image (if available) */}
-      {meal.image_url && !imageError && (
-        <div className="w-full h-20 mb-2 rounded overflow-hidden bg-muted">
-          <img
-            src={meal.image_url}
-            alt={meal.meal_name}
-            className="w-full h-full object-cover"
-            onError={() => setImageError(true)}
-            loading="lazy"
-          />
+      <div className="pl-2 pr-7 py-1.5">
+        {/* Meal Name - compact, single line */}
+        <div className="text-xs font-medium text-slate-900 truncate">
+          {meal.meal_name}
         </div>
-      )}
 
-      {/* No image placeholder */}
-      {(!meal.image_url || imageError) && (
-        <div className="w-full h-16 mb-2 rounded bg-muted/30 flex items-center justify-center">
-          <ImageIcon className="h-6 w-6 text-muted-foreground/30" />
-        </div>
-      )}
-
-      {/* Meal Name */}
-      <div className="font-medium text-sm mb-0.5 pr-6">{meal.meal_name}</div>
-
-      {/* Cuisine Indicator */}
-      {meal.cuisine && (
-        <div className="text-xs text-muted-foreground mb-1">
-          {getCuisineEmoji(meal.cuisine)} {meal.cuisine}
-        </div>
-      )}
-
-      {/* Badges */}
-      {renderBadges().length > 0 && (
-        <div className="flex gap-1.5 flex-wrap">
-          {renderBadges()}
-        </div>
-      )}
+        {/* Badges - very compact */}
+        {renderBadges().length > 0 && (
+          <div className="flex gap-1.5 mt-0.5">
+            {renderBadges()}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

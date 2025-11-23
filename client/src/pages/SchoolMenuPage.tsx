@@ -94,12 +94,12 @@ const SchoolMenuPage: React.FC = () => {
   const sortedDates = Object.keys(menuByDate).sort();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
       <Card>
-        <CardHeader>
-          <CardTitle>School Menu</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-xl sm:text-2xl">School Menu</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             Upload photos of school menus and track what your kids like
           </CardDescription>
         </CardHeader>
@@ -143,10 +143,10 @@ const SchoolMenuPage: React.FC = () => {
           {!selectedImage ? (
             <Button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full"
+              className="w-full h-12 min-h-[44px]"
               variant="outline"
             >
-              <Camera className="mr-2 h-4 w-4" />
+              <Camera className="mr-2 h-5 w-5" />
               Take/Upload Photo
             </Button>
           ) : (

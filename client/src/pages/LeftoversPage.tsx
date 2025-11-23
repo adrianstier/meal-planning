@@ -34,12 +34,12 @@ const LeftoversPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
       <Card>
-        <CardHeader>
-          <CardTitle>Leftovers Tracker</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-xl sm:text-2xl">Leftovers Tracker</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             Manage your leftovers and avoid food waste
           </CardDescription>
         </CardHeader>
@@ -88,7 +88,7 @@ const LeftoversPage: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {leftovers.map((leftover) => {
             const expiryStatus = getExpiryColor(leftover.days_until_expiry);
 
@@ -151,7 +151,7 @@ const LeftoversPage: React.FC = () => {
                     onClick={() => handleConsume(leftover.id)}
                     disabled={consumeLeftover.isPending}
                     variant="outline"
-                    className="w-full"
+                    className="w-full h-11 sm:h-10 min-h-[44px]"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Mark as Consumed

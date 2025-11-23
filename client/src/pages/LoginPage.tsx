@@ -197,7 +197,7 @@ export default function LoginPage() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-medium transition-all duration-150"
+                className="w-full h-12 sm:h-11 text-base font-medium transition-all duration-150"
                 disabled={loading}
                 size="lg"
               >

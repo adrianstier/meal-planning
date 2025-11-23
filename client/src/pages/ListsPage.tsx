@@ -84,14 +84,14 @@ const ListsPage: React.FC = () => {
   const sortedCategories = categoryOrder.filter(cat => itemsByCategory[cat] && itemsByCategory[cat].length > 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex-1">
-              <CardTitle>Shopping List</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl sm:text-2xl">Shopping List</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
                 Keep track of what you need to buy
               </CardDescription>
             </div>
@@ -100,7 +100,7 @@ const ListsPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={handleShareList}
-                className="flex-shrink-0"
+                className="flex-shrink-0 h-10 min-h-[44px] w-full sm:w-auto"
               >
                 <Share2 className="h-4 w-4 mr-2" />
                 Share

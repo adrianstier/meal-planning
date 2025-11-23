@@ -359,7 +359,7 @@ const RecipesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 max-w-[1800px] mx-auto">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 max-w-[1800px] mx-auto">
       {/* Header */}
       <Card className="shadow-lg border-muted/40 transition-all duration-300 hover:shadow-xl">
         <CardHeader>
@@ -407,10 +407,10 @@ const RecipesPage: React.FC = () => {
               />
             </div>
 
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap overflow-x-auto pb-2 sm:pb-0">
               <Select value={prepTimeFilter} onValueChange={setPrepTimeFilter}>
-                <SelectTrigger className="w-[140px] h-10 transition-all duration-200 hover:shadow-sm">
-                  <Clock className="mr-2 h-4 w-4" />
+                <SelectTrigger className="w-[120px] sm:w-[140px] h-10 transition-all duration-200 hover:shadow-sm flex-shrink-0">
+                  <Clock className="mr-1 sm:mr-2 h-4 w-4" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -422,8 +422,8 @@ const RecipesPage: React.FC = () => {
               </Select>
 
               <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                <SelectTrigger className="w-[140px] h-10 transition-all duration-200 hover:shadow-sm">
-                  <ChefHat className="mr-2 h-4 w-4" />
+                <SelectTrigger className="w-[120px] sm:w-[140px] h-10 transition-all duration-200 hover:shadow-sm flex-shrink-0">
+                  <ChefHat className="mr-1 sm:mr-2 h-4 w-4" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -435,7 +435,7 @@ const RecipesPage: React.FC = () => {
               </Select>
 
               <Select value={tagFilter} onValueChange={setTagFilter}>
-                <SelectTrigger className="w-[160px] h-10 transition-all duration-200 hover:shadow-sm">
+                <SelectTrigger className="w-[130px] sm:w-[160px] h-10 transition-all duration-200 hover:shadow-sm flex-shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -448,7 +448,7 @@ const RecipesPage: React.FC = () => {
               </Select>
 
               <Select value={cuisineFilter} onValueChange={setCuisineFilter}>
-                <SelectTrigger className="w-[160px] h-10 transition-all duration-200 hover:shadow-sm">
+                <SelectTrigger className="w-[130px] sm:w-[160px] h-10 transition-all duration-200 hover:shadow-sm flex-shrink-0">
                   <SelectValue placeholder="All cuisines" />
                 </SelectTrigger>
                 <SelectContent>
@@ -462,8 +462,8 @@ const RecipesPage: React.FC = () => {
               </Select>
 
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[160px] h-10 transition-all duration-200 hover:shadow-sm">
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                <SelectTrigger className="w-[130px] sm:w-[160px] h-10 transition-all duration-200 hover:shadow-sm flex-shrink-0">
+                  <ArrowUpDown className="mr-1 sm:mr-2 h-4 w-4" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

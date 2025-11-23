@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { format, startOfWeek, addDays, parseISO, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart, Undo2, Redo2, LayoutGrid, List, Minimize2, BookOpen, Trash2, Minus, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart, LayoutGrid, Minimize2, BookOpen, Minus, Users, Trash2 } from 'lucide-react';
 import { scaleIngredients, calculateServingMultiplier } from '../utils/ingredientScaler';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -23,6 +23,7 @@ import PlanSkeleton from '../components/features/plan/PlanSkeleton';
 import WeeklyVarietySummary from '../components/features/plan/WeeklyVarietySummary';
 import RecipeBrowserSidebar from '../components/features/plan/RecipeBrowserSidebar';
 import CompactDayCard from '../components/features/plan/CompactDayCard';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import type { MealPlan } from '../types/api';
 
 type ViewMode = 'week' | 'list' | 'compact';
@@ -56,8 +57,14 @@ const PlanPageEnhanced: React.FC = () => {
   const [bentoChildName, setBentoChildName] = useState('');
   const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(() => {
     const stored = localStorage.getItem('recipeBrowserOpen');
-    return stored === 'true' || stored === null; // Default to open but narrower
+    return stored === 'true'; // Default to CLOSED - give full space to meal grid
   });
+  const [advancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
+
+  // Confirmation dialog state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [clearWeekConfirmOpen, setClearWeekConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   // Undo/Redo state
   const [history, setHistory] = useState<any[]>([]);
@@ -273,26 +280,33 @@ const PlanPageEnhanced: React.FC = () => {
     setDialogOpen(true);
   };
 
-  const handleDeleteMeal = async (mealPlanId: number) => {
-    if (window.confirm('Remove this meal from your plan?')) {
-      try {
-        await deletePlanItem.mutateAsync(mealPlanId);
-        saveToHistory({ type: 'delete', mealPlanId });
-      } catch (error) {
-        console.error('Failed to delete meal:', error);
-      }
+  const handleDeleteMeal = (mealPlanId: number) => {
+    setPendingDeleteId(mealPlanId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteMeal = async () => {
+    if (pendingDeleteId === null) return;
+
+    try {
+      await deletePlanItem.mutateAsync(pendingDeleteId);
+      saveToHistory({ type: 'delete', mealPlanId: pendingDeleteId });
+    } catch (error) {
+      console.error('Failed to delete meal:', error);
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
-  const handleClearWeek = async () => {
-    const totalMeals = weekPlan?.length || 0;
-    if (window.confirm(`Are you sure you want to clear all ${totalMeals} meals from this week? This action cannot be undone.`)) {
-      try {
-        await clearWeekPlan.mutateAsync(currentWeekStart);
-      } catch (error) {
-        console.error('Failed to clear week:', error);
-        alert('Failed to clear meals. Please try again.');
-      }
+  const handleClearWeek = () => {
+    setClearWeekConfirmOpen(true);
+  };
+
+  const confirmClearWeek = async () => {
+    try {
+      await clearWeekPlan.mutateAsync(currentWeekStart);
+    } catch (error) {
+      console.error('Failed to clear week:', error);
     }
   };
 
@@ -413,53 +427,56 @@ const PlanPageEnhanced: React.FC = () => {
     const isTodayCard = isToday(parseISO(day.date));
 
     return (
-      <Card
+      <div
         key={day.date}
-        className={`flex flex-col transition-all duration-300 hover:shadow-lg ${
+        className={`flex flex-col bg-white border transition-all ${
           isTodayCard
-            ? 'ring-2 ring-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-md'
-            : 'hover:shadow-md border-muted/40'
+            ? 'border-slate-300'
+            : 'border-slate-200'
         }`}
       >
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">
-            <div className="hidden md:block">
-              <span className="font-bold">{day.dayName}</span>
-              {isTodayCard && (
-                <span className="ml-2 text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full">
-                  Today
-                </span>
-              )}
+        {/* Day Header */}
+        <div className="px-4 py-3 border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                {day.dayName}
+              </h3>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {day.month} {day.dayNum}
+              </p>
             </div>
-            <div className="md:hidden">
-              <span className="font-bold">{day.dayShort}</span>
-              {isTodayCard && <span className="ml-1 text-xs font-normal text-primary">•</span>}
-            </div>
-          </CardTitle>
-          <CardDescription className="font-medium">
-            {day.month} {day.dayNum}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex-1 space-y-3 text-sm">
+            {isTodayCard && (
+              <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-1 rounded">
+                Today
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Meals */}
+        <div className="flex-1 p-4 space-y-4">
           {/* Breakfast */}
           {shouldShowMeal('breakfast') && (
           <div
-            className="space-y-1 p-2 rounded-lg transition-all duration-200 hover:bg-accent/30"
+            className="space-y-2"
             onDrop={(e) => handleDrop(day.date, 'breakfast', e)}
             onDragOver={(e) => {
               e.preventDefault();
-              e.currentTarget.classList.add('bg-primary/10', 'shadow-sm');
+              e.currentTarget.classList.add('bg-primary/5', 'rounded-lg');
             }}
             onDragLeave={(e) => {
-              e.currentTarget.classList.remove('bg-primary/10', 'shadow-sm');
+              e.currentTarget.classList.remove('bg-primary/5', 'rounded-lg');
             }}
           >
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">🥐 Breakfast</h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                Breakfast
+              </h4>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 hover:bg-primary/10 transition-all duration-200"
+                className="h-6 w-6 -mr-1"
                 onClick={() => handleAddMeal(day.date, 'breakfast')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -541,22 +558,24 @@ const PlanPageEnhanced: React.FC = () => {
           {/* Lunch */}
           {shouldShowMeal('lunch') && (
           <div
-            className="space-y-1 p-2 rounded-lg transition-all duration-200 hover:bg-accent/30"
+            className="space-y-2"
             onDrop={(e) => handleDrop(day.date, 'lunch', e)}
             onDragOver={(e) => {
               e.preventDefault();
-              e.currentTarget.classList.add('bg-primary/10', 'shadow-sm');
+              e.currentTarget.classList.add('bg-primary/5', 'rounded-lg');
             }}
             onDragLeave={(e) => {
-              e.currentTarget.classList.remove('bg-primary/10', 'shadow-sm');
+              e.currentTarget.classList.remove('bg-primary/5', 'rounded-lg');
             }}
           >
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">🥗 Lunch</h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                Lunch
+              </h4>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 hover:bg-primary/10 transition-all duration-200"
+                className="h-6 w-6 -mr-1"
                 onClick={() => handleAddMeal(day.date, 'lunch')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -638,22 +657,24 @@ const PlanPageEnhanced: React.FC = () => {
           {/* Dinner */}
           {shouldShowMeal('dinner') && (
           <div
-            className="space-y-1 p-2 rounded-lg transition-all duration-200 hover:bg-accent/30"
+            className="space-y-2"
             onDrop={(e) => handleDrop(day.date, 'dinner', e)}
             onDragOver={(e) => {
               e.preventDefault();
-              e.currentTarget.classList.add('bg-primary/10', 'shadow-sm');
+              e.currentTarget.classList.add('bg-primary/5', 'rounded-lg');
             }}
             onDragLeave={(e) => {
-              e.currentTarget.classList.remove('bg-primary/10', 'shadow-sm');
+              e.currentTarget.classList.remove('bg-primary/5', 'rounded-lg');
             }}
           >
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">🍽️ Dinner</h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                Dinner
+              </h4>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 hover:bg-primary/10 transition-all duration-200"
+                className="h-6 w-6 -mr-1"
                 onClick={() => handleAddMeal(day.date, 'dinner')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -689,379 +710,219 @@ const PlanPageEnhanced: React.FC = () => {
             )}
           </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   };
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Recipe Browser Sidebar */}
-      <RecipeBrowserSidebar
-        meals={meals}
-        isOpen={recipeBrowserOpen}
-        onClose={() => setRecipeBrowserOpen(false)}
-      />
+    <div className="flex h-full min-h-0">
+      {/* Recipe Browser - Integrated Side Panel */}
+      {recipeBrowserOpen && (
+        <div className="w-96 relative self-stretch border-r border-border bg-background flex-shrink-0">
+          <RecipeBrowserSidebar
+            meals={meals}
+            isOpen={recipeBrowserOpen}
+            onClose={() => setRecipeBrowserOpen(false)}
+          />
+        </div>
+      )}
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-muted/20">
-        <div className="space-y-6 p-4 sm:p-6 max-w-[1800px] mx-auto">
-          {/* Header with Week Navigation */}
-          <Card className="shadow-lg border-muted/40 transition-all duration-300 hover:shadow-xl">
-        <CardHeader>
-          <div className="flex flex-col gap-4">
-            {/* Title Row */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+      <div className="flex-1 h-full overflow-y-auto bg-slate-50">
+        <div className="max-w-[2000px] mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+
+          {/* Header */}
+          <div className="flex flex-col gap-3 sm:gap-4">
+            {/* Top Row: Title + Week Navigation + Primary Action */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+              {/* Title & Date */}
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
                   Weekly Meal Plan
-                </CardTitle>
-                <CardDescription className="text-base">
-                  {format(parseISO(currentWeekStart), 'MMM d')} -{' '}
-                  {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
-                </CardDescription>
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                  {format(parseISO(currentWeekStart), 'MMM d')} – {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
+                </p>
               </div>
-            </div>
 
-            {/* Meal Display Mode Toggle - Prominent Row */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border border-muted/40 transition-all duration-300 hover:shadow-sm">
-              <span className="text-sm font-semibold text-foreground/80">Show:</span>
-              <div className="flex items-center gap-1.5 border rounded-lg p-1 bg-background shadow-sm w-full sm:w-auto">
+              {/* Week Navigation */}
+              <div className="flex items-center border border-slate-200 rounded-lg bg-white">
                 <Button
-                  variant={mealDisplayMode === 'dinners' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-9 px-3 sm:px-4 transition-all duration-200 flex-1 sm:flex-none"
-                  onClick={() => setMealDisplayMode('dinners')}
-                  title="Dinners Only"
+                  variant="ghost"
+                  size="icon"
+                  onClick={goToPreviousWeek}
+                  className="h-9 w-9"
                 >
-                  Dinners Only
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant={mealDisplayMode === '3-meals' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-9 px-3 sm:px-4 transition-all duration-200 flex-1 sm:flex-none"
-                  onClick={() => setMealDisplayMode('3-meals')}
-                  title="3 Meals (Breakfast, Lunch, Dinner)"
+                  variant="ghost"
+                  onClick={goToThisWeek}
+                  className="h-9 px-3 text-sm font-medium"
                 >
-                  3 Meals
+                  This Week
                 </Button>
                 <Button
-                  variant={mealDisplayMode === 'all' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-9 px-3 sm:px-4 transition-all duration-200 flex-1 sm:flex-none whitespace-nowrap"
-                  onClick={() => setMealDisplayMode('all')}
-                  title="All Meals + Snacks"
+                  variant="ghost"
+                  size="icon"
+                  onClick={goToNextWeek}
+                  className="h-9 w-9"
                 >
-                  All + Snacks
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            {/* Controls Row */}
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-              {/* Left side - View controls */}
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                {/* Recipe Browser Toggle */}
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+              {/* Left: View Controls */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
                 <Button
-                  variant={recipeBrowserOpen ? 'default' : 'outline'}
+                  variant={recipeBrowserOpen ? "default" : "outline"}
+                  onClick={() => setRecipeBrowserOpen(!recipeBrowserOpen)}
                   size="sm"
-                  onClick={() => {
-                    setRecipeBrowserOpen(!recipeBrowserOpen);
-                  }}
-                  className="h-10 px-4 transition-all duration-200 hover:scale-105 hover:shadow-md"
+                  className="h-8"
                 >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Recipes</span>
-                  <span className="sm:hidden">Browse</span>
+                  <BookOpen className="h-3.5 w-3.5 mr-1.5" />
+                  Recipes
                 </Button>
+
+                {/* Meal Display Toggle */}
+                <div className="flex items-center border border-slate-200 rounded-lg bg-white">
+                  <Button
+                    variant={mealDisplayMode === 'dinners' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
+                    onClick={() => setMealDisplayMode('dinners')}
+                  >
+                    Dinners
+                  </Button>
+                  <Button
+                    variant={mealDisplayMode === '3-meals' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
+                    onClick={() => setMealDisplayMode('3-meals')}
+                  >
+                    3 Meals
+                  </Button>
+                  <Button
+                    variant={mealDisplayMode === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
+                    onClick={() => setMealDisplayMode('all')}
+                  >
+                    All
+                  </Button>
+                </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center gap-1 border rounded-lg p-1.5 bg-background shadow-sm transition-all duration-200 hover:shadow-md">
-                  <Button
-                    variant={viewMode === 'week' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-9 w-9 p-0 transition-all duration-200"
-                    onClick={() => setViewMode('week')}
-                    title="Week Grid View"
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-9 w-9 p-0 transition-all duration-200"
-                    onClick={() => setViewMode('list')}
-                    title="List View"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center border border-slate-200 rounded-lg bg-white">
                   <Button
                     variant={viewMode === 'compact' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-9 w-9 p-0 transition-all duration-200"
+                    className="h-7 w-7 p-0"
                     onClick={() => setViewMode('compact')}
                     title="Compact View"
                   >
-                    <Minimize2 className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Undo/Redo */}
-                <div className="flex items-center gap-1 border rounded-lg p-1 bg-background shadow-sm transition-all duration-200 hover:shadow-md">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 transition-all duration-200"
-                    onClick={handleUndo}
-                    disabled={historyIndex <= 0}
-                    title="Undo (Cmd+Z)"
-                  >
-                    <Undo2 className="h-4 w-4" />
+                    <Minimize2 className="h-3.5 w-3.5" />
                   </Button>
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 transition-all duration-200"
-                    onClick={handleRedo}
-                    disabled={historyIndex >= history.length - 1}
-                    title="Redo (Cmd+Shift+Z)"
+                    variant={viewMode === 'week' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setViewMode('week')}
+                    title="Grid View"
                   >
-                    <Redo2 className="h-4 w-4" />
+                    <LayoutGrid className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
 
-              {/* Right side - Actions and Navigation */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
+              {/* Right: Actions */}
+              <div className="flex items-center gap-2 overflow-x-auto">
                 <Button
-                  variant="default"
+                  variant="outline"
                   onClick={handleGenerateWeek}
                   disabled={generateWeekPlan.isPending}
-                  className="h-10 px-4 shadow-md transition-all duration-200 hover:scale-105 hover:shadow-lg bg-gradient-to-r from-primary to-primary/90"
+                  size="sm"
+                  className="h-8"
                 >
-                  <Sparkles className="mr-2 h-4 w-4" />
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                   {generateWeekPlan.isPending ? 'Generating...' : 'Generate Week'}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleGenerateShoppingList}
                   disabled={generateShoppingList.isPending}
-                  className="h-10 px-4 transition-all duration-200 hover:scale-105 hover:shadow-md hover:bg-primary/5"
+                  size="sm"
+                  className="h-8"
                 >
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">{generateShoppingList.isPending ? 'Generating...' : 'Shopping List'}</span>
-                  <span className="sm:hidden">{generateShoppingList.isPending ? 'Loading...' : 'Shop'}</span>
+                  <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+                  {generateShoppingList.isPending ? 'Loading...' : 'Shopping List'}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleClearWeek}
-                  disabled={clearWeekPlan.isPending || !weekPlan || weekPlan.length === 0}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 px-4 transition-all duration-200 hover:scale-105 hover:shadow-md"
+                  disabled={!weekPlan || weekPlan.length === 0 || clearWeekPlan.isPending}
+                  size="sm"
+                  className="h-8"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                   {clearWeekPlan.isPending ? 'Clearing...' : 'Clear'}
                 </Button>
-                <div className="flex items-center gap-2 border-l border-muted pl-3 ml-2">
-                  <Button variant="outline" size="icon" onClick={goToPreviousWeek} className="h-10 w-10 transition-all duration-200 hover:scale-110 hover:shadow-md" title="Previous Week">
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
-                  <Button variant="outline" onClick={goToThisWeek} className="h-10 px-4 transition-all duration-200 hover:scale-105 hover:shadow-md">
-                    <span className="hidden sm:inline">This Week</span>
-                    <span className="sm:hidden">Today</span>
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-10 w-10 transition-all duration-200 hover:scale-110 hover:shadow-md" title="Next Week">
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Weekly Variety Summary */}
-            {weekPlan && weekPlan.length > 0 && (
-              <WeeklyVarietySummary weekPlan={weekPlan} />
-            )}
-
-            {/* Cuisine Filter */}
-            {uniqueCuisines.length > 0 && (
-              <div className="pt-4 border-t border-muted/40">
-                <div className="flex flex-col sm:flex-row items-start gap-3">
-                  <div className="text-sm font-semibold text-foreground/80 min-w-[80px] pt-1.5">
-                    Cuisines:
-                  </div>
-                  <div className="flex flex-wrap gap-2 flex-1">
-                    {uniqueCuisines.map((cuisine) => (
-                      <Button
-                        key={cuisine}
-                        variant={selectedCuisines.includes(cuisine || '') ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => toggleCuisine(cuisine || '')}
-                        className="h-9 text-sm px-3 transition-all duration-200 hover:scale-105 hover:shadow-sm"
-                      >
-                        {cuisine}
-                      </Button>
-                    ))}
-                    {selectedCuisines.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedCuisines([])}
-                        className="h-9 text-xs text-muted-foreground hover:text-foreground transition-all duration-200"
-                      >
-                        Clear All
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                {selectedCuisines.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-3 sm:ml-[92px] bg-muted/30 px-3 py-2 rounded-lg inline-block">
-                    ✨ Generating meals from: <span className="font-medium text-foreground/70">{selectedCuisines.join(', ')}</span>
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Bento Box Generation Options */}
-            <div className="pt-4 border-t">
-              <div className="flex items-start gap-3">
-                <div className="text-sm font-medium text-muted-foreground min-w-[80px] pt-1.5">
-                  Bento Boxes:
-                </div>
-                <div className="flex flex-col gap-3 flex-1">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={generateBentos}
-                      onChange={(e) => setGenerateBentos(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    <span className="text-sm">Generate bento box lunches for the week</span>
-                  </label>
-                  {generateBentos && (
-                    <div className="ml-6">
-                      <label className="flex flex-col gap-1.5">
-                        <span className="text-xs text-muted-foreground">Child's name (optional)</span>
-                        <input
-                          type="text"
-                          value={bentoChildName}
-                          onChange={(e) => setBentoChildName(e.target.value)}
-                          placeholder="e.g., Emma"
-                          className="text-sm px-3 py-1.5 rounded-md border border-input bg-background"
-                        />
-                      </label>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Will create 5 bento box plans (Mon-Fri) with varied items from your collection
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Keyboard Shortcuts Hint */}
-            <div className="text-xs text-muted-foreground pt-3 border-t border-muted/40">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-muted/20 px-3 py-2 rounded-lg">
-                <span className="font-semibold text-foreground/70">⌨️ Shortcuts:</span>
-                <span className="hidden sm:inline">← → (navigate weeks) • G (generate) • T (this week) • V (view mode) • Cmd+Z (undo) • Cmd+Shift+Z (redo)</span>
-                <span className="sm:hidden">← → • G • T • V • Cmd+Z</span>
               </div>
             </div>
           </div>
-        </CardHeader>
-      </Card>
 
-      {/* Empty State Banner */}
-      {(!weekPlan || weekPlan.length === 0) && (
-        <Card className="bg-gradient-to-br from-muted/40 to-muted/20 border-2 border-dashed border-muted-foreground/30 shadow-lg transition-all duration-300 hover:shadow-xl hover:border-primary/40">
-          <CardContent className="pt-12 pb-12">
-            <div className="text-center space-y-6">
-              <div className="flex justify-center">
-                <div className="relative">
-                  <Sparkles className="h-16 w-16 text-primary/60 animate-pulse" />
-                  <div className="absolute inset-0 h-16 w-16 bg-primary/20 rounded-full blur-xl" />
-                </div>
-              </div>
-              <div className="space-y-3">
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  Your Meal Plan is Empty
-                </h3>
-                <p className="text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">
-                  Get started by dragging recipes from the Recipe Browser (click <BookOpen className="inline h-4 w-4 mb-1" /> Recipes button above) or click "Generate Week" to auto-populate your plan with delicious meals
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                <Button
-                  onClick={() => setRecipeBrowserOpen(true)}
-                  variant="outline"
-                  size="lg"
-                  className="transition-all duration-200 hover:scale-105 hover:shadow-lg w-full sm:w-auto"
-                >
-                  <BookOpen className="mr-2 h-5 w-5" />
-                  Browse Recipes
-                </Button>
-                <Button
-                  onClick={() => setGenerateDialogOpen(true)}
-                  size="lg"
-                  className="transition-all duration-200 hover:scale-105 hover:shadow-lg bg-gradient-to-r from-primary to-primary/90 w-full sm:w-auto"
-                >
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Generate Week
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Weekly Grid / List / Compact View */}
-      {(() => {
-        if (viewMode === 'compact') {
-          return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
-              {weekDays.map(day => (
-                <CompactDayCard
-                  key={day.date}
-                  date={day.date}
-                  dayName={day.dayName}
-                  dayShort={day.dayShort}
-                  dayNum={day.dayNum}
-                  month={day.month}
-                  meals={(mealsByDate[day.date] as { breakfast: MealPlan[]; morning_snack: MealPlan[]; lunch: MealPlan[]; afternoon_snack: MealPlan[]; dinner: MealPlan[]; }) || {
-                    breakfast: [],
-                    morning_snack: [],
-                    lunch: [],
-                    afternoon_snack: [],
-                    dinner: [],
-                  }}
-                  onDrop={handleDrop}
-                  onMealClick={(meal) => {
-                    setSelectedMeal(meal);
-                    setAdjustedServings(null);
-                    setViewDialogOpen(true);
-                  }}
-                  mealDisplayMode={mealDisplayMode}
-                />
-              ))}
-            </div>
-          );
-        } else if (viewMode === 'week') {
-          return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
-              {weekDays.map(day => renderDayCard(day))}
-            </div>
-          );
-        } else if (viewMode === 'list') {
-          return (
-            <div className="space-y-4">
-              {weekDays.map(day => (
-                <div key={day.date}>
-                  {renderDayCard(day)}
+          {/* Weekly Grid / List / Compact View */}
+          {(() => {
+            if (viewMode === 'compact') {
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                  {weekDays.map(day => (
+                    <CompactDayCard
+                      key={day.date}
+                      date={day.date}
+                      dayName={day.dayName}
+                      dayShort={day.dayShort}
+                      dayNum={day.dayNum}
+                      month={day.month}
+                      meals={(mealsByDate[day.date] as { breakfast: MealPlan[]; morning_snack: MealPlan[]; lunch: MealPlan[]; afternoon_snack: MealPlan[]; dinner: MealPlan[]; }) || {
+                        breakfast: [],
+                        morning_snack: [],
+                        lunch: [],
+                        afternoon_snack: [],
+                        dinner: [],
+                      }}
+                      onDrop={handleDrop}
+                      onMealClick={(meal) => {
+                        setSelectedMeal(meal);
+                        setAdjustedServings(null);
+                        setViewDialogOpen(true);
+                      }}
+                      onMealDelete={handleDeleteMeal}
+                      mealDisplayMode={mealDisplayMode}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-          );
-        }
-        return null;
-      })()}
+              );
+            } else if (viewMode === 'week') {
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
+                  {weekDays.map(day => renderDayCard(day))}
+                </div>
+              );
+            } else if (viewMode === 'list') {
+              return (
+                <div className="space-y-4">
+                  {weekDays.map(day => renderDayCard(day))}
+                </div>
+              );
+            }
+            return null;
+          })()}
 
       {/* View Meal Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
@@ -1250,6 +1111,30 @@ const PlanPageEnhanced: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Meal Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={confirmDeleteMeal}
+        title="Remove Meal"
+        description="Are you sure you want to remove this meal from your plan?"
+        confirmText="Remove"
+        cancelText="Cancel"
+        variant="destructive"
+      />
+
+      {/* Clear Week Confirmation Dialog */}
+      <ConfirmDialog
+        open={clearWeekConfirmOpen}
+        onOpenChange={setClearWeekConfirmOpen}
+        onConfirm={confirmClearWeek}
+        title="Clear Entire Week"
+        description={`Are you sure you want to clear all ${weekPlan?.length || 0} meals from this week? This action cannot be undone.`}
+        confirmText="Clear Week"
+        cancelText="Cancel"
+        variant="destructive"
+      />
         </div>
       </div>
     </div>

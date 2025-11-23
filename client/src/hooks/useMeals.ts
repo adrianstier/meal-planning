@@ -79,6 +79,24 @@ export const useParseRecipe = () => {
   });
 };
 
+export const useParseRecipeFromImage = () => {
+  return useMutation({
+    mutationFn: async (imageFile: File) => {
+      try {
+        const response = await mealsApi.parseRecipeFromImage(imageFile);
+        return response;
+      } catch (error) {
+        console.error('Parse recipe from image mutation error:', error);
+        throw error;
+      }
+    },
+    retry: false,
+    onError: (error) => {
+      console.error('Recipe image parse failed:', error);
+    },
+  });
+};
+
 export const useSearchMeals = (query: string) => {
   return useQuery({
     queryKey: ['meals', 'search', query],

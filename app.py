@@ -775,6 +775,82 @@ def parse_recipe():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/meals/parse-image', methods=['POST'])
+@login_required
+def parse_recipe_from_image():
+    """Parse a recipe from an uploaded image using AI vision"""
+    try:
+        if not recipe_parser:
+            return jsonify({'success': False, 'error': 'AI parser not available'}), 503
+
+        # Check if image was uploaded
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'error': 'No image file provided'}), 400
+
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No image selected'}), 400
+
+        # Validate file type
+        allowed_types = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+        content_type = file.content_type
+        if content_type not in allowed_types:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid image type. Allowed: JPEG, PNG, WebP, GIF'
+            }), 400
+
+        # Read and encode image
+        import base64
+        image_data = base64.b64encode(file.read()).decode('utf-8')
+
+        # Parse using AI vision
+        parsed = recipe_parser.parse_recipe_from_image(image_data, content_type)
+
+        # Optionally save the uploaded image as the recipe's image
+        if parsed:
+            # Save the uploaded image
+            file.seek(0)  # Reset file pointer
+            ext = {
+                'image/jpeg': '.jpg',
+                'image/png': '.png',
+                'image/webp': '.webp',
+                'image/gif': '.gif'
+            }.get(content_type, '.jpg')
+
+            import uuid
+            filename = f"{uuid.uuid4()}{ext}"
+            filepath = os.path.join('static/recipe_images', filename)
+            os.makedirs('static/recipe_images', exist_ok=True)
+
+            # Save with PIL for optimization
+            from PIL import Image
+            from io import BytesIO
+
+            file.seek(0)
+            img = Image.open(file)
+
+            # Convert RGBA to RGB if needed
+            if img.mode == 'RGBA' and ext in ['.jpg', '.jpeg']:
+                rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                rgb_img.paste(img, mask=img.split()[3])
+                img = rgb_img
+
+            # Resize if too large
+            max_width = 1200
+            if img.width > max_width:
+                ratio = max_width / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+            img.save(filepath, optimize=True, quality=85)
+            parsed['image_url'] = f"/static/recipe_images/{filename}"
+
+        return jsonify({'success': True, 'data': parsed, 'source': 'ai_vision'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/meals/kid-friendly', methods=['GET'])
 @login_required
 def get_kid_friendly_meals():

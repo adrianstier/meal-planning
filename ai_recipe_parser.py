@@ -31,6 +31,8 @@ class RecipeParser:
         self.client = anthropic.Anthropic(api_key=api_key)
         # Use Claude 3.5 Haiku - faster and more accurate than 3.0
         self.model = "claude-3-5-haiku-20241022"
+        # Use Sonnet for vision tasks (better at image understanding)
+        self.vision_model = "claude-sonnet-4-20250514"
         self.image_folder = image_folder
         os.makedirs(image_folder, exist_ok=True)
 
@@ -167,6 +169,102 @@ class RecipeParser:
         except Exception as e:
             print(f"⚠️  Failed to download image: {e}")
             return None
+
+    def parse_recipe_from_image(self, image_data: str, media_type: str = "image/jpeg") -> Dict:
+        """
+        Parse a recipe from an uploaded image using Claude Vision
+        image_data: base64 encoded image
+        media_type: MIME type of the image (image/jpeg, image/png, image/webp, image/gif)
+        Returns structured meal data
+        """
+
+        prompt = """Look at this recipe image and extract all the recipe information you can see.
+
+Please analyze this recipe image and provide a JSON response with the following structure:
+{
+    "name": "Recipe name",
+    "meal_type": "dinner|lunch|snack|breakfast",
+    "cuisine": "Italian|Mexican|Chinese|Japanese|Thai|Indian|French|Greek|Spanish|Korean|Vietnamese|American|Mediterranean|Middle Eastern|Caribbean|German|British|Asian|Other",
+    "kid_friendly_level": 1-10 (how kid-friendly is this meal),
+    "prep_time_minutes": estimated prep time in minutes,
+    "cook_time_minutes": estimated cook time in minutes,
+    "adult_friendly": true|false,
+    "dietary_category": "omnivore|vegetarian|pescatarian|vegan",
+    "notes": "Any special notes or tips",
+    "instructions": "Step-by-step cooking instructions as a single string with numbered steps",
+    "ingredients": [
+        {
+            "name": "ingredient name",
+            "component_type": "protein|veggie|starch|fruit|condiment|side",
+            "quantity": "amount (e.g., '2 cups', '1 lb')",
+            "is_optional": true|false
+        }
+    ]
+}
+
+Guidelines:
+- kid_friendly_level: Consider whether kids aged 4-7 would typically enjoy this
+- meal_type: What meal this would typically be served as
+- cuisine: Identify the cuisine type based on ingredients, cooking methods, and dish origin
+- instructions: Extract and format cooking steps as a clear, numbered list. If instructions aren't visible, write brief but complete step-by-step instructions based on typical cooking methods for this recipe.
+- component_type: Classify each ingredient appropriately
+  - protein: meat, fish, beans, eggs, cheese
+  - veggie: vegetables
+  - starch: pasta, rice, bread, potatoes
+  - fruit: fruits
+  - condiment: sauces, spices, oils
+  - side: anything else
+
+Return ONLY valid JSON, no other text."""
+
+        try:
+            message = self.client.messages.create(
+                model=self.vision_model,
+                max_tokens=2000,
+                timeout=60.0,  # Longer timeout for vision
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": image_data
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ]
+                }]
+            )
+
+            # Extract JSON from response
+            response_text = message.content[0].text
+
+            # Try to find JSON in the response
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                parsed_data = json.loads(json_match.group())
+                cleaned_data = self._validate_and_clean(parsed_data)
+                return cleaned_data
+            else:
+                raise ValueError("No JSON found in AI response")
+
+        except anthropic.APITimeoutError as e:
+            raise Exception(f"AI request timed out after 60 seconds: {str(e)}")
+        except anthropic.APIConnectionError as e:
+            raise Exception(f"Failed to connect to AI service: {str(e)}")
+        except anthropic.RateLimitError as e:
+            raise Exception(f"AI rate limit exceeded. Please try again later: {str(e)}")
+        except anthropic.APIError as e:
+            raise Exception(f"AI service error: {str(e)}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"Failed to parse AI response as JSON: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Failed to parse recipe from image: {str(e)}")
 
     def parse_recipe(self, recipe_input: str) -> Dict:
         """

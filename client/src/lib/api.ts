@@ -103,6 +103,14 @@ export const mealsApi = {
   update: (id: number, meal: Partial<Meal>) => api.put<Meal>(`/api/meals/${id}`, meal),
   delete: (id: number) => api.delete(`/api/meals/${id}`),
   parseRecipe: (text: string) => api.post<Meal>('/api/meals/parse', { recipe_text: text }, { timeout: 90000 }), // 90 second timeout for recipe parsing
+  parseRecipeFromImage: (imageFile: File) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api.post<Meal>('/api/meals/parse-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000, // 2 minute timeout for image parsing
+    });
+  },
   search: (query: string) => api.get<Meal[]>(`/api/meals/search?q=${encodeURIComponent(query)}`),
   favorite: (id: number) => api.post(`/api/meals/${id}/favorite`),
   unfavorite: (id: number) => api.delete(`/api/meals/${id}/favorite`),

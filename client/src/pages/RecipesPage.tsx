@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, Upload } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -28,7 +28,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { RecipeParsingProgress } from '../components/features/recipes/RecipeParsingProgress';
-import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe } from '../hooks/useMeals';
+import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
 import StarRating from '../components/StarRating';
 import { useDragDrop } from '../contexts/DragDropContext';
@@ -37,6 +37,7 @@ const RecipesPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [parseDialogOpen, setParseDialogOpen] = useState(false);
   const [urlDialogOpen, setUrlDialogOpen] = useState(false);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [bulkTagDialogOpen, setBulkTagDialogOpen] = useState(false);
@@ -44,6 +45,8 @@ const RecipesPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [recipeText, setRecipeText] = useState('');
   const [recipeUrl, setRecipeUrl] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [parsedRecipe, setParsedRecipe] = useState<Partial<Meal> | null>(null);
   const [bulkTagInput, setBulkTagInput] = useState('');
 
@@ -73,6 +76,7 @@ const RecipesPage: React.FC = () => {
   const toggleFavorite = useToggleFavorite();
   const deleteMeal = useDeleteMeal();
   const parseRecipe = useParseRecipe();
+  const parseRecipeFromImage = useParseRecipeFromImage();
   const { setDraggedRecipe } = useDragDrop();
 
   const handleParseRecipe = async () => {
@@ -195,6 +199,77 @@ const RecipesPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to parse recipe from URL: ${errorMessage}`);
       // Don't close the dialog so user can try again
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleParseFromImage = async () => {
+    if (!selectedImage) {
+      alert('Please select an image');
+      return;
+    }
+
+    try {
+      const result = await parseRecipeFromImage.mutateAsync(selectedImage);
+
+      const parsedData = result.data;
+
+      setParsedRecipe(parsedData);
+      setImageDialogOpen(false);
+
+      // Pre-fill form with parsed data (same logic as other parse handlers)
+      let ingredientsText = '';
+      if (parsedData.ingredients && Array.isArray(parsedData.ingredients)) {
+        ingredientsText = parsedData.ingredients
+          .map((ing: { quantity?: string; name: string }) => {
+            const quantity = ing.quantity ? `${ing.quantity} ` : '';
+            const name = ing.name || '';
+            return `${quantity}${name}`.trim();
+          })
+          .filter(line => line.length > 0)
+          .join('\n');
+      } else if (typeof parsedData.ingredients === 'string') {
+        ingredientsText = parsedData.ingredients;
+      }
+
+      let instructionsText = '';
+      if (parsedData.instructions && Array.isArray(parsedData.instructions)) {
+        instructionsText = parsedData.instructions.join('\n');
+      } else if (typeof parsedData.instructions === 'string') {
+        instructionsText = parsedData.instructions;
+      }
+
+      setFormData({
+        ...formData,
+        name: parsedData.name || '',
+        meal_type: parsedData.meal_type || 'dinner',
+        cook_time_minutes: parsedData.cook_time_minutes,
+        servings: parsedData.servings,
+        difficulty: parsedData.difficulty || 'medium',
+        tags: parsedData.tags || '',
+        ingredients: ingredientsText,
+        instructions: instructionsText,
+        image_url: parsedData.image_url,
+        cuisine: parsedData.cuisine,
+      });
+      setAddDialogOpen(true);
+      setSelectedImage(null);
+      setImagePreview(null);
+    } catch (error) {
+      console.error('Failed to parse recipe from image:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to parse recipe from image: ${errorMessage}`);
     }
   };
 
@@ -390,6 +465,10 @@ const RecipesPage: React.FC = () => {
                 <DropdownMenuItem onClick={() => setUrlDialogOpen(true)} className="cursor-pointer transition-colors">
                   <Link className="mr-2 h-4 w-4" />
                   Parse from URL
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setImageDialogOpen(true)} className="cursor-pointer transition-colors">
+                  <Camera className="mr-2 h-4 w-4" />
+                  Parse from Image
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -822,6 +901,73 @@ const RecipesPage: React.FC = () => {
               disabled={!recipeUrl || parseRecipe.isPending}
             >
               {parseRecipe.isPending ? 'Parsing...' : 'Parse Recipe'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Parse Recipe from Image Dialog */}
+      <Dialog open={imageDialogOpen} onOpenChange={(open) => {
+        setImageDialogOpen(open);
+        if (!open) {
+          setSelectedImage(null);
+          setImagePreview(null);
+        }
+      }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Parse Recipe from Image</DialogTitle>
+            <DialogDescription>
+              Upload a photo of a recipe and let AI extract the details for you
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {parseRecipeFromImage.isPending ? (
+              <RecipeParsingProgress
+                isVisible={parseRecipeFromImage.isPending}
+              />
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="recipe-image">Recipe Image</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="recipe-image"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleImageSelect}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                </div>
+                {imagePreview && (
+                  <div className="relative w-full">
+                    <img
+                      src={imagePreview}
+                      alt="Recipe preview"
+                      className="w-full max-h-64 object-contain rounded-lg border"
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Supported formats: JPEG, PNG, WebP, GIF
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setImageDialogOpen(false);
+              setSelectedImage(null);
+              setImagePreview(null);
+            }} disabled={parseRecipeFromImage.isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleParseFromImage}
+              disabled={!selectedImage || parseRecipeFromImage.isPending}
+            >
+              {parseRecipeFromImage.isPending ? 'Parsing...' : 'Parse Recipe'}
             </Button>
           </DialogFooter>
         </DialogContent>

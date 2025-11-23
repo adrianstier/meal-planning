@@ -60,13 +60,20 @@ client/build/
 client/dist/
 client/node_modules/
 
-# Static files (React production build gets copied here)
-# Commit these for deployment platforms without Node.js
-!static/.gitkeep
+# Static files - built by Railway build script
+templates/static/js/
+templates/static/css/
+templates/static/media/
+templates/index.html
+templates/manifest.json
+templates/favicon.ico
+templates/logo192.png
+templates/logo512.png
+templates/asset-manifest.json
+templates/robots.txt
 
-# Template (React build gets copied here)
-# Uncommented to allow committing for Render deployment
-!templates/.gitkeep
+# Keep recipe images (not built, user uploaded)
+!templates/static/recipe_images/
 
 # Backups
 *_backup/

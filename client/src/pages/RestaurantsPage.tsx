@@ -312,16 +312,17 @@ const RestaurantsPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
               <Label>Search</Label>
               <Input
                 placeholder="Search restaurants..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-11 min-h-[44px]"
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>Cuisine Type</Label>
               <Select
                 value={filters.cuisine_type || 'all'}
@@ -329,7 +330,7 @@ const RestaurantsPage: React.FC = () => {
                   setFilters({ ...filters, cuisine_type: value === 'all' ? undefined : value })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 min-h-[44px]">
                   <SelectValue placeholder="All Cuisines" />
                 </SelectTrigger>
                 <SelectContent>
@@ -342,19 +343,19 @@ const RestaurantsPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 min-h-[44px]">
               <Switch
                 checked={filters.outdoor_seating || false}
                 onCheckedChange={(checked) => setFilters({ ...filters, outdoor_seating: checked || undefined })}
               />
-              <Label>Outdoor Seating</Label>
+              <Label className="cursor-pointer">Outdoor Seating</Label>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 min-h-[44px]">
               <Switch
                 checked={filters.has_bar || false}
                 onCheckedChange={(checked) => setFilters({ ...filters, has_bar: checked || undefined })}
               />
-              <Label>Has Bar</Label>
+              <Label className="cursor-pointer">Has Bar</Label>
             </div>
           </div>
           {Object.keys(filters).length > 0 && (

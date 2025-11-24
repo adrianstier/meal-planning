@@ -393,8 +393,8 @@ const CSABoxPage: React.FC = () => {
             <>
               {/* Box Actions */}
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                       <CardTitle>{selectedBox.name}</CardTitle>
                       <CardDescription>
@@ -402,7 +402,7 @@ const CSABoxPage: React.FC = () => {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={() => setShowAddItem(true)} size="sm">
+                      <Button onClick={() => setShowAddItem(true)} size="sm" className="flex-1 sm:flex-initial h-10 min-h-[40px]">
                         <Plus className="h-4 w-4 mr-2" />
                         Add Item
                       </Button>
@@ -410,6 +410,7 @@ const CSABoxPage: React.FC = () => {
                         onClick={() => loadRecipeMatches(selectedBox.id)}
                         size="sm"
                         variant="secondary"
+                        className="flex-1 sm:flex-initial h-10 min-h-[40px]"
                       >
                         <Sparkles className="h-4 w-4 mr-2" />
                         Find Recipes
@@ -573,7 +574,7 @@ const CSABoxPage: React.FC = () => {
                   ) : (
                     <div className="space-y-2">
                       {unusedItems.map(item => (
-                        <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50">
+                        <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg hover:bg-accent/50 gap-3">
                           <div className="flex-1">
                             <div className="font-medium">{item.ingredient_name}</div>
                             <div className="text-sm text-muted-foreground">
@@ -586,6 +587,7 @@ const CSABoxPage: React.FC = () => {
                               size="sm"
                               variant="outline"
                               onClick={() => toggleItemUsed(item.id, item.is_used)}
+                              className="flex-1 sm:flex-initial h-9 min-h-[36px]"
                             >
                               <CheckCircle className="h-4 w-4 mr-1" />
                               Mark Used
@@ -594,6 +596,7 @@ const CSABoxPage: React.FC = () => {
                               size="sm"
                               variant="ghost"
                               onClick={() => deleteItem(item.id)}
+                              className="h-9 w-9 min-h-[36px] p-0"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

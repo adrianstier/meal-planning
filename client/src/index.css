@@ -97,6 +97,25 @@
       'Helvetica Neue', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent iOS text size adjustment */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  @media screen and (max-width: 767px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Improve tap highlight on mobile */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Safe area insets for notched devices */
+  html {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
   /* Improved Focus Styles for Accessibility */
@@ -152,6 +171,40 @@
   /* Focus-within utilities for enhanced keyboard navigation */
   .focus-within-ring:focus-within {
     @apply ring-2 ring-ring ring-offset-2;
+  }
+
+  /* Touch-specific utilities */
+  @media (hover: none) and (pointer: coarse) {
+    /* Show elements on touch devices that are hidden on desktop hover */
+    .touch\:opacity-100 {
+      opacity: 1 !important;
+    }
+
+    /* Increase touch targets on mobile */
+    .touch\:min-h-11 {
+      min-height: 44px;
+    }
+
+    .touch\:min-w-11 {
+      min-width: 44px;
+    }
+  }
+
+  /* Prevent text selection on interactive elements */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Horizontal scrolling without visible scrollbar on mobile */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 

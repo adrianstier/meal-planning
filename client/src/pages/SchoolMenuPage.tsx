@@ -243,11 +243,11 @@ const SchoolMenuPage: React.FC = () => {
                             </p>
                           )}
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-9 w-9 min-h-[36px]"
                             onClick={() => handleDislike(item.id)}
                           >
                             <ThumbsDown className="h-4 w-4" />
@@ -255,7 +255,7 @@ const SchoolMenuPage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-9 w-9 min-h-[36px]"
                             onClick={() => handleDelete(item.id)}
                           >
                             <Trash2 className="h-4 w-4" />

@@ -128,7 +128,7 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
 
         <div className="space-y-4 flex-1 overflow-y-auto">
           {/* Constraints */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">
               <Label>Max Cook Time</Label>
               <Select
@@ -140,7 +140,7 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
                   })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 min-h-[44px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -163,7 +163,7 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
                   })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 min-h-[44px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -213,21 +213,21 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
                 No meals found. Try adjusting your search or constraints.
               </div>
             ) : (
-              <div className="grid gap-2 max-h-96 overflow-y-auto">
+              <div className="grid gap-2 max-h-[50vh] sm:max-h-96 overflow-y-auto">
                 {displayMeals.map((meal) => (
                   <button
                     key={meal.id}
                     onClick={() => setSelectedMealId(meal.id)}
-                    className={`text-left p-3 rounded-md border transition-colors ${
+                    className={`text-left p-4 rounded-md border transition-colors min-h-[52px] ${
                       selectedMealId === meal.id
                         ? 'border-primary bg-primary/10'
-                        : 'border-border hover:bg-accent'
+                        : 'border-border hover:bg-accent active:bg-accent'
                     }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h4 className="font-medium">{meal.name}</h4>
-                        <div className="flex gap-2 mt-1 text-xs text-muted-foreground">
+                        <h4 className="font-medium text-base">{meal.name}</h4>
+                        <div className="flex gap-2 mt-1 text-sm sm:text-xs text-muted-foreground">
                           {meal.cook_time_minutes && (
                             <span>{meal.cook_time_minutes} min</span>
                           )}

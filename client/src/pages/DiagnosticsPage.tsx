@@ -283,65 +283,53 @@ const DiagnosticsPage: React.FC = () => {
             Monitor and debug application errors
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex gap-2 sm:flex-wrap">
           <Button
             variant="default"
+            size="sm"
             onClick={exportForClaude}
             disabled={errors.length === 0}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 min-h-[40px]"
           >
-            <Copy className="mr-2 h-4 w-4" />
-            Copy for Claude
+            <Copy className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Copy for Claude</span>
           </Button>
           <Button
             variant="outline"
+            size="sm"
             onClick={analyzeWithAI}
             disabled={errors.length === 0}
+            className="h-10 min-h-[40px]"
           >
-            <Sparkles className="mr-2 h-4 w-4" />
-            AI Analysis
+            <Sparkles className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">AI Analysis</span>
           </Button>
           <Button
             variant="destructive"
+            size="sm"
             onClick={cleanupDuplicates}
+            className="h-10 min-h-[40px]"
           >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Cleanup Duplicates
-          </Button>
-          <Button
-            variant="default"
-            onClick={async () => {
-              try {
-                const response = await api.post('/api/admin/fix-schema');
-                console.log('Schema fix response:', response);
-
-                const data = response.data?.data || response.data;
-                if (data && data.success) {
-                  alert(`✅ Schema Fixed!\n\n${data.fixed?.join('\n') || 'Database schema updated successfully'}`);
-                  window.location.reload();
-                } else {
-                  alert(`❌ Error: ${data?.error || 'Failed to fix schema'}`);
-                }
-              } catch (error: any) {
-                console.error('Schema fix error:', error);
-                alert(`❌ Failed: ${error.message}`);
-              }
-            }}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-          >
-            <Sparkles className="mr-2 h-4 w-4" />
-            Fix Database Schema
-          </Button>
-          <Button variant="outline" onClick={downloadLocalLogs}>
-            <Download className="mr-2 h-4 w-4" />
-            Export Logs
+            <Trash2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Cleanup</span>
           </Button>
           <Button
             variant="outline"
+            size="sm"
+            onClick={downloadLocalLogs}
+            className="h-10 min-h-[40px]"
+          >
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleRefresh}
             disabled={isRefreshing}
+            className="h-10 min-h-[40px] col-span-2 sm:col-span-1"
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>

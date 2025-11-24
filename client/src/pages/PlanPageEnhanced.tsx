@@ -717,9 +717,9 @@ const PlanPageEnhanced: React.FC = () => {
 
   return (
     <div className="flex h-full min-h-0">
-      {/* Recipe Browser - Integrated Side Panel */}
+      {/* Recipe Browser - Integrated Side Panel (hidden on mobile) */}
       {recipeBrowserOpen && (
-        <div className="w-96 relative self-stretch border-r border-border bg-background flex-shrink-0">
+        <div className="hidden lg:block w-80 xl:w-96 relative self-stretch border-r border-border bg-background flex-shrink-0">
           <RecipeBrowserSidebar
             meals={meals}
             isOpen={recipeBrowserOpen}
@@ -777,39 +777,41 @@ const PlanPageEnhanced: React.FC = () => {
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
               {/* Left: View Controls */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 -mx-1 px-1">
                 <Button
                   variant={recipeBrowserOpen ? "default" : "outline"}
                   onClick={() => setRecipeBrowserOpen(!recipeBrowserOpen)}
                   size="sm"
-                  className="h-8"
+                  className="h-9 min-h-[36px] hidden lg:flex"
                 >
                   <BookOpen className="h-3.5 w-3.5 mr-1.5" />
                   Recipes
                 </Button>
 
                 {/* Meal Display Toggle */}
-                <div className="flex items-center border border-slate-200 rounded-lg bg-white">
+                <div className="flex items-center border border-slate-200 rounded-lg bg-white flex-shrink-0">
                   <Button
                     variant={mealDisplayMode === 'dinners' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-7 px-2.5 text-xs"
+                    className="h-8 px-2 sm:px-2.5 text-xs min-h-[32px]"
                     onClick={() => setMealDisplayMode('dinners')}
                   >
-                    Dinners
+                    <span className="hidden sm:inline">Dinners</span>
+                    <span className="sm:hidden">D</span>
                   </Button>
                   <Button
                     variant={mealDisplayMode === '3-meals' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-7 px-2.5 text-xs"
+                    className="h-8 px-2 sm:px-2.5 text-xs min-h-[32px]"
                     onClick={() => setMealDisplayMode('3-meals')}
                   >
-                    3 Meals
+                    <span className="hidden sm:inline">3 Meals</span>
+                    <span className="sm:hidden">3M</span>
                   </Button>
                   <Button
                     variant={mealDisplayMode === 'all' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-7 px-2.5 text-xs"
+                    className="h-8 px-2 sm:px-2.5 text-xs min-h-[32px]"
                     onClick={() => setMealDisplayMode('all')}
                   >
                     All
@@ -817,11 +819,11 @@ const PlanPageEnhanced: React.FC = () => {
                 </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center border border-slate-200 rounded-lg bg-white">
+                <div className="flex items-center border border-slate-200 rounded-lg bg-white flex-shrink-0">
                   <Button
                     variant={viewMode === 'compact' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 min-h-[32px]"
                     onClick={() => setViewMode('compact')}
                     title="Compact View"
                   >
@@ -830,7 +832,7 @@ const PlanPageEnhanced: React.FC = () => {
                   <Button
                     variant={viewMode === 'week' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 min-h-[32px]"
                     onClick={() => setViewMode('week')}
                     title="Grid View"
                   >
@@ -840,36 +842,36 @@ const PlanPageEnhanced: React.FC = () => {
               </div>
 
               {/* Right: Actions */}
-              <div className="flex items-center gap-2 overflow-x-auto">
+              <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1">
                 <Button
                   variant="outline"
                   onClick={handleGenerateWeek}
                   disabled={generateWeekPlan.isPending}
                   size="sm"
-                  className="h-8"
+                  className="h-9 min-h-[36px] flex-shrink-0"
                 >
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                  {generateWeekPlan.isPending ? 'Generating...' : 'Generate Week'}
+                  <Sparkles className="h-3.5 w-3.5 sm:mr-1.5" />
+                  <span className="hidden sm:inline">{generateWeekPlan.isPending ? 'Generating...' : 'Generate'}</span>
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleGenerateShoppingList}
                   disabled={generateShoppingList.isPending}
                   size="sm"
-                  className="h-8"
+                  className="h-9 min-h-[36px] flex-shrink-0"
                 >
-                  <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                  {generateShoppingList.isPending ? 'Loading...' : 'Shopping List'}
+                  <ShoppingCart className="h-3.5 w-3.5 sm:mr-1.5" />
+                  <span className="hidden sm:inline">{generateShoppingList.isPending ? 'Loading...' : 'Shop'}</span>
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleClearWeek}
                   disabled={!weekPlan || weekPlan.length === 0 || clearWeekPlan.isPending}
                   size="sm"
-                  className="h-8"
+                  className="h-9 min-h-[36px] flex-shrink-0"
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                  {clearWeekPlan.isPending ? 'Clearing...' : 'Clear'}
+                  <Trash2 className="h-3.5 w-3.5 sm:mr-1.5" />
+                  <span className="hidden sm:inline">{clearWeekPlan.isPending ? 'Clearing...' : 'Clear'}</span>
                 </Button>
               </div>
             </div>

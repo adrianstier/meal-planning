@@ -217,11 +217,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Mobile Menu Button */}
           <div className="lg:hidden ml-auto flex items-center gap-2">
             <div
-              className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground mr-1"
+              className="hidden sm:flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground mr-1"
               aria-hidden="true"
             >
               <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline max-w-[80px] truncate">
+              <span className="max-w-[80px] truncate">
                 {user?.display_name || user?.username}
               </span>
             </div>
@@ -229,15 +229,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               variant="ghost"
               size="sm"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="h-9 w-9 p-0"
+              className="h-11 w-11 p-0 min-h-[44px]"
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-menu"
             >
               {mobileMenuOpen ? (
-                <X className="h-5 w-5" aria-hidden="true" />
+                <X className="h-6 w-6" aria-hidden="true" />
               ) : (
-                <Menu className="h-5 w-5" aria-hidden="true" />
+                <Menu className="h-6 w-6" aria-hidden="true" />
               )}
             </Button>
           </div>

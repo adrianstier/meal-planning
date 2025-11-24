@@ -81,7 +81,7 @@ const MealCard: React.FC<MealCardProps> = ({
       {/* Quick Delete Button - Simple X */}
       {onDelete && (
         <button
-          className="absolute top-1 right-1 h-4 w-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/95 shadow-sm hover:bg-red-50 hover:text-red-600"
+          className="absolute top-0.5 right-0.5 h-6 w-6 min-h-[24px] min-w-[24px] flex items-center justify-center rounded opacity-0 group-hover:opacity-100 sm:transition-opacity z-10 bg-white/95 shadow-sm hover:bg-red-50 hover:text-red-600 touch:opacity-100"
           onClick={(e) => {
             e.stopPropagation();
             onDelete();
@@ -89,7 +89,7 @@ const MealCard: React.FC<MealCardProps> = ({
           title="Remove from plan"
           type="button"
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash2 className="h-3.5 w-3.5" />
         </button>
       )}
 

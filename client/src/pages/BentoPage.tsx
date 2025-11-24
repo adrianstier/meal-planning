@@ -312,7 +312,7 @@ const BentoPage: React.FC = () => {
                               size="sm"
                               onClick={() => handleQuickAdd(itemName, category.value)}
                               disabled={alreadyAdded}
-                              className="h-7 text-xs"
+                              className="h-8 text-xs min-h-[32px] px-2"
                             >
                               {alreadyAdded && '✓ '}{itemName}
                             </Button>
@@ -406,22 +406,22 @@ const BentoPage: React.FC = () => {
         {/* Plans Tab */}
         <TabsContent value="plans" className="space-y-4">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <CardTitle>Weekly Bento Plans</CardTitle>
                   <CardDescription>
                     Generate and view bento box plans for the week
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                   <Input
                     type="date"
                     value={weekStart}
                     onChange={(e) => setWeekStart(e.target.value)}
-                    className="w-40"
+                    className="w-full sm:w-40 h-11 min-h-[44px]"
                   />
-                  <Button onClick={handleGenerateWeek} disabled={items.length < 4}>
+                  <Button onClick={handleGenerateWeek} disabled={items.length < 4} className="h-11 min-h-[44px]">
                     <Sparkles className="mr-2 h-4 w-4" />
                     Generate Week
                   </Button>

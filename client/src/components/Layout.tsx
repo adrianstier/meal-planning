@@ -16,7 +16,8 @@ import {
   Bug,
   Sprout,
   ShoppingCart,
-  MoreHorizontal
+  MoreHorizontal,
+  PartyPopper
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
@@ -41,6 +42,7 @@ const primaryNavItems = [
 
 // Secondary navigation - additional features
 const secondaryNavItems = [
+  { path: '/holiday', label: 'Holiday Planner', icon: PartyPopper, description: 'Plan holiday meals' },
   { path: '/csa', label: 'CSA Box', icon: Sprout, description: 'Seasonal produce' },
   { path: '/bento', label: 'Bento', icon: Package, description: 'Bento meal prep' },
   { path: '/leftovers', label: 'Leftovers', icon: UtensilsCrossed, description: 'Track leftovers' },
@@ -256,7 +258,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Menu Content */}
             <div
               id="mobile-menu"
-              className="lg:hidden border-t bg-background/95 backdrop-blur z-30 animate-slide-in-from-top"
+              className="lg:hidden border-t bg-background/95 backdrop-blur z-40 animate-slide-in-from-top relative"
               role="navigation"
               aria-label="Mobile navigation"
             >

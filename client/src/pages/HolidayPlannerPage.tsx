@@ -3,8 +3,9 @@ import axios from 'axios';
 import {
   Plus, Calendar, Users, Clock, ChefHat, Trash2,
   CalendarDays, Sparkles, ShoppingCart, CheckCircle,
-  PartyPopper, Gift, Egg
+  PartyPopper, Gift, Egg, GripVertical, Copy
 } from 'lucide-react';
+import { useDragDrop } from '../contexts/DragDropContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -27,6 +28,14 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Toast } from '../components/ui/toast';
+
+interface ToastState {
+  show: boolean;
+  type: 'success' | 'error' | 'info' | 'warning';
+  message: string;
+  description?: string;
+}
 
 interface HolidayEvent {
   id: number;
@@ -42,6 +51,7 @@ interface HolidayEvent {
 
 interface Dish {
   id: number;
+  meal_id: number | null;
   custom_name: string;
   category: string;
   servings: number;
@@ -86,6 +96,16 @@ const HolidayPlannerPage: React.FC = () => {
     day_of_schedule: TimelineItem[];
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState>({ show: false, type: 'info', message: '' });
+
+  // Drag and drop context
+  const { draggedRecipe, setDraggedRecipe } = useDragDrop();
+
+  // Helper to show toast
+  const showToast = (type: ToastState['type'], message: string, description?: string) => {
+    setToast({ show: true, type, message, description });
+  };
 
   // Dialogs
   const [showCreateEvent, setShowCreateEvent] = useState(false);
@@ -271,6 +291,97 @@ const HolidayPlannerPage: React.FC = () => {
     }
   };
 
+  const duplicateEvent = async (eventId: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent selecting the event
+    try {
+      const response = await axios.post(`/api/holiday/events/${eventId}/duplicate`);
+      showToast('success', 'Event duplicated', 'All dishes and guests have been copied');
+      loadEvents();
+      // Select the new event
+      if (response.data.event_id) {
+        const newEventResponse = await axios.get(`/api/holiday/events/${response.data.event_id}`);
+        setSelectedEvent(newEventResponse.data.event);
+      }
+    } catch (error) {
+      console.error('Error duplicating event:', error);
+      showToast('error', 'Failed to duplicate event', 'Please try again');
+    }
+  };
+
+  // Handle dropping a recipe from the Recipes page
+  const handleDropRecipe = async (category: string, e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverCategory(null);
+
+    if (!selectedEvent) return;
+
+    try {
+      // Get recipe data from drag event or context
+      let recipeData;
+      const jsonData = e.dataTransfer.getData('application/json');
+      if (jsonData) {
+        recipeData = JSON.parse(jsonData);
+      } else if (draggedRecipe) {
+        recipeData = draggedRecipe.meal;
+      }
+
+      if (!recipeData) return;
+
+      // Map meal_type to holiday category
+      let dishCategory = category;
+      if (category === 'drop-zone') {
+        // Default category based on meal type
+        switch (recipeData.meal_type) {
+          case 'breakfast':
+          case 'snack':
+            dishCategory = 'appetizer';
+            break;
+          case 'dinner':
+          case 'lunch':
+          default:
+            dishCategory = 'main';
+        }
+      }
+
+      // Add the recipe as a dish to the holiday event
+      await axios.post(`/api/holiday/events/${selectedEvent.id}/dishes`, {
+        meal_id: recipeData.id,
+        custom_name: recipeData.name,
+        category: dishCategory,
+        servings: recipeData.servings || selectedEvent.guest_count,
+        prep_time_minutes: Math.floor((recipeData.cook_time_minutes || 60) * 0.3),
+        cook_time_minutes: Math.floor((recipeData.cook_time_minutes || 60) * 0.7),
+        can_make_ahead: false,
+        make_ahead_days: 0,
+        notes: recipeData.ingredients ? `From recipe: ${recipeData.name}` : ''
+      });
+
+      // Clear the dragged recipe
+      setDraggedRecipe(null);
+
+      // Show success toast
+      showToast('success', `Added "${recipeData.name}"`, `Added to ${dishCategory}s in your holiday menu`);
+
+      // Reload event details
+      loadEventDetails(selectedEvent.id);
+      loadEvents();
+
+    } catch (error) {
+      console.error('Error adding dropped recipe:', error);
+      showToast('error', 'Failed to add recipe', 'Please try again');
+    }
+  };
+
+  const handleDragOver = (category: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setDragOverCategory(category);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverCategory(null);
+  };
+
   const getEventIcon = (type: string) => {
     switch (type) {
       case 'thanksgiving': return <PartyPopper className="h-5 w-5 text-orange-500" />;
@@ -441,16 +552,26 @@ const HolidayPlannerPage: React.FC = () => {
                         </CardDescription>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteEvent(event.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => duplicateEvent(event.id, e)}
+                        title="Duplicate event"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteEvent(event.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -504,7 +625,7 @@ const HolidayPlannerPage: React.FC = () => {
                       <div>
                         <CardTitle>Menu</CardTitle>
                         <CardDescription>
-                          {dishes.length} dishes planned
+                          {dishes.length} dishes planned • Drag recipes here from the Recipes page
                         </CardDescription>
                       </div>
                       <div className="flex gap-2">
@@ -520,53 +641,100 @@ const HolidayPlannerPage: React.FC = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {/* Main drop zone when empty or to add to any category */}
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-4 mb-4 transition-all ${
+                        dragOverCategory === 'drop-zone'
+                          ? 'border-primary bg-primary/10 scale-[1.02]'
+                          : 'border-muted-foreground/20 hover:border-muted-foreground/40'
+                      }`}
+                      onDrop={(e) => handleDropRecipe('drop-zone', e)}
+                      onDragOver={(e) => handleDragOver('drop-zone', e)}
+                      onDragLeave={handleDragLeave}
+                    >
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <GripVertical className="h-5 w-5" />
+                        <span className="text-sm font-medium">
+                          {dragOverCategory === 'drop-zone' ? 'Drop recipe here!' : 'Drag & drop recipes from your Recipe Book'}
+                        </span>
+                      </div>
+                    </div>
+
                     {dishes.length === 0 ? (
                       <p className="text-center py-6 text-muted-foreground">
-                        No dishes yet. Add one or apply a template!
+                        No dishes yet. Add one, apply a template, or drag recipes from your Recipe Book!
                       </p>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {['main', 'side', 'appetizer', 'dessert', 'drink'].map(category => {
                           const categoryDishes = dishes.filter(d => d.category === category);
-                          if (categoryDishes.length === 0) return null;
 
                           return (
-                            <div key={category}>
-                              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mb-2">
+                            <div
+                              key={category}
+                              className={`rounded-lg transition-all ${
+                                dragOverCategory === category
+                                  ? 'bg-primary/5 ring-2 ring-primary/50'
+                                  : ''
+                              }`}
+                              onDrop={(e) => handleDropRecipe(category, e)}
+                              onDragOver={(e) => handleDragOver(category, e)}
+                              onDragLeave={handleDragLeave}
+                            >
+                              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
                                 {category}s
+                                <span className="text-xs font-normal normal-case text-muted-foreground/60">
+                                  ({categoryDishes.length})
+                                </span>
+                                {dragOverCategory === category && (
+                                  <span className="text-xs text-primary animate-pulse">
+                                    Drop to add as {category}
+                                  </span>
+                                )}
                               </h4>
-                              <div className="space-y-2">
-                                {categoryDishes.map(dish => (
-                                  <div
-                                    key={dish.id}
-                                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50"
-                                  >
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium">
-                                          {dish.custom_name || dish.meal_name}
-                                        </span>
-                                        {dish.can_make_ahead && (
-                                          <Badge variant="secondary" className="text-xs">
-                                            Make ahead
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <div className="text-sm text-muted-foreground mt-1">
-                                        {dish.prep_time_minutes}m prep + {dish.cook_time_minutes}m cook
-                                        {dish.assigned_to && ` • ${dish.assigned_to}`}
-                                      </div>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => deleteDish(dish.id)}
+                              {categoryDishes.length > 0 ? (
+                                <div className="space-y-2">
+                                  {categoryDishes.map(dish => (
+                                    <div
+                                      key={dish.id}
+                                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 bg-background"
                                     >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium">
+                                            {dish.custom_name || dish.meal_name}
+                                          </span>
+                                          {dish.can_make_ahead && (
+                                            <Badge variant="secondary" className="text-xs">
+                                              Make ahead
+                                            </Badge>
+                                          )}
+                                          {dish.meal_id && (
+                                            <Badge variant="outline" className="text-xs">
+                                              From recipes
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground mt-1">
+                                          {dish.prep_time_minutes}m prep + {dish.cook_time_minutes}m cook
+                                          {dish.assigned_to && ` • ${dish.assigned_to}`}
+                                        </div>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => deleteDish(dish.id)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="border border-dashed rounded-lg p-3 text-center text-muted-foreground/50 text-sm">
+                                  Drop recipes here to add as {category}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -917,6 +1085,17 @@ const HolidayPlannerPage: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Toast notification */}
+      {toast.show && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          description={toast.description}
+          duration={3000}
+          onDismiss={() => setToast({ ...toast, show: false })}
+        />
+      )}
     </div>
   );
 };

@@ -337,6 +337,76 @@ def delete_event(event_id):
         return jsonify({'success': True, 'message': 'Event deleted'})
 
 
+@holiday_bp.route('/events/<int:event_id>/duplicate', methods=['POST'])
+@login_required
+def duplicate_event(event_id):
+    """Duplicate a holiday event with all its dishes and guests"""
+    user_id = get_current_user_id()
+    data = request.json or {}
+
+    with db_connection(db) as conn:
+        cursor = conn.cursor()
+
+        # Get original event
+        cursor.execute('''
+            SELECT name, event_type, event_date, serving_time, guest_count, notes
+            FROM holiday_events
+            WHERE id = ? AND user_id = ?
+        ''', (event_id, user_id))
+
+        event_row = cursor.fetchone()
+        if not event_row:
+            return jsonify({'error': 'Event not found'}), 404
+
+        # Create new event with modified name and date
+        new_name = data.get('name', f"{event_row[0]} (Copy)")
+        new_date = data.get('event_date', event_row[2])
+
+        cursor.execute('''
+            INSERT INTO holiday_events
+            (user_id, name, event_type, event_date, serving_time, guest_count, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            user_id,
+            new_name,
+            event_row[1],
+            new_date,
+            event_row[3],
+            event_row[4],
+            event_row[5]
+        ))
+
+        new_event_id = cursor.lastrowid
+
+        # Duplicate dishes
+        cursor.execute('''
+            INSERT INTO holiday_dishes
+            (event_id, meal_id, custom_name, category, servings, prep_time_minutes,
+             cook_time_minutes, can_make_ahead, make_ahead_days, assigned_to, notes)
+            SELECT ?, meal_id, custom_name, category, servings, prep_time_minutes,
+                   cook_time_minutes, can_make_ahead, make_ahead_days, NULL, notes
+            FROM holiday_dishes
+            WHERE event_id = ?
+        ''', (new_event_id, event_id))
+
+        # Duplicate guests (but clear RSVP status)
+        cursor.execute('''
+            INSERT INTO holiday_guests
+            (event_id, name, email, dietary_restrictions, bringing_dish, rsvp_status, notes)
+            SELECT ?, name, email, dietary_restrictions, bringing_dish, 'pending', notes
+            FROM holiday_guests
+            WHERE event_id = ?
+        ''', (new_event_id, event_id))
+
+        conn.commit()
+
+        return jsonify({
+            'success': True,
+            'event_id': new_event_id,
+            'message': 'Event duplicated successfully'
+        })
+
+
 # ============== DISH MANAGEMENT ==============
 
 @holiday_bp.route('/events/<int:event_id>/dishes', methods=['POST'])

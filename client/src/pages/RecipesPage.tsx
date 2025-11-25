@@ -624,6 +624,31 @@ const RecipesPage: React.FC = () => {
                       setDraggedRecipe({ meal, sourceType: 'recipes' });
                       e.dataTransfer.effectAllowed = 'copy';
                       e.dataTransfer.setData('application/json', JSON.stringify(meal));
+
+                      // Create custom drag image with recipe preview
+                      const dragPreview = document.createElement('div');
+                      dragPreview.style.cssText = `
+                        position: absolute;
+                        top: -1000px;
+                        width: 200px;
+                        padding: 12px;
+                        background: white;
+                        border-radius: 8px;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                        font-family: system-ui;
+                      `;
+
+                      dragPreview.innerHTML = `
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                          ${meal.image_url ? `<img src="${meal.image_url}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px;" />` : ''}
+                          <div style="font-weight: 600; font-size: 14px; color: #1f2937;">${meal.name}</div>
+                          <div style="font-size: 12px; color: #6b7280;">${meal.cook_time_minutes || 30} min • ${meal.servings || 4} servings</div>
+                        </div>
+                      `;
+
+                      document.body.appendChild(dragPreview);
+                      e.dataTransfer.setDragImage(dragPreview, 100, 50);
+                      setTimeout(() => document.body.removeChild(dragPreview), 0);
                     }}
                     onDragEnd={() => {
                       setDraggedRecipe(null);

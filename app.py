@@ -828,8 +828,8 @@ def parse_recipe_from_image():
 
             import uuid
             filename = f"{uuid.uuid4()}{ext}"
-            filepath = os.path.join('static/recipe_images', filename)
-            os.makedirs('static/recipe_images', exist_ok=True)
+            filepath = os.path.join('templates/static/recipe_images', filename)
+            os.makedirs('templates/static/recipe_images', exist_ok=True)
 
             # Save with PIL for optimization
             from PIL import Image

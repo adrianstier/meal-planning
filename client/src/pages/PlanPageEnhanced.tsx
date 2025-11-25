@@ -1,9 +1,56 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { format, startOfWeek, addDays, parseISO, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart, LayoutGrid, Minimize2, BookOpen, Minus, Users, Trash2 } from 'lucide-react';
+import { format, startOfWeek, addDays, parseISO, isToday, isTomorrow, isYesterday } from 'date-fns';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Sparkles,
+  ShoppingCart,
+  LayoutGrid,
+  Minimize2,
+  BookOpen,
+  Minus,
+  Users,
+  Trash2,
+  Clock,
+  Baby,
+  Package,
+  Utensils,
+  MoreVertical,
+  Calendar,
+  TrendingUp,
+  Sun,
+  Coffee,
+  Pizza,
+  ChefHat,
+  Cookie,
+  Copy,
+  Edit,
+  Check,
+  AlertCircle,
+  Timer,
+  Flame,
+  Filter,
+  Grid3x3,
+  List,
+  Download,
+  Upload,
+  Star,
+  Activity
+} from 'lucide-react';
 import { scaleIngredients, calculateServingMultiplier } from '../utils/ingredientScaler';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Progress } from '../components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +59,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import { cn } from '../lib/utils';
+import '../styles/meal-plan-enhanced.css';
 import { useWeekPlan, useGenerateWeekPlan, useApplyGeneratedPlan, useDeletePlanItem, useAddPlanItem, useClearWeekPlan } from '../hooks/usePlan';
 import { useGenerateShoppingList } from '../hooks/useShopping';
 import { useMeals } from '../hooks/useMeals';
@@ -28,6 +77,55 @@ import type { MealPlan } from '../types/api';
 
 type ViewMode = 'week' | 'list' | 'compact';
 type MealDisplayMode = 'dinners' | '3-meals' | 'all';
+
+// Meal type configurations with colors and icons for enhanced UX
+const mealTypeConfig = {
+  breakfast: {
+    label: 'Breakfast',
+    icon: Coffee,
+    color: 'from-orange-400 to-yellow-400',
+    bgColor: 'bg-gradient-to-br from-orange-50 to-yellow-50',
+    borderColor: 'border-orange-200',
+    textColor: 'text-orange-700',
+    time: '7:00 AM'
+  },
+  morning_snack: {
+    label: 'Morning Snack',
+    icon: Cookie,
+    color: 'from-green-400 to-emerald-400',
+    bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50',
+    borderColor: 'border-green-200',
+    textColor: 'text-green-700',
+    time: '10:00 AM'
+  },
+  lunch: {
+    label: 'Lunch',
+    icon: Pizza,
+    color: 'from-blue-400 to-cyan-400',
+    bgColor: 'bg-gradient-to-br from-blue-50 to-cyan-50',
+    borderColor: 'border-blue-200',
+    textColor: 'text-blue-700',
+    time: '12:00 PM'
+  },
+  afternoon_snack: {
+    label: 'Afternoon Snack',
+    icon: Cookie,
+    color: 'from-teal-400 to-green-400',
+    bgColor: 'bg-gradient-to-br from-teal-50 to-green-50',
+    borderColor: 'border-teal-200',
+    textColor: 'text-teal-700',
+    time: '3:00 PM'
+  },
+  dinner: {
+    label: 'Dinner',
+    icon: ChefHat,
+    color: 'from-purple-400 to-pink-400',
+    bgColor: 'bg-gradient-to-br from-purple-50 to-pink-50',
+    borderColor: 'border-purple-200',
+    textColor: 'text-purple-700',
+    time: '6:00 PM'
+  }
+};
 
 const PlanPageEnhanced: React.FC = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -69,6 +167,11 @@ const PlanPageEnhanced: React.FC = () => {
   // Undo/Redo state
   const [history, setHistory] = useState<any[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+
+  // Enhanced UX states
+  const [showStats, setShowStats] = useState(true);
+  const [copiedMeal, setCopiedMeal] = useState<MealPlan | null>(null);
+  const [filterMealType, setFilterMealType] = useState<string>('all');
 
   const { data: weekPlan, isLoading, error } = useWeekPlan(currentWeekStart);
   const { data: meals } = useMeals();
@@ -160,7 +263,7 @@ const PlanPageEnhanced: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [historyIndex, history, currentWeekStart]);
 
-  // Generate 7 days starting from currentWeekStart
+  // Generate 7 days starting from currentWeekStart with enhanced properties
   const weekDays = useMemo(() => {
     const start = parseISO(currentWeekStart);
     return Array.from({ length: 7 }, (_, i) => {
@@ -171,6 +274,10 @@ const PlanPageEnhanced: React.FC = () => {
         dayShort: format(date, 'EEE'),
         dayNum: format(date, 'd'),
         month: format(date, 'MMM'),
+        isToday: isToday(date),
+        isTomorrow: isTomorrow(date),
+        isYesterday: isYesterday(date),
+        isPast: date < new Date() && !isToday(date),
       };
     });
   }, [currentWeekStart]);
@@ -218,6 +325,42 @@ const PlanPageEnhanced: React.FC = () => {
       new Set(meals.map(m => m.cuisine).filter(Boolean))
     ).sort();
   }, [meals]);
+
+  // Calculate weekly statistics for enhanced dashboard
+  const weeklyStats = useMemo(() => {
+    if (!weekPlan) return {
+      totalMeals: 0,
+      totalCookTime: 0,
+      plannedDays: 0,
+      completionRate: 0,
+      quickMeals: 0,
+      kidFriendly: 0,
+      bentoBoxes: 0,
+      averageCookTime: 0
+    };
+
+    const stats = {
+      totalMeals: weekPlan.length,
+      totalCookTime: weekPlan.reduce((sum, meal) => sum + (meal.cook_time_minutes || 0), 0),
+      plannedDays: new Set(weekPlan.map(m => m.plan_date)).size,
+      completionRate: 0,
+      quickMeals: weekPlan.filter(m => m.cook_time_minutes && m.cook_time_minutes <= 30).length,
+      kidFriendly: weekPlan.filter(m => m.meal_tags?.includes('kid-friendly')).length,
+      bentoBoxes: weekPlan.filter(m => m.meal_tags?.includes('bento')).length,
+      averageCookTime: 0
+    };
+
+    // Calculate completion rate (meals planned vs possible meals)
+    const possibleMeals = 7 * 3; // 7 days * 3 main meals
+    stats.completionRate = Math.round((stats.totalMeals / possibleMeals) * 100);
+
+    // Calculate average cook time
+    if (stats.totalMeals > 0) {
+      stats.averageCookTime = Math.round(stats.totalCookTime / stats.totalMeals);
+    }
+
+    return stats;
+  }, [weekPlan]);
 
   // Days with meals for compact view
   const daysWithMeals = useMemo(() => {
@@ -311,8 +454,27 @@ const PlanPageEnhanced: React.FC = () => {
   };
 
   const handleCopyMeal = (meal: MealPlan) => {
-    // TODO: Show dialog to select target date
-    alert('Copy meal feature - select a date to copy to');
+    setCopiedMeal(meal);
+    // Show toast notification
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-slide-up';
+    toast.textContent = 'Meal copied! Click any empty slot to paste.';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  };
+
+  const handlePasteMeal = async (date: string, mealType: string) => {
+    if (!copiedMeal) return;
+    try {
+      await addPlanItem.mutateAsync({
+        meal_id: copiedMeal.meal_id,
+        plan_date: date,
+        meal_type: mealType as any
+      });
+      setCopiedMeal(null);
+    } catch (error) {
+      console.error('Failed to paste meal:', error);
+    }
   };
 
   const handleMoveMeal = (meal: MealPlan) => {
@@ -335,6 +497,60 @@ const PlanPageEnhanced: React.FC = () => {
     } catch (error) {
       console.error('Failed to add suggested meal:', error);
     }
+  };
+
+  // Enhanced badge renderer with better colors and icons
+  const renderEnhancedBadges = (meal: any) => {
+    const badges = [];
+
+    if (meal.cook_time_minutes) {
+      const timeColor = meal.cook_time_minutes <= 20 ? 'bg-green-100 text-green-700' :
+                       meal.cook_time_minutes <= 30 ? 'bg-yellow-100 text-yellow-700' :
+                       'bg-orange-100 text-orange-700';
+      badges.push(
+        <Badge key="time" className={cn("gap-1", timeColor)}>
+          <Timer className="h-3 w-3" />
+          {meal.cook_time_minutes}m
+        </Badge>
+      );
+    }
+
+    if (meal.meal_tags?.includes('kid-friendly')) {
+      badges.push(
+        <Badge key="kid" className="bg-blue-100 text-blue-700 gap-1">
+          <Baby className="h-3 w-3" />
+          Kid
+        </Badge>
+      );
+    }
+
+    if (meal.meal_tags?.includes('bento')) {
+      badges.push(
+        <Badge key="bento" className="bg-purple-100 text-purple-700 gap-1">
+          <Package className="h-3 w-3" />
+          Bento
+        </Badge>
+      );
+    }
+
+    if (meal.meal_tags?.includes('leftovers')) {
+      badges.push(
+        <Badge key="leftovers" className="bg-indigo-100 text-indigo-700 gap-1">
+          <Utensils className="h-3 w-3" />
+          Leftover
+        </Badge>
+      );
+    }
+
+    if (meal.difficulty === 'easy') {
+      badges.push(
+        <Badge key="easy" className="bg-green-100 text-green-700">
+          Easy
+        </Badge>
+      );
+    }
+
+    return badges;
   };
 
   const handleGenerateWeek = async () => {
@@ -386,23 +602,50 @@ const PlanPageEnhanced: React.FC = () => {
   };
 
   if (isLoading) {
-    return <PlanSkeleton />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="container py-8">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Loading Your Meal Plan...
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center h-64 gap-4">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-200 border-t-purple-600"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Utensils className="h-6 w-6 text-purple-600 animate-pulse" />
+                  </div>
+                </div>
+                <p className="text-muted-foreground animate-pulse">Preparing your delicious week...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Weekly Meal Plan</CardTitle>
-            <CardDescription>Error loading meal plan</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-destructive">
-              Failed to load meal plan. Please try again.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50">
+        <div className="container py-8">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur border-red-200">
+            <CardHeader>
+              <CardTitle className="text-2xl text-red-600 flex items-center gap-2">
+                <AlertCircle className="h-6 w-6" />
+                Error Loading Meal Plan
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-red-600">
+                Failed to load your meal plan. Please try refreshing the page.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }

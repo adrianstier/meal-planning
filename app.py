@@ -19,6 +19,7 @@ from stripe_routes import stripe_bp
 from nutrition_routes import nutrition_bp
 from analytics_routes import analytics_bp
 from csa_routes import csa_bp
+from holiday_routes import holiday_bp
 import os
 from dotenv import load_dotenv
 import random
@@ -58,8 +59,15 @@ print("✅ Analytics dashboard routes registered at /api/analytics/*")
 app.register_blueprint(csa_bp)
 print("✅ CSA box management routes registered at /api/csa/*")
 
+app.register_blueprint(holiday_bp)
+print("✅ Holiday meal planning routes registered at /api/holiday/*")
+
 # Initialize database
 db = MealPlannerDB()
+
+# Initialize the db instance for holiday routes
+from holiday_routes import init_db as init_holiday_db
+init_holiday_db(db)
 
 # Track initialization errors for diagnostics
 recipe_parser_error = None

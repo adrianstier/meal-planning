@@ -1,0 +1,418 @@
+/* Enhanced Meal Plan Page Styles */
+
+/* Animations */
+@keyframes slide-down {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+/* Enhanced Day Cards */
+.day-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.day-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #8b5cf6, #3b82f6);
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.day-card:hover::before {
+  transform: translateY(0);
+}
+
+.day-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.day-card.today {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.day-card.today::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Meal Type Slots */
+.meal-slot {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.meal-slot:hover {
+  transform: scale(1.02);
+}
+
+.meal-slot.breakfast {
+  background: linear-gradient(135deg, #fed7aa 0%, #fef3c7 100%);
+}
+
+.meal-slot.lunch {
+  background: linear-gradient(135deg, #bfdbfe 0%, #cffafe 100%);
+}
+
+.meal-slot.dinner {
+  background: linear-gradient(135deg, #e9d5ff 0%, #fce7f3 100%);
+}
+
+.meal-slot.snack {
+  background: linear-gradient(135deg, #bbf7d0 0%, #d1fae5 100%);
+}
+
+/* Meal Cards within slots */
+.meal-item {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.meal-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.meal-item:hover::before {
+  opacity: 1;
+}
+
+.meal-item:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Badges with enhanced styles */
+.badge-time {
+  background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+  color: #92400e;
+  font-weight: 600;
+}
+
+.badge-kid {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.badge-bento {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+  color: #6b21a8;
+  font-weight: 600;
+}
+
+/* Action buttons */
+.action-button {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.action-button:hover::before {
+  opacity: 1;
+}
+
+.action-button:hover {
+  transform: scale(1.05);
+}
+
+.action-button:active {
+  transform: scale(0.98);
+}
+
+/* Statistics Dashboard */
+.stat-card {
+  transition: all 0.3s ease;
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+  transform: rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Week Navigation */
+.week-nav-button {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.week-nav-button:hover {
+  transform: scale(1.1);
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  color: white;
+}
+
+.week-nav-button:active {
+  transform: scale(0.95);
+}
+
+/* Generate Week Button */
+.generate-button {
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.generate-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+.generate-button:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.generate-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(139, 92, 246, 0.5);
+}
+
+/* Dropdown Menus */
+.dropdown-item {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.dropdown-item:hover {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+  padding-left: 20px;
+}
+
+/* Copy/Paste Indicator */
+.paste-zone {
+  border: 2px dashed #8b5cf6;
+  background: rgba(139, 92, 246, 0.05);
+  animation: pulse-glow 2s infinite;
+  cursor: pointer;
+}
+
+.paste-zone:hover {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: #7c3aed;
+}
+
+/* Toast Notifications */
+.toast-notification {
+  animation: slide-up 0.3s ease-out;
+  backdrop-filter: blur(10px);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(16, 185, 129, 0.9) 100%);
+}
+
+/* Loading Skeleton Enhancements */
+.skeleton-shimmer {
+  background: linear-gradient(90deg,
+    rgba(229, 231, 235, 0) 0%,
+    rgba(229, 231, 235, 0.5) 50%,
+    rgba(229, 231, 235, 0) 100%);
+  animation: shimmer 2s infinite;
+  position: absolute;
+  inset: 0;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Mobile Responsive Enhancements */
+@media (max-width: 768px) {
+  .day-card {
+    margin-bottom: 1rem;
+  }
+
+  .meal-slot {
+    padding: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 0.75rem;
+  }
+
+  .week-nav-button {
+    padding: 0.5rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .day-card {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb;
+  }
+
+  .meal-slot {
+    background: white !important;
+    border: 1px solid #e5e7eb;
+  }
+}
+
+/* Accessibility Enhancements */
+.focus-visible:focus {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+/* Dark mode support (if implemented) */
+@media (prefers-color-scheme: dark) {
+  .day-card {
+    background: rgba(17, 24, 39, 0.8);
+    border-color: rgba(75, 85, 99, 0.5);
+  }
+
+  .meal-slot.breakfast {
+    background: linear-gradient(135deg, rgba(254, 215, 170, 0.1) 0%, rgba(254, 243, 199, 0.1) 100%);
+  }
+
+  .meal-slot.lunch {
+    background: linear-gradient(135deg, rgba(191, 219, 254, 0.1) 0%, rgba(207, 250, 254, 0.1) 100%);
+  }
+
+  .meal-slot.dinner {
+    background: linear-gradient(135deg, rgba(233, 213, 255, 0.1) 0%, rgba(252, 231, 243, 0.1) 100%);
+  }
+
+  .meal-slot.snack {
+    background: linear-gradient(135deg, rgba(187, 247, 208, 0.1) 0%, rgba(209, 250, 229, 0.1) 100%);
+  }
+}

@@ -19,6 +19,7 @@ import ProfilePage from './pages/ProfilePage';
 import DiagnosticsPage from './pages/DiagnosticsPage';
 import PricingPage from './pages/PricingPage';
 import CSABoxPage from './pages/CSABoxPage';
+import HolidayPlannerPage from './pages/HolidayPlannerPage';
 import { errorLogger } from './utils/errorLogger';
 
 // Create a client
@@ -141,6 +142,13 @@ function AppContent() {
           <ProtectedRoute>
             <Layout>
               <DiagnosticsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/holiday" element={
+          <ProtectedRoute>
+            <Layout>
+              <HolidayPlannerPage />
             </Layout>
           </ProtectedRoute>
         } />

@@ -250,9 +250,8 @@ const RecipesPage: React.FC = () => {
         instructionsText = parsedData.instructions;
       }
 
-      setFormData({
-        ...formData,
-        name: parsedData.name || '',
+      const recipeToSave = {
+        name: parsedData.name || 'Untitled Recipe',
         meal_type: parsedData.meal_type || 'dinner',
         cook_time_minutes: parsedData.cook_time_minutes,
         servings: parsedData.servings,
@@ -262,8 +261,23 @@ const RecipesPage: React.FC = () => {
         instructions: instructionsText,
         image_url: parsedData.image_url,
         cuisine: parsedData.cuisine,
-      });
-      setAddDialogOpen(true);
+      };
+
+      // Auto-save the recipe to the database
+      try {
+        await createMeal.mutateAsync(recipeToSave);
+        alert(`✅ Recipe "${recipeToSave.name}" has been saved to your recipe book!`);
+      } catch (saveError) {
+        console.error('Failed to auto-save recipe:', saveError);
+        // If auto-save fails, fall back to showing the form for manual save
+        setFormData({
+          ...formData,
+          ...recipeToSave,
+        });
+        setAddDialogOpen(true);
+        alert('Recipe parsed successfully! Please review and save manually.');
+      }
+
       setSelectedImage(null);
       setImagePreview(null);
     } catch (error) {

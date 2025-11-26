@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Sparkles, Clock, Star, ChefHat } from 'lucide-react';
+import { Plus, Clock, Star } from 'lucide-react';
 import type { Meal, MealPlan } from '../../../types/api';
 import { cn } from '../../../lib/utils';
+import { getCuisineEmoji } from '../../../utils/cuisineColors';
 
 interface SmartDropZoneProps {
   mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner';
@@ -29,6 +30,7 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
   onDragLeave,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
 
   // Intelligent suggestions based on multiple factors
   const smartSuggestions = useMemo(() => {
@@ -97,67 +99,16 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
       return { meal, score };
     });
 
-    // Sort by score and return top 4
+    // Sort by score and return top suggestions
     return scoredMeals
       .sort((a, b) => b.score - a.score)
       .slice(0, 4)
       .map(s => s.meal);
   }, [availableMeals, mealType, dayOfWeek, weekPlan]);
 
-  const getMealTypeInfo = () => {
-    switch (mealType) {
-      case 'breakfast':
-        return {
-          emoji: '🥐',
-          label: 'Breakfast',
-          hint: 'Quick & energizing',
-          color: 'from-amber-500/10 to-orange-500/10',
-          borderColor: 'border-amber-500/30'
-        };
-      case 'morning_snack':
-        return {
-          emoji: '🍎',
-          label: 'Morning Snack',
-          hint: 'Light & healthy',
-          color: 'from-green-500/10 to-emerald-500/10',
-          borderColor: 'border-green-500/30'
-        };
-      case 'lunch':
-        return {
-          emoji: '🥗',
-          label: 'Lunch',
-          hint: 'Balanced & satisfying',
-          color: 'from-blue-500/10 to-cyan-500/10',
-          borderColor: 'border-blue-500/30'
-        };
-      case 'afternoon_snack':
-        return {
-          emoji: '🥨',
-          label: 'Afternoon Snack',
-          hint: 'Energy boost',
-          color: 'from-purple-500/10 to-pink-500/10',
-          borderColor: 'border-purple-500/30'
-        };
-      case 'dinner':
-        return {
-          emoji: '🍽️',
-          label: 'Dinner',
-          hint: 'Hearty & delicious',
-          color: 'from-rose-500/10 to-red-500/10',
-          borderColor: 'border-rose-500/30'
-        };
-      default:
-        return {
-          emoji: '🍴',
-          label: 'Meal',
-          hint: 'Plan something tasty',
-          color: 'from-gray-500/10 to-slate-500/10',
-          borderColor: 'border-gray-500/30'
-        };
-    }
-  };
-
-  const mealInfo = getMealTypeInfo();
+  // Get the best single suggestion
+  const topSuggestion = smartSuggestions[0];
+  const additionalSuggestions = smartSuggestions.slice(1);
 
   const handleDragOverInternal = (e: React.DragEvent) => {
     e.preventDefault();
@@ -179,11 +130,11 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
     <div
       className={cn(
         "relative rounded-lg transition-all duration-200",
-        "border border-dashed",
+        "border-2 border-dashed",
         isDragOver
-          ? "border-primary/50 bg-primary/5 shadow-sm"
-          : "border-muted-foreground/30 hover:border-primary/40 hover:bg-muted/20",
-        "min-h-[120px]"
+          ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50",
+        "min-h-[80px]"
       )}
       onDrop={handleDropInternal}
       onDragOver={handleDragOverInternal}
@@ -191,86 +142,148 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
     >
       {/* Drag overlay */}
       {isDragOver && (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center z-10 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 to-primary/5 rounded-lg flex items-center justify-center z-10 pointer-events-none">
           <div className="text-center">
-            <ChefHat className="h-10 w-10 mx-auto mb-2 text-primary animate-bounce" />
-            <p className="text-sm font-semibold text-primary">Drop to add</p>
+            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-2">
+              <Plus className="h-6 w-6 text-primary" />
+            </div>
+            <p className="text-sm font-semibold text-primary">Drop here</p>
           </div>
         </div>
       )}
 
-      <div className="p-3 space-y-2.5">
-
-        {/* Smart Suggestions */}
-        {smartSuggestions.length > 0 && onSelectSuggestion && (
+      <div className="p-3">
+        {/* Single Best Suggestion - Clean & Focused */}
+        {topSuggestion && onSelectSuggestion && !showAllSuggestions ? (
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Sparkles className="h-3 w-3 text-amber-500" />
-              <span className="font-medium">Suggestions</span>
+            <button
+              className={cn(
+                "w-full group relative overflow-hidden rounded-lg p-3 text-left",
+                "bg-white border border-slate-200",
+                "hover:border-primary/50 hover:shadow-sm",
+                "transition-all duration-200"
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectSuggestion(topSuggestion.id);
+              }}
+            >
+              <div className="flex items-start gap-3">
+                {/* Cuisine indicator */}
+                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-base">
+                  {topSuggestion.cuisine ? getCuisineEmoji(topSuggestion.cuisine) : '🍽️'}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm text-slate-900 group-hover:text-primary transition-colors line-clamp-1">
+                    {topSuggestion.name}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                    {topSuggestion.cook_time_minutes && (
+                      <span className="flex items-center gap-0.5">
+                        <Clock className="h-3 w-3" />
+                        {topSuggestion.cook_time_minutes}m
+                      </span>
+                    )}
+                    {topSuggestion.kid_rating && topSuggestion.kid_rating >= 4 && (
+                      <span className="flex items-center gap-0.5 text-amber-600">
+                        <Star className="h-3 w-3 fill-current" />
+                        {topSuggestion.kid_rating}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick add indicator */}
+                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Plus className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                </div>
+              </div>
+            </button>
+
+            {/* More options link */}
+            <div className="flex items-center justify-between px-1">
+              {additionalSuggestions.length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAllSuggestions(true);
+                  }}
+                  className="text-xs text-slate-400 hover:text-primary transition-colors"
+                >
+                  +{additionalSuggestions.length} more
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAdd();
+                }}
+                className="text-xs text-slate-400 hover:text-primary transition-colors ml-auto"
+              >
+                Browse all
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+          </div>
+        ) : showAllSuggestions && smartSuggestions.length > 0 && onSelectSuggestion ? (
+          /* Expanded suggestions view */
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-slate-500">Suggestions</span>
+              <button
+                onClick={() => setShowAllSuggestions(false)}
+                className="text-xs text-slate-400 hover:text-primary"
+              >
+                Show less
+              </button>
+            </div>
+            <div className="space-y-1.5">
               {smartSuggestions.map((meal) => (
                 <button
                   key={meal.id}
-                  className={cn(
-                    "group/card relative overflow-hidden rounded-md p-2 text-left",
-                    "bg-card border border-border",
-                    "hover:border-primary/40 hover:shadow-sm",
-                    "transition-all duration-200",
-                    "min-h-[60px]"
-                  )}
+                  className="w-full flex items-center gap-2 p-2 rounded-md text-left bg-white border border-slate-100 hover:border-primary/30 hover:bg-slate-50 transition-all text-sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectSuggestion(meal.id);
                   }}
                 >
-                  <div className="space-y-1">
-                    {meal.cuisine && (
-                      <div className="text-[10px] font-medium text-muted-foreground">
-                        {meal.cuisine}
-                      </div>
-                    )}
-                    <div className="font-medium text-xs leading-tight line-clamp-2 group-hover/card:text-primary transition-colors">
-                      {meal.name}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      {meal.cook_time_minutes && meal.cook_time_minutes > 0 && (
-                        <div className="flex items-center gap-0.5">
-                          <Clock className="h-2.5 w-2.5" />
-                          <span>{meal.cook_time_minutes}m</span>
-                        </div>
-                      )}
-                      {meal.kid_rating && meal.kid_rating >= 4 && (
-                        <div className="flex items-center gap-0.5 text-amber-600">
-                          <Star className="h-2.5 w-2.5 fill-current" />
-                          <span>{meal.kid_rating}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <span className="flex-shrink-0 text-sm">
+                    {meal.cuisine ? getCuisineEmoji(meal.cuisine) : '🍽️'}
+                  </span>
+                  <span className="flex-1 truncate text-slate-700">{meal.name}</span>
+                  {meal.cook_time_minutes && (
+                    <span className="flex-shrink-0 text-xs text-slate-400">
+                      {meal.cook_time_minutes}m
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Empty state hint */}
-        {smartSuggestions.length === 0 && (
-          <div className="text-center py-4 text-muted-foreground">
-            <div className="mb-2 opacity-30">
-              <ChefHat className="h-8 w-8 mx-auto" />
-            </div>
-            <p className="text-xs mb-1">Drag a recipe here</p>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onAdd();
               }}
-              className="text-xs text-primary hover:underline font-medium"
+              className="w-full text-xs text-slate-400 hover:text-primary transition-colors pt-1"
             >
-              or browse recipes
+              Browse all recipes
             </button>
+          </div>
+        ) : (
+          /* Clean empty state */
+          <div
+            className="flex flex-col items-center justify-center py-4 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd();
+            }}
+          >
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-2 group-hover:bg-primary/10 transition-colors">
+              <Plus className="h-5 w-5 text-slate-400" />
+            </div>
+            <p className="text-xs text-slate-400">Add meal</p>
           </div>
         )}
       </div>

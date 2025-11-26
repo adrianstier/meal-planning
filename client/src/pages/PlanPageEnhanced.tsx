@@ -12,31 +12,15 @@ import {
   Minus,
   Users,
   Trash2,
-  Clock,
   Baby,
   Package,
   Utensils,
-  MoreVertical,
-  Calendar,
-  TrendingUp,
-  Sun,
   Coffee,
   Pizza,
   ChefHat,
   Cookie,
-  Copy,
-  Edit,
-  Check,
   AlertCircle,
-  Timer,
-  Flame,
-  Filter,
-  Grid3x3,
-  List,
-  Download,
-  Upload,
-  Star,
-  Activity
+  Timer
 } from 'lucide-react';
 import { scaleIngredients, calculateServingMultiplier } from '../utils/ingredientScaler';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -668,37 +652,79 @@ const PlanPageEnhanced: React.FC = () => {
     };
 
     const isTodayCard = isToday(parseISO(day.date));
+    const isPastDay = day.isPast;
+    const mealsPlanned = Object.values(dayMeals).flat().length;
 
     return (
       <div
         key={day.date}
-        className={`flex flex-col bg-white border transition-all ${
+        className={cn(
+          "group flex flex-col bg-white rounded-xl transition-all duration-200 overflow-hidden",
           isTodayCard
-            ? 'border-slate-300'
-            : 'border-slate-200'
-        }`}
+            ? "ring-2 ring-primary ring-offset-2 shadow-lg"
+            : isPastDay
+            ? "opacity-60 hover:opacity-90"
+            : "border border-slate-200 hover:border-slate-300 hover:shadow-md"
+        )}
       >
         {/* Day Header */}
-        <div className="px-4 py-3 border-b border-slate-100">
+        <div className={cn(
+          "px-4 py-3",
+          isTodayCard
+            ? "bg-gradient-to-r from-primary/10 to-primary/5"
+            : "bg-slate-50/80"
+        )}>
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">
-                {day.dayName}
-              </h3>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {day.month} {day.dayNum}
-              </p>
+            <div className="flex items-center gap-3">
+              {/* Date circle */}
+              <div className={cn(
+                "w-11 h-11 rounded-full flex flex-col items-center justify-center",
+                isTodayCard
+                  ? "bg-primary text-white"
+                  : "bg-white border border-slate-200"
+              )}>
+                <span className={cn(
+                  "text-lg font-bold leading-none",
+                  isTodayCard ? "text-white" : "text-slate-900"
+                )}>
+                  {day.dayNum}
+                </span>
+                <span className={cn(
+                  "text-[10px] uppercase tracking-wide",
+                  isTodayCard ? "text-white/80" : "text-slate-400"
+                )}>
+                  {day.month}
+                </span>
+              </div>
+              <div>
+                <h3 className={cn(
+                  "text-base font-semibold",
+                  isTodayCard ? "text-primary" : "text-slate-900"
+                )}>
+                  {day.dayName}
+                </h3>
+                {isTodayCard && (
+                  <span className="text-xs font-medium text-primary/70">
+                    Today
+                  </span>
+                )}
+              </div>
             </div>
-            {isTodayCard && (
-              <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-1 rounded">
-                Today
-              </span>
+            {/* Meal count indicator */}
+            {mealsPlanned > 0 && (
+              <div className="flex items-center gap-1 text-xs text-slate-500">
+                <div className={cn(
+                  "w-2 h-2 rounded-full",
+                  mealsPlanned >= 3 ? "bg-green-500" : mealsPlanned >= 1 ? "bg-amber-500" : "bg-slate-300"
+                )} />
+                <span>{mealsPlanned} meal{mealsPlanned !== 1 ? 's' : ''}</span>
+              </div>
             )}
           </div>
         </div>
 
         {/* Meals */}
-        <div className="flex-1 p-4 space-y-4">
+        <div className="flex-1 p-4 space-y-5">
           {/* Breakfast */}
           {shouldShowMeal('breakfast') && (
           <div
@@ -712,14 +738,17 @@ const PlanPageEnhanced: React.FC = () => {
               e.currentTarget.classList.remove('bg-primary/5', 'rounded-lg');
             }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Breakfast
-              </h4>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 rounded-full bg-amber-400" />
+                <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                  Breakfast
+                </h4>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 -mr-1"
+                className="h-6 w-6 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => handleAddMeal(day.date, 'breakfast')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -811,14 +840,17 @@ const PlanPageEnhanced: React.FC = () => {
               e.currentTarget.classList.remove('bg-primary/5', 'rounded-lg');
             }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Lunch
-              </h4>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 rounded-full bg-blue-400" />
+                <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                  Lunch
+                </h4>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 -mr-1"
+                className="h-6 w-6 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => handleAddMeal(day.date, 'lunch')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -910,14 +942,17 @@ const PlanPageEnhanced: React.FC = () => {
               e.currentTarget.classList.remove('bg-primary/5', 'rounded-lg');
             }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Dinner
-              </h4>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 rounded-full bg-violet-400" />
+                <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                  Dinner
+                </h4>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 -mr-1"
+                className="h-6 w-6 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => handleAddMeal(day.date, 'dinner')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -984,25 +1019,52 @@ const PlanPageEnhanced: React.FC = () => {
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
                   Weekly Meal Plan
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                  {format(parseISO(currentWeekStart), 'MMM d')} – {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
-                </p>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-xs sm:text-sm text-slate-600">
+                    {format(parseISO(currentWeekStart), 'MMM d')} – {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
+                  </p>
+                  {/* Week completion indicator */}
+                  {weeklyStats.totalMeals > 0 && (
+                    <div className="hidden sm:flex items-center gap-2 text-xs">
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-100">
+                        <div className="flex gap-0.5">
+                          {[...Array(7)].map((_, i) => {
+                            const dayDate = format(addDays(parseISO(currentWeekStart), i), 'yyyy-MM-dd');
+                            const dayHasMeals = mealsByDate[dayDate] && Object.values(mealsByDate[dayDate]).some(meals => (meals as any[]).length > 0);
+                            return (
+                              <div
+                                key={i}
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full transition-colors",
+                                  dayHasMeals ? "bg-green-500" : "bg-slate-300"
+                                )}
+                              />
+                            );
+                          })}
+                        </div>
+                        <span className="text-slate-600 font-medium">
+                          {weeklyStats.plannedDays}/7 days
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Week Navigation */}
-              <div className="flex items-center border border-slate-200 rounded-lg bg-white">
+              <div className="flex items-center border border-slate-200 rounded-lg bg-white shadow-sm">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={goToPreviousWeek}
-                  className="h-9 w-9"
+                  className="h-9 w-9 hover:bg-slate-100"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={goToThisWeek}
-                  className="h-9 px-3 text-sm font-medium"
+                  className="h-9 px-4 text-sm font-medium hover:bg-slate-100"
                 >
                   This Week
                 </Button>
@@ -1010,7 +1072,7 @@ const PlanPageEnhanced: React.FC = () => {
                   variant="ghost"
                   size="icon"
                   onClick={goToNextWeek}
-                  className="h-9 w-9"
+                  className="h-9 w-9 hover:bg-slate-100"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -1025,36 +1087,46 @@ const PlanPageEnhanced: React.FC = () => {
                   variant={recipeBrowserOpen ? "default" : "outline"}
                   onClick={() => setRecipeBrowserOpen(!recipeBrowserOpen)}
                   size="sm"
-                  className="h-9 min-h-[36px] hidden lg:flex"
+                  className={cn(
+                    "h-9 min-h-[36px] hidden lg:flex gap-1.5",
+                    recipeBrowserOpen && "shadow-sm"
+                  )}
                 >
-                  <BookOpen className="h-3.5 w-3.5 mr-1.5" />
+                  <BookOpen className="h-3.5 w-3.5" />
                   Recipes
                 </Button>
 
                 {/* Meal Display Toggle */}
-                <div className="flex items-center border border-slate-200 rounded-lg bg-white flex-shrink-0">
+                <div className="flex items-center border border-slate-200 rounded-lg bg-white shadow-sm flex-shrink-0">
                   <Button
                     variant={mealDisplayMode === 'dinners' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-8 px-2 sm:px-2.5 text-xs min-h-[32px]"
+                    className={cn(
+                      "h-8 px-3 text-xs min-h-[32px] rounded-r-none",
+                      mealDisplayMode === 'dinners' && "shadow-sm"
+                    )}
                     onClick={() => setMealDisplayMode('dinners')}
                   >
-                    <span className="hidden sm:inline">Dinners</span>
-                    <span className="sm:hidden">D</span>
+                    Dinners
                   </Button>
                   <Button
                     variant={mealDisplayMode === '3-meals' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-8 px-2 sm:px-2.5 text-xs min-h-[32px]"
+                    className={cn(
+                      "h-8 px-3 text-xs min-h-[32px] rounded-none border-x border-slate-100",
+                      mealDisplayMode === '3-meals' && "shadow-sm"
+                    )}
                     onClick={() => setMealDisplayMode('3-meals')}
                   >
-                    <span className="hidden sm:inline">3 Meals</span>
-                    <span className="sm:hidden">3M</span>
+                    3 Meals
                   </Button>
                   <Button
                     variant={mealDisplayMode === 'all' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-8 px-2 sm:px-2.5 text-xs min-h-[32px]"
+                    className={cn(
+                      "h-8 px-3 text-xs min-h-[32px] rounded-l-none",
+                      mealDisplayMode === 'all' && "shadow-sm"
+                    )}
                     onClick={() => setMealDisplayMode('all')}
                   >
                     All
@@ -1062,11 +1134,14 @@ const PlanPageEnhanced: React.FC = () => {
                 </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center border border-slate-200 rounded-lg bg-white flex-shrink-0">
+                <div className="flex items-center border border-slate-200 rounded-lg bg-white shadow-sm flex-shrink-0">
                   <Button
                     variant={viewMode === 'compact' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-8 w-8 p-0 min-h-[32px]"
+                    className={cn(
+                      "h-8 w-8 p-0 min-h-[32px] rounded-r-none",
+                      viewMode === 'compact' && "shadow-sm"
+                    )}
                     onClick={() => setViewMode('compact')}
                     title="Compact View"
                   >
@@ -1075,7 +1150,10 @@ const PlanPageEnhanced: React.FC = () => {
                   <Button
                     variant={viewMode === 'week' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-8 w-8 p-0 min-h-[32px]"
+                    className={cn(
+                      "h-8 w-8 p-0 min-h-[32px] rounded-l-none",
+                      viewMode === 'week' && "shadow-sm"
+                    )}
                     onClick={() => setViewMode('week')}
                     title="Grid View"
                   >
@@ -1087,13 +1165,12 @@ const PlanPageEnhanced: React.FC = () => {
               {/* Right: Actions */}
               <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1">
                 <Button
-                  variant="outline"
                   onClick={handleGenerateWeek}
                   disabled={generateWeekPlan.isPending}
                   size="sm"
-                  className="h-9 min-h-[36px] flex-shrink-0"
+                  className="h-9 min-h-[36px] flex-shrink-0 gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-sm"
                 >
-                  <Sparkles className="h-3.5 w-3.5 sm:mr-1.5" />
+                  <Sparkles className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{generateWeekPlan.isPending ? 'Generating...' : 'Generate'}</span>
                 </Button>
                 <Button
@@ -1101,19 +1178,19 @@ const PlanPageEnhanced: React.FC = () => {
                   onClick={handleGenerateShoppingList}
                   disabled={generateShoppingList.isPending}
                   size="sm"
-                  className="h-9 min-h-[36px] flex-shrink-0"
+                  className="h-9 min-h-[36px] flex-shrink-0 gap-1.5 shadow-sm hover:bg-slate-50"
                 >
-                  <ShoppingCart className="h-3.5 w-3.5 sm:mr-1.5" />
+                  <ShoppingCart className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{generateShoppingList.isPending ? 'Loading...' : 'Shop'}</span>
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={handleClearWeek}
                   disabled={!weekPlan || weekPlan.length === 0 || clearWeekPlan.isPending}
                   size="sm"
-                  className="h-9 min-h-[36px] flex-shrink-0"
+                  className="h-9 min-h-[36px] flex-shrink-0 gap-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50"
                 >
-                  <Trash2 className="h-3.5 w-3.5 sm:mr-1.5" />
+                  <Trash2 className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{clearWeekPlan.isPending ? 'Clearing...' : 'Clear'}</span>
                 </Button>
               </div>

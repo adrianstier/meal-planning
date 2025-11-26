@@ -88,6 +88,12 @@ const RecipeBrowserSidebar: React.FC<RecipeBrowserSidebarProps> = ({ meals, isOp
           </Button>
         </div>
 
+        {/* Drag instruction - prominent placement */}
+        <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
+          <GripVertical className="h-4 w-4 text-primary" />
+          <span className="text-xs font-medium text-primary">Drag recipes to add to your plan</span>
+        </div>
+
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -249,11 +255,10 @@ const RecipeBrowserSidebar: React.FC<RecipeBrowserSidebarProps> = ({ meals, isOp
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-3 border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white flex-shrink-0">
-        <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
-          <GripVertical className="h-3.5 w-3.5" />
-          <span>Drag recipes to add to your plan</span>
-        </div>
+      <div className="px-5 py-2.5 border-t border-slate-200 bg-slate-50/50 flex-shrink-0">
+        <p className="text-[11px] text-slate-400 text-center">
+          {filteredMeals.length} of {meals?.length || 0} recipes shown
+        </p>
       </div>
     </div>
   );

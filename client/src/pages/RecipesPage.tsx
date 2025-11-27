@@ -448,20 +448,20 @@ const RecipesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 max-w-[1800px] mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-4 sm:p-6 space-y-6 max-w-[1800px] mx-auto">
       {/* Header */}
-      <Card className="shadow-lg border-muted/40 transition-all duration-300 hover:shadow-xl">
+      <Card className="shadow-sm border-slate-200 bg-white rounded-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div className="space-y-1">
-              <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Recipes
+              <CardTitle className="text-2xl sm:text-3xl font-bold text-slate-900">
+                Recipe Collection
               </CardTitle>
-              <CardDescription className="text-base">Manage your recipe collection</CardDescription>
+              <CardDescription className="text-slate-500">{meals?.length || 0} recipes in your collection</CardDescription>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="transition-all duration-200 hover:scale-105 hover:shadow-lg bg-gradient-to-r from-primary to-primary/90 w-full sm:w-auto">
+                <Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-200 hover:shadow-xl transition-all duration-200 w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Recipe
                   <ChevronDown className="ml-2 h-4 w-4" />
@@ -573,32 +573,31 @@ const RecipesPage: React.FC = () => {
 
       {/* Recipes by Type */}
       <Tabs defaultValue="dinner" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 h-auto p-2 bg-muted/40">
-          <TabsTrigger value="breakfast" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5">
-            <span className="hidden sm:inline">🥐 Breakfast</span>
-            <span className="sm:hidden">🥐</span>
-            <span className="ml-1.5 font-semibold">({mealsByType.breakfast.length})</span>
+        <TabsList className="w-full flex flex-wrap justify-start gap-1.5 h-auto p-1.5 bg-slate-100 rounded-xl">
+          <TabsTrigger value="breakfast" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+            <span className="mr-1.5">🥐</span>
+            <span className="hidden sm:inline">Breakfast</span>
+            <span className="ml-1 text-xs opacity-75">({mealsByType.breakfast.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="lunch" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5">
-            <span className="hidden sm:inline">🥗 Lunch</span>
-            <span className="sm:hidden">🥗</span>
-            <span className="ml-1.5 font-semibold">({mealsByType.lunch.length})</span>
+          <TabsTrigger value="lunch" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+            <span className="mr-1.5">🥗</span>
+            <span className="hidden sm:inline">Lunch</span>
+            <span className="ml-1 text-xs opacity-75">({mealsByType.lunch.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="dinner" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5">
-            <span className="hidden sm:inline">🍽️ Dinner</span>
-            <span className="sm:hidden">🍽️</span>
-            <span className="ml-1.5 font-semibold">({mealsByType.dinner.length})</span>
+          <TabsTrigger value="dinner" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+            <span className="mr-1.5">🍽️</span>
+            <span className="hidden sm:inline">Dinner</span>
+            <span className="ml-1 text-xs opacity-75">({mealsByType.dinner.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="snack" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5">
-            <span className="hidden sm:inline">🍎 Snacks</span>
-            <span className="sm:hidden">🍎</span>
-            <span className="ml-1.5 font-semibold">({mealsByType.snack.length})</span>
+          <TabsTrigger value="snack" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+            <span className="mr-1.5">🍎</span>
+            <span className="hidden sm:inline">Snacks</span>
+            <span className="ml-1 text-xs opacity-75">({mealsByType.snack.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="favorites" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 transition-all duration-200 py-2.5 col-span-2 sm:col-span-1">
-            <Heart className="h-4 w-4 mr-1.5 fill-red-500 text-red-500" />
+          <TabsTrigger value="favorites" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+            <Heart className="h-4 w-4 mr-1.5 fill-red-400 text-red-400" />
             <span className="hidden sm:inline">Favorites</span>
-            <span className="sm:hidden">Favs</span>
-            <span className="ml-1.5 font-semibold">({mealsByType.favorites.length})</span>
+            <span className="ml-1 text-xs opacity-75">({mealsByType.favorites.length})</span>
           </TabsTrigger>
         </TabsList>
 
@@ -653,18 +652,18 @@ const RecipesPage: React.FC = () => {
                     onDragEnd={() => {
                       setDraggedRecipe(null);
                     }}
-                    className="flex flex-col cursor-grab active:cursor-grabbing hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden border-muted/40 shadow-md"
+                    className="group flex flex-col cursor-grab active:cursor-grabbing hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden border-slate-200 bg-white rounded-xl"
                     onClick={() => {
                       setSelectedMeal(meal);
                       setViewDialogOpen(true);
                     }}
                   >
-                    <div className="aspect-video w-full overflow-hidden bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center relative group">
+                    <div className="aspect-video w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center relative">
                       {meal.image_url ? (
                         <img
                           src={meal.image_url}
                           alt={meal.name}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           onError={(e) => {
                             // Hide broken image, show placeholder instead
                             e.currentTarget.style.display = 'none';
@@ -679,10 +678,24 @@ const RecipesPage: React.FC = () => {
                         </svg>
                         <span className="text-xs opacity-60">No image</span>
                       </div>
+                      {/* Floating favorite button */}
+                      <button
+                        className="absolute top-2 right-2 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:scale-110 z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleFavorite(meal);
+                        }}
+                      >
+                        <Heart
+                          className={`h-4 w-4 ${
+                            meal.is_favorite ? 'fill-red-500 text-red-500' : 'text-slate-600'
+                          }`}
+                        />
+                      </button>
                       {/* Hover overlay for drag hint */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4 pointer-events-none">
                         <span className="text-white text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
-                          Click to view • Drag to plan
+                          Drag to plan
                         </span>
                       </div>
                     </div>

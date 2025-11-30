@@ -938,8 +938,7 @@ def parse_recipe_from_image():
 
             import uuid
             filename = f"{uuid.uuid4()}{ext}"
-            filepath = os.path.join('templates/static/recipe_images', filename)
-            os.makedirs('templates/static/recipe_images', exist_ok=True)
+            filepath = os.path.join(RECIPE_IMAGE_FOLDER, filename)
 
             # Save with PIL for optimization
             from PIL import Image
@@ -962,7 +961,7 @@ def parse_recipe_from_image():
                 img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
 
             img.save(filepath, optimize=True, quality=85)
-            parsed['image_url'] = f"/static/recipe_images/{filename}"
+            parsed['image_url'] = f"/recipe-images/{filename}"
 
         return jsonify({'success': True, 'data': parsed, 'source': 'ai_vision'})
     except Exception as e:

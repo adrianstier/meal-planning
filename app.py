@@ -430,6 +430,27 @@ def debug_reset_admin():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/debug/init-db', methods=['POST'])
+def debug_init_db():
+    """Debug endpoint to fully initialize database"""
+    try:
+        results = {}
+
+        # Initialize base database schema
+        db.initialize_database()
+        results['base_schema'] = 'success'
+
+        # Run users migration
+        from database.migrations.add_users_and_auth import migrate as users_migrate
+        users_migrate(db.db_path)
+        results['users_table'] = 'success'
+
+        return jsonify({'success': True, 'results': results})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+
 @app.route('/api/debug/check-admin', methods=['GET'])
 def debug_check_admin():
     """Debug endpoint to check admin user exists"""
@@ -4488,9 +4509,23 @@ def cleanup_duplicates():
 
 def init_database():
     """Initialize database and run migrations - called on module load for gunicorn"""
-    # Initialize database if it doesn't exist
-    if not os.path.exists(db.db_path):
-        print("📊 Initializing database...")
+    print("🔄 init_database() starting...")
+
+    # Always ensure base schema exists
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='meals'")
+        if not cursor.fetchone():
+            print("📊 Initializing database schema...")
+            conn.close()
+            db.initialize_database()
+        else:
+            conn.close()
+            print("✅ Base schema exists")
+    except Exception as e:
+        print(f"⚠️  Database check failed: {e}")
+        print("📊 Attempting to initialize database...")
         db.initialize_database()
 
     # Run migration for users table if needed
@@ -4500,20 +4535,38 @@ def init_database():
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
         if not cursor.fetchone():
             print("🔄 Running users table migration...")
+            conn.close()
             from database.migrations.add_users_and_auth import migrate as users_migrate
             users_migrate(db.db_path)
             print("✅ Users table created!")
         else:
-            print("✅ Users table already exists")
-            # Ensure admin password is synced to known value on Railway
-            print("🔄 Syncing admin password...")
-            from database.migrations.reset_admin_password import reset_admin_password
-            reset_admin_password(db_path=db.db_path)
-        conn.close()
+            # Check if admin user exists
+            cursor.execute("SELECT id FROM users WHERE username = 'admin'")
+            if not cursor.fetchone():
+                print("🔄 Admin user missing, creating...")
+                conn.close()
+                from database.migrations.add_users_and_auth import migrate as users_migrate
+                # Drop and recreate users table to get admin
+                conn2 = db.connect()
+                cursor2 = conn2.cursor()
+                cursor2.execute("DROP TABLE IF EXISTS users")
+                conn2.commit()
+                conn2.close()
+                users_migrate(db.db_path)
+                print("✅ Admin user created!")
+            else:
+                conn.close()
+                print("✅ Users table and admin exist")
+                # Ensure admin password is synced to known value on Railway
+                print("🔄 Syncing admin password...")
+                from database.migrations.reset_admin_password import reset_admin_password
+                reset_admin_password(db_path=db.db_path)
     except Exception as e:
         print(f"⚠️  Users migration check: {e}")
         import traceback
         traceback.print_exc()
+
+    print("✅ init_database() complete")
 
 # Run database initialization on module load (for gunicorn)
 init_database()

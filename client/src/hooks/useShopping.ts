@@ -67,3 +67,14 @@ export const useClearPurchased = () => {
     },
   });
 };
+
+export const useClearAllShopping = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => shoppingApi.clearAll(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shopping'] });
+    },
+  });
+};

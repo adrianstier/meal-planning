@@ -187,6 +187,7 @@ export const shoppingApi = {
   delete: (id: number) => api.delete(`/api/shopping/${id}`),
   togglePurchased: (id: number) => api.post(`/api/shopping/${id}/toggle`),
   clearPurchased: () => api.delete('/api/shopping/purchased'),
+  clearAll: () => api.delete('/api/shopping/all'),
   generateFromPlan: (startDate: string, endDate: string) =>
     api.post<ShoppingItem[]>('/api/shopping/generate', { start_date: startDate, end_date: endDate }),
 };

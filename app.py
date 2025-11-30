@@ -1225,6 +1225,24 @@ def clear_purchased_items():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/shopping/all', methods=['DELETE'])
+@login_required
+def clear_all_shopping_items():
+    """Delete all shopping items"""
+    try:
+        user_id = get_current_user_id()
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM shopping_items WHERE user_id = ?", (user_id,))
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': f'All {deleted_count} items cleared'})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/shopping/generate', methods=['POST'])
 @login_required
 def generate_shopping_from_plan():

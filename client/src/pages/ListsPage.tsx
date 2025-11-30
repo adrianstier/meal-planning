@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
-import { useShoppingItems, useAddShoppingItem, useToggleShoppingItem, useDeleteShoppingItem, useClearPurchased } from '../hooks/useShopping';
+import { useShoppingItems, useAddShoppingItem, useToggleShoppingItem, useDeleteShoppingItem, useClearPurchased, useClearAllShopping } from '../hooks/useShopping';
 
 const ListsPage: React.FC = () => {
   const [newItem, setNewItem] = useState('');
@@ -16,6 +16,7 @@ const ListsPage: React.FC = () => {
   const toggleItem = useToggleShoppingItem();
   const deleteItem = useDeleteShoppingItem();
   const clearPurchased = useClearPurchased();
+  const clearAll = useClearAllShopping();
 
   const handleAddItem = async () => {
     if (!newItem.trim()) return;
@@ -95,16 +96,33 @@ const ListsPage: React.FC = () => {
                 Keep track of what you need to buy
               </CardDescription>
             </div>
-            {activeItems.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShareList}
-                className="flex-shrink-0 h-10 min-h-[44px] w-full sm:w-auto"
-              >
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
+            {(activeItems.length > 0 || purchasedItems.length > 0) && (
+              <div className="flex gap-2 w-full sm:w-auto">
+                {activeItems.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShareList}
+                    className="flex-shrink-0 h-10 min-h-[44px] flex-1 sm:flex-initial"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to clear all items from your shopping list?')) {
+                      clearAll.mutateAsync();
+                    }
+                  }}
+                  className="flex-shrink-0 h-10 min-h-[44px] flex-1 sm:flex-initial text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear All
+                </Button>
+              </div>
             )}
           </div>
         </CardHeader>

@@ -46,6 +46,22 @@ app.config['SESSION_COOKIE_SECURE'] = os.getenv('RAILWAY_ENVIRONMENT') is not No
 
 CORS(app, supports_credentials=True)
 
+# Cache control - prevent browser from caching old JS/CSS files
+@app.after_request
+def add_cache_headers(response):
+    # For HTML files, always revalidate to get latest JS/CSS references
+    if response.content_type and 'text/html' in response.content_type:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    # For JS/CSS with hash in filename, cache for 1 year (hash changes on rebuild)
+    elif request.path.startswith('/static/') and any(ext in request.path for ext in ['.js', '.css']):
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    # For other static assets (images, etc), cache for 1 day
+    elif request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response
+
 # Register all blueprint routes
 app.register_blueprint(stripe_bp)
 print("✅ Stripe payment routes registered at /api/stripe/*")

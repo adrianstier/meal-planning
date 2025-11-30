@@ -419,6 +419,34 @@ def get_stats():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/debug/reset-admin', methods=['POST'])
+def debug_reset_admin():
+    """Debug endpoint to reset admin password"""
+    try:
+        from database.migrations.reset_admin_password import reset_admin_password
+        reset_admin_password(db_path=db.db_path)
+        return jsonify({'success': True, 'message': 'Admin password reset to OwtvQubm2H9BP0qE'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/debug/check-admin', methods=['GET'])
+def debug_check_admin():
+    """Debug endpoint to check admin user exists"""
+    try:
+        conn = db.connect()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, email, display_name FROM users WHERE username = 'admin'")
+        user = cursor.fetchone()
+        conn.close()
+        if user:
+            return jsonify({'success': True, 'user': dict(user)})
+        return jsonify({'success': False, 'error': 'Admin user not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/meals', methods=['GET'])
 @login_required
 def get_meals():

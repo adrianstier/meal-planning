@@ -4455,6 +4455,42 @@ def cleanup_duplicates():
 
 
 # ============================================================================
+# DATABASE INITIALIZATION (runs on import for gunicorn compatibility)
+# ============================================================================
+
+def init_database():
+    """Initialize database and run migrations - called on module load for gunicorn"""
+    # Initialize database if it doesn't exist
+    if not os.path.exists(db.db_path):
+        print("📊 Initializing database...")
+        db.initialize_database()
+
+    # Run migration for users table if needed
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+        if not cursor.fetchone():
+            print("🔄 Running users table migration...")
+            from database.migrations.add_users_and_auth import migrate as users_migrate
+            users_migrate(db.db_path)
+            print("✅ Users table created!")
+        else:
+            print("✅ Users table already exists")
+            # Ensure admin password is synced to known value on Railway
+            print("🔄 Syncing admin password...")
+            from database.migrations.reset_admin_password import reset_admin_password
+            reset_admin_password(db_path=db.db_path)
+        conn.close()
+    except Exception as e:
+        print(f"⚠️  Users migration check: {e}")
+        import traceback
+        traceback.print_exc()
+
+# Run database initialization on module load (for gunicorn)
+init_database()
+
+# ============================================================================
 # RUN SERVER
 # ============================================================================
 

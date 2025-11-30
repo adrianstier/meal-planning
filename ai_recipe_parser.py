@@ -163,8 +163,8 @@ class RecipeParser:
 
             print(f"✅ Downloaded recipe image: {filename} ({img.width}x{img.height})")
 
-            # Return relative path for web access
-            return f"/static/recipe_images/{filename}"
+            # Return relative path for web access (served via /recipe-images route)
+            return f"/recipe-images/{filename}"
 
         except Exception as e:
             print(f"⚠️  Failed to download image: {e}")

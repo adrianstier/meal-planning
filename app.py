@@ -92,13 +92,21 @@ recipe_parser_error = None
 vision_parser_error = None
 url_scraper_error = None
 
+# Determine image folder - use persistent volume on Railway
+volume_path = os.getenv('RAILWAY_VOLUME_MOUNT_PATH', '/app/data')
+if os.path.exists(volume_path):
+    RECIPE_IMAGE_FOLDER = os.path.join(volume_path, 'recipe_images')
+else:
+    RECIPE_IMAGE_FOLDER = 'templates/static/recipe_images'
+os.makedirs(RECIPE_IMAGE_FOLDER, exist_ok=True)
+print(f"📸 Recipe images folder: {RECIPE_IMAGE_FOLDER}")
+
 # Initialize AI recipe parser
 try:
     api_key = os.getenv('ANTHROPIC_API_KEY')
     if api_key:
-        # Save images to templates/static/recipe_images so they're served by Flask
-        recipe_parser = RecipeParser(api_key, image_folder='templates/static/recipe_images')
-        print("✅ Recipe parser initialized with image folder: templates/static/recipe_images")
+        recipe_parser = RecipeParser(api_key, image_folder=RECIPE_IMAGE_FOLDER)
+        print(f"✅ Recipe parser initialized with image folder: {RECIPE_IMAGE_FOLDER}")
     else:
         recipe_parser = None
         recipe_parser_error = "No ANTHROPIC_API_KEY found"
@@ -124,8 +132,8 @@ except Exception as e:
 
 # Initialize URL scraper (always available)
 try:
-    url_scraper = RecipeURLScraper()
-    print("✅ Recipe URL scraper initialized (supports 100+ sites)")
+    url_scraper = RecipeURLScraper(image_folder=RECIPE_IMAGE_FOLDER)
+    print(f"✅ Recipe URL scraper initialized with image folder: {RECIPE_IMAGE_FOLDER}")
 except Exception as e:
     url_scraper = None
     url_scraper_error = str(e)
@@ -3499,6 +3507,20 @@ def serve_logo192():
 def serve_logo512():
     """Serve logo512.png for PWA"""
     return send_from_directory('templates', 'logo512.png', mimetype='image/png')
+
+@app.route('/recipe-images/<path:filename>')
+def serve_recipe_image(filename):
+    """Serve recipe images from persistent storage"""
+    return send_from_directory(RECIPE_IMAGE_FOLDER, filename)
+
+@app.route('/static/recipe_images/<path:filename>')
+def serve_recipe_image_legacy(filename):
+    """Legacy route - redirect old image paths to new location"""
+    # First try the persistent volume location
+    if os.path.exists(os.path.join(RECIPE_IMAGE_FOLDER, filename)):
+        return send_from_directory(RECIPE_IMAGE_FOLDER, filename)
+    # Fall back to templates/static for old local development images
+    return send_from_directory('templates/static/recipe_images', filename)
 
 # ============================================================================
 # BENTO BOX API ENDPOINTS

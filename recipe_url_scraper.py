@@ -87,8 +87,8 @@ class RecipeURLScraper:
             # Save image
             img.save(filepath, optimize=True, quality=85)
 
-            # Return relative path for web access
-            return f"/static/recipe_images/{filename}"
+            # Return relative path for web access (served via /recipe-images route)
+            return f"/recipe-images/{filename}"
 
         except Exception as e:
             print(f"⚠️  Failed to download image from {image_url}: {e}")

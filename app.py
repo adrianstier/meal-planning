@@ -40,11 +40,13 @@ app = Flask(__name__, static_folder='templates/static', static_url_path='/static
 # Configure session for authentication
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-# HTTPS only in production (Railway or any production environment)
-app.config['SESSION_COOKIE_SECURE'] = os.getenv('RAILWAY_ENVIRONMENT') is not None or os.getenv('NODE_ENV') == 'production'
+# SameSite=None required for Safari compatibility with cross-site cookies
+# Must be used with Secure=True
+is_production = os.getenv('RAILWAY_ENVIRONMENT') is not None or os.getenv('NODE_ENV') == 'production'
+app.config['SESSION_COOKIE_SECURE'] = is_production
+app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'
 
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=["https://web-production-09493.up.railway.app", "http://localhost:3000", "http://localhost:5001"])
 
 # Cache control - prevent browser from caching old JS/CSS files
 @app.after_request

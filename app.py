@@ -4576,6 +4576,10 @@ if __name__ == '__main__':
             print("✅ Users table created!")
         else:
             print("✅ Users table already exists")
+            # Ensure admin password is synced to known value on Railway
+            print("🔄 Syncing admin password...")
+            from database.migrations.reset_admin_password import reset_admin_password
+            reset_admin_password(db_path=db.db_path)
         conn.close()
     except Exception as e:
         print(f"⚠️  Users migration check: {e}")

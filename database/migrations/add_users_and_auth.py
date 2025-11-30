@@ -57,9 +57,9 @@ def migrate(db_path='meal_planner.db'):
 
         print("✅ Users table created")
 
-        # Create default admin user
+        # Create default admin user with known password for Railway sync
         print("🔄 Creating default admin user...")
-        default_password = secrets.token_urlsafe(12)
+        default_password = os.getenv('ADMIN_PASSWORD', 'OwtvQubm2H9BP0qE')
         password_hash = hash_password(default_password)
 
         cursor.execute("""

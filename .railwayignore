@@ -1,0 +1,24 @@
+# Ignore node_modules - Railway will run npm install
+node_modules/
+client/node_modules/
+
+# Ignore build outputs - Railway will build fresh
+client/build/
+
+# Development files
+*.log
+.env.local
+.env.development
+
+# Test files
+test-*.js
+debug-*.js
+*.spec.js
+
+# IDE
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

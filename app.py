@@ -742,6 +742,41 @@ def delete_meal(meal_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/meals/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_meals():
+    """Delete multiple meals at once"""
+    try:
+        user_id = get_current_user_id()
+        data = request.get_json()
+        meal_ids = data.get('meal_ids', [])
+
+        if not meal_ids:
+            return jsonify({'success': False, 'error': 'No meal IDs provided'}), 400
+
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Delete meals that belong to this user
+        placeholders = ','.join('?' * len(meal_ids))
+        cursor.execute(
+            f"DELETE FROM meals WHERE id IN ({placeholders}) AND user_id = ?",
+            meal_ids + [user_id]
+        )
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': f'Deleted {deleted_count} recipes',
+            'deleted_count': deleted_count
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/meals/<int:meal_id>/favorite', methods=['POST'])
 @login_required
 def favorite_meal(meal_id):

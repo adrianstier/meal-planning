@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, Upload } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -28,7 +28,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { RecipeParsingProgress } from '../components/features/recipes/RecipeParsingProgress';
-import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage } from '../hooks/useMeals';
+import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage, useBulkDeleteMeals } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
 import StarRating from '../components/StarRating';
 import { useDragDrop } from '../contexts/DragDropContext';
@@ -58,6 +58,11 @@ const RecipesPage: React.FC = () => {
   const [cuisineFilter, setCuisineFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
 
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedMealIds, setSelectedMealIds] = useState<Set<number>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+
   const [formData, setFormData] = useState<Partial<Meal>>({
     name: '',
     meal_type: 'dinner',
@@ -75,9 +80,51 @@ const RecipesPage: React.FC = () => {
   const updateMeal = useUpdateMeal();
   const toggleFavorite = useToggleFavorite();
   const deleteMeal = useDeleteMeal();
+  const bulkDeleteMeals = useBulkDeleteMeals();
   const parseRecipe = useParseRecipe();
   const parseRecipeFromImage = useParseRecipeFromImage();
   const { setDraggedRecipe } = useDragDrop();
+
+  // Multi-select handlers
+  const toggleSelectMode = () => {
+    setSelectMode(!selectMode);
+    if (selectMode) {
+      setSelectedMealIds(new Set());
+    }
+  };
+
+  const toggleMealSelection = (mealId: number) => {
+    const newSelected = new Set(selectedMealIds);
+    if (newSelected.has(mealId)) {
+      newSelected.delete(mealId);
+    } else {
+      newSelected.add(mealId);
+    }
+    setSelectedMealIds(newSelected);
+  };
+
+  const selectAllInCurrentTab = (mealList: Meal[]) => {
+    const newSelected = new Set(selectedMealIds);
+    mealList.forEach(meal => newSelected.add(meal.id));
+    setSelectedMealIds(newSelected);
+  };
+
+  const deselectAll = () => {
+    setSelectedMealIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedMealIds.size === 0) return;
+
+    try {
+      await bulkDeleteMeals.mutateAsync(Array.from(selectedMealIds));
+      setBulkDeleteDialogOpen(false);
+      setSelectedMealIds(new Set());
+      setSelectMode(false);
+    } catch (error) {
+      console.error('Failed to bulk delete meals:', error);
+    }
+  };
 
   const handleParseRecipe = async () => {
     try {
@@ -459,33 +506,52 @@ const RecipesPage: React.FC = () => {
               </CardTitle>
               <CardDescription className="text-slate-500">{meals?.length || 0} recipes in your collection</CardDescription>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-200 hover:shadow-xl transition-all duration-200 w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Recipe
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setAddDialogOpen(true)} className="cursor-pointer transition-colors">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Manually
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setParseDialogOpen(true)} className="cursor-pointer transition-colors">
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Parse from Text
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setUrlDialogOpen(true)} className="cursor-pointer transition-colors">
-                  <Link className="mr-2 h-4 w-4" />
-                  Parse from URL
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setImageDialogOpen(true)} className="cursor-pointer transition-colors">
-                  <Camera className="mr-2 h-4 w-4" />
-                  Parse from Image
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                variant={selectMode ? "default" : "outline"}
+                onClick={toggleSelectMode}
+                className={selectMode ? "bg-violet-600 hover:bg-violet-700" : ""}
+              >
+                {selectMode ? (
+                  <>
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </>
+                ) : (
+                  <>
+                    <CheckSquare className="mr-2 h-4 w-4" />
+                    Select
+                  </>
+                )}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-200 hover:shadow-xl transition-all duration-200 flex-1 sm:flex-initial">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Recipe
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => setAddDialogOpen(true)} className="cursor-pointer transition-colors">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Manually
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setParseDialogOpen(true)} className="cursor-pointer transition-colors">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Parse from Text
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setUrlDialogOpen(true)} className="cursor-pointer transition-colors">
+                    <Link className="mr-2 h-4 w-4" />
+                    Parse from URL
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setImageDialogOpen(true)} className="cursor-pointer transition-colors">
+                    <Camera className="mr-2 h-4 w-4" />
+                    Parse from Image
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Search and Filters */}
@@ -618,8 +684,12 @@ const RecipesPage: React.FC = () => {
                 {mealsByType[type].map((meal) => (
                   <Card
                     key={meal.id}
-                    draggable
+                    draggable={!selectMode}
                     onDragStart={(e) => {
+                      if (selectMode) {
+                        e.preventDefault();
+                        return;
+                      }
                       setDraggedRecipe({ meal, sourceType: 'recipes' });
                       e.dataTransfer.effectAllowed = 'copy';
                       e.dataTransfer.setData('application/json', JSON.stringify(meal));
@@ -652,8 +722,12 @@ const RecipesPage: React.FC = () => {
                     onDragEnd={() => {
                       setDraggedRecipe(null);
                     }}
-                    className="group flex flex-col cursor-grab active:cursor-grabbing hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden border-slate-200 bg-white rounded-xl"
+                    className={`group flex flex-col ${selectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden border-slate-200 bg-white rounded-xl ${selectMode && selectedMealIds.has(meal.id) ? 'ring-2 ring-violet-500 ring-offset-2' : ''}`}
                     onClick={() => {
+                      if (selectMode) {
+                        toggleMealSelection(meal.id);
+                        return;
+                      }
                       setSelectedMeal(meal);
                       setViewDialogOpen(true);
                     }}
@@ -678,9 +752,23 @@ const RecipesPage: React.FC = () => {
                         </svg>
                         <span className="text-xs opacity-60">No image</span>
                       </div>
+                      {/* Selection checkbox in select mode */}
+                      {selectMode && (
+                        <div className="absolute top-2 left-2 z-20">
+                          <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                            selectedMealIds.has(meal.id)
+                              ? 'bg-violet-600 border-violet-600'
+                              : 'bg-white/90 border-slate-300 backdrop-blur-sm'
+                          }`}>
+                            {selectedMealIds.has(meal.id) && (
+                              <CheckSquare className="h-4 w-4 text-white" />
+                            )}
+                          </div>
+                        </div>
+                      )}
                       {/* Floating favorite button */}
                       <button
-                        className="absolute top-2 right-2 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:scale-110 z-10"
+                        className={`absolute top-2 right-2 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-sm transition-all duration-200 hover:bg-white hover:scale-110 z-10 ${selectMode ? 'hidden' : 'opacity-0 group-hover:opacity-100'}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleToggleFavorite(meal);
@@ -692,12 +780,14 @@ const RecipesPage: React.FC = () => {
                           }`}
                         />
                       </button>
-                      {/* Hover overlay for drag hint */}
+                      {/* Hover overlay for drag hint (only when not in select mode) */}
+                      {!selectMode && (
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4 pointer-events-none">
                         <span className="text-white text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
                           Drag to plan
                         </span>
                       </div>
+                      )}
                     </div>
                     {meal.source_url && (
                       <div className="px-6 pt-3 pb-1">
@@ -1393,6 +1483,57 @@ const RecipesPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedMealIds.size} Recipes</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedMealIds.size} selected recipes? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMeals.isPending}
+            >
+              {bulkDeleteMeals.isPending ? 'Deleting...' : `Delete ${selectedMealIds.size} Recipes`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating Selection Action Bar */}
+      {selectMode && selectedMealIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white rounded-xl shadow-2xl border border-slate-200 px-4 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-4">
+          <span className="text-sm font-medium text-slate-700">
+            {selectedMealIds.size} selected
+          </span>
+          <div className="h-5 w-px bg-slate-200" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={deselectAll}
+            className="text-slate-600"
+          >
+            Deselect All
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setBulkDeleteDialogOpen(true)}
+            className="shadow-sm"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Selected
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

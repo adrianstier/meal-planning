@@ -102,6 +102,7 @@ export const mealsApi = {
   create: (meal: Partial<Meal>) => api.post<Meal>('/api/meals', meal),
   update: (id: number, meal: Partial<Meal>) => api.put<Meal>(`/api/meals/${id}`, meal),
   delete: (id: number) => api.delete(`/api/meals/${id}`),
+  bulkDelete: (mealIds: number[]) => api.post<{ deleted_count: number }>('/api/meals/bulk-delete', { meal_ids: mealIds }),
   parseRecipe: (text: string) => api.post<Meal>('/api/meals/parse', { recipe_text: text }, { timeout: 90000 }), // 90 second timeout for recipe parsing
   parseRecipeFromImage: (imageFile: File) => {
     const formData = new FormData();

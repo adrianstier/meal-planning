@@ -120,3 +120,14 @@ export const useToggleFavorite = () => {
     },
   });
 };
+
+export const useBulkDeleteMeals = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (mealIds: number[]) => mealsApi.bulkDelete(mealIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meals'] });
+    },
+  });
+};

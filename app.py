@@ -4564,6 +4564,24 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"⚠️  Shopping items migration check: {e}")
 
+    # Run migration for users table if needed
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+        if not cursor.fetchone():
+            print("🔄 Running users table migration...")
+            from database.migrations.add_users_and_auth import migrate as users_migrate
+            users_migrate(db.db_path)
+            print("✅ Users table created!")
+        else:
+            print("✅ Users table already exists")
+        conn.close()
+    except Exception as e:
+        print(f"⚠️  Users migration check: {e}")
+        import traceback
+        traceback.print_exc()
+
     # Run migration for cuisine column if needed
     try:
         conn = db.connect()

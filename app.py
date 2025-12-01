@@ -494,6 +494,38 @@ def debug_check_admin():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/debug/image-storage', methods=['GET'])
+def debug_image_storage():
+    """Debug endpoint to check image storage configuration"""
+    try:
+        volume_path = os.getenv('RAILWAY_VOLUME_MOUNT_PATH', '/app/data')
+        volume_exists = os.path.exists(volume_path)
+        folder_exists = os.path.exists(RECIPE_IMAGE_FOLDER)
+
+        # Count images in folder
+        image_count = 0
+        image_files = []
+        if folder_exists:
+            files = os.listdir(RECIPE_IMAGE_FOLDER)
+            image_files = [f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif'))]
+            image_count = len(image_files)
+
+        return jsonify({
+            'success': True,
+            'volume_env_var': os.getenv('RAILWAY_VOLUME_MOUNT_PATH'),
+            'volume_path': volume_path,
+            'volume_exists': volume_exists,
+            'recipe_image_folder': RECIPE_IMAGE_FOLDER,
+            'folder_exists': folder_exists,
+            'image_count': image_count,
+            'sample_images': image_files[:5] if image_files else [],
+            'is_production': os.getenv('RAILWAY_ENVIRONMENT') is not None
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+
 @app.route('/api/meals', methods=['GET'])
 @login_required
 def get_meals():

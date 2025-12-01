@@ -137,11 +137,18 @@ class RecipeURLScraper:
                 # TypeError: cuisine() returned unexpected type
                 pass
 
-            # Use original image URL directly (don't download to avoid Railway storage issues)
+            # Download image to local storage for persistence
             try:
                 image_url = scraper.image()
                 if image_url:
-                    recipe_data['image_url'] = image_url
+                    # Download and save image locally
+                    local_image_path = self.download_image(image_url)
+                    if local_image_path:
+                        recipe_data['image_url'] = local_image_path
+                    else:
+                        # Fall back to external URL if download fails
+                        recipe_data['image_url'] = image_url
+                        print(f"⚠️  Using external image URL (download failed): {image_url}")
             except Exception as e:
                 print(f"⚠️  Could not extract image URL: {e}")
 

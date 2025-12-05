@@ -497,6 +497,33 @@ def debug_clear_sample_data():
         return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 
+@app.route('/api/debug/db-counts', methods=['GET'])
+def debug_db_counts():
+    """Show counts of records in main tables"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        counts = {}
+
+        tables = ['meals', 'scheduled_meals', 'meal_plans', 'users', 'meal_ingredients', 'family_members']
+        for table in tables:
+            try:
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                counts[table] = cursor.fetchone()[0]
+            except:
+                counts[table] = 'table not found'
+
+        # Also get sample of meals
+        cursor.execute("SELECT id, name, user_id FROM meals LIMIT 10")
+        sample_meals = [{'id': r[0], 'name': r[1], 'user_id': r[2]} for r in cursor.fetchall()]
+
+        conn.close()
+        return jsonify({'success': True, 'counts': counts, 'sample_meals': sample_meals})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+
 @app.route('/api/debug/init-db', methods=['POST'])
 def debug_init_db():
     """Debug endpoint to fully initialize database"""

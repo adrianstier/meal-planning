@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Pencil, Sparkles, Calendar as CalendarIcon, Package } from 'lucide-react';
+import { Plus, Trash2, Pencil, Sparkles, Calendar as CalendarIcon, Package, Beef, Apple, Carrot, Croissant, Milk, Cookie, Star, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -43,12 +43,12 @@ const BentoPage: React.FC = () => {
   });
 
   const categories = [
-    { value: 'protein', label: 'Protein', color: 'bg-red-100 border-red-300', emoji: '🍖' },
-    { value: 'fruit', label: 'Fruit', color: 'bg-yellow-100 border-yellow-300', emoji: '🍎' },
-    { value: 'vegetable', label: 'Vegetable', color: 'bg-green-100 border-green-300', emoji: '🥕' },
-    { value: 'grain', label: 'Grain/Carb', color: 'bg-amber-100 border-amber-300', emoji: '🍞' },
-    { value: 'dairy', label: 'Dairy', color: 'bg-blue-100 border-blue-300', emoji: '🧀' },
-    { value: 'snack', label: 'Snack', color: 'bg-purple-100 border-purple-300', emoji: '🍪' },
+    { value: 'protein', label: 'Protein', color: 'bg-red-100 border-red-300', icon: Beef },
+    { value: 'fruit', label: 'Fruit', color: 'bg-yellow-100 border-yellow-300', icon: Apple },
+    { value: 'vegetable', label: 'Vegetable', color: 'bg-green-100 border-green-300', icon: Carrot },
+    { value: 'grain', label: 'Grain/Carb', color: 'bg-amber-100 border-amber-300', icon: Croissant },
+    { value: 'dairy', label: 'Dairy', color: 'bg-blue-100 border-blue-300', icon: Milk },
+    { value: 'snack', label: 'Snack', color: 'bg-purple-100 border-purple-300', icon: Cookie },
   ];
 
   // Common kids' lunch items organized by category
@@ -299,7 +299,7 @@ const BentoPage: React.FC = () => {
                   {categories.map(category => (
                     <div key={category.value} className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg sm:text-xl">{category.emoji}</span>
+                        <category.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                         <h3 className="font-semibold text-sm sm:text-base">{category.label}</h3>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -338,7 +338,7 @@ const BentoPage: React.FC = () => {
                 {itemsByCategory.map(category => (
                   <div key={category.value} className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{category.emoji}</span>
+                      <category.icon className="h-6 w-6" />
                       <h3 className="font-semibold text-lg">{category.label}</h3>
                       <span className="text-sm text-muted-foreground">
                         ({category.items.length})
@@ -360,12 +360,12 @@ const BentoPage: React.FC = () => {
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{item.name}</span>
                                 {item.is_favorite && (
-                                  <span className="text-xs">⭐</span>
+                                  <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
                                 )}
                               </div>
                               {item.allergens && (
-                                <p className="text-xs text-red-600 mt-1">
-                                  ⚠️ {item.allergens}
+                                <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                  <AlertTriangle className="h-3 w-3" /> {item.allergens}
                                 </p>
                               )}
                               {item.notes && (
@@ -469,8 +469,8 @@ const BentoPage: React.FC = () => {
                                     catInfo ? catInfo.color : 'bg-gray-100 border-gray-300'
                                   } text-center`}
                                 >
-                                  <div className="text-2xl mb-2">
-                                    {catInfo ? catInfo.emoji : '📦'}
+                                  <div className="text-2xl mb-2 flex items-center justify-center">
+                                    {catInfo ? <catInfo.icon className="h-6 w-6" /> : <Package className="h-6 w-6" />}
                                   </div>
                                   <div className="text-xs text-muted-foreground mb-1">
                                     Compartment {idx + 1}
@@ -533,7 +533,10 @@ const BentoPage: React.FC = () => {
                 <SelectContent>
                   {categories.map(cat => (
                     <SelectItem key={cat.value} value={cat.value}>
-                      {cat.emoji} {cat.label}
+                      <span className="flex items-center gap-2">
+                        <cat.icon className="h-4 w-4" />
+                        {cat.label}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

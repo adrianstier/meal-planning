@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Clock, Baby, Package, Utensils, MoreVertical, Trash2, Copy, ArrowRight, Repeat } from 'lucide-react';
 import {
   DropdownMenu,
@@ -8,7 +8,6 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { Button } from '../../ui/button';
-import { getCuisineEmoji } from '../../../utils/cuisineColors';
 import type { MealPlan } from '../../../types/api';
 
 interface MealCardProps {

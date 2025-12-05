@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Search } from 'lucide-react';
+import { Sparkles, Search, Star } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -234,7 +234,7 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
                           {meal.difficulty && (
                             <span className="capitalize">{meal.difficulty}</span>
                           )}
-                          {meal.is_favorite && <span>⭐</span>}
+                          {meal.is_favorite && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
                         </div>
                       </div>
                     </div>

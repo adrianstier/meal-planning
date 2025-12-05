@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Clock, Star } from 'lucide-react';
+import { Plus, Clock, Star, Globe, Utensils } from 'lucide-react';
 import type { Meal, MealPlan } from '../../../types/api';
 import { cn } from '../../../lib/utils';
-import { getCuisineEmoji } from '../../../utils/cuisineColors';
+import { getCuisineColors } from '../../../utils/cuisineColors';
 
 interface SmartDropZoneProps {
   mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner';
@@ -170,8 +170,15 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
             >
               <div className="flex items-start gap-3">
                 {/* Cuisine indicator */}
-                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-base">
-                  {topSuggestion.cuisine ? getCuisineEmoji(topSuggestion.cuisine) : '🍽️'}
+                <div className={cn(
+                  "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
+                  topSuggestion.cuisine ? getCuisineColors(topSuggestion.cuisine).bg : "bg-slate-100"
+                )}>
+                  {topSuggestion.cuisine ? (
+                    <Globe className={cn("h-4 w-4", getCuisineColors(topSuggestion.cuisine).text)} />
+                  ) : (
+                    <Utensils className="h-4 w-4 text-slate-400" />
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -249,8 +256,15 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
                     onSelectSuggestion(meal.id);
                   }}
                 >
-                  <span className="flex-shrink-0 text-sm">
-                    {meal.cuisine ? getCuisineEmoji(meal.cuisine) : '🍽️'}
+                  <span className={cn(
+                    "flex-shrink-0 w-6 h-6 rounded flex items-center justify-center",
+                    meal.cuisine ? getCuisineColors(meal.cuisine).bg : "bg-slate-100"
+                  )}>
+                    {meal.cuisine ? (
+                      <Globe className={cn("h-3 w-3", getCuisineColors(meal.cuisine).text)} />
+                    ) : (
+                      <Utensils className="h-3 w-3 text-slate-400" />
+                    )}
                   </span>
                   <span className="flex-1 truncate text-slate-700">{meal.name}</span>
                   {meal.cook_time_minutes && (

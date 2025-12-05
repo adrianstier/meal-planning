@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus, Sparkles, Coffee, Salad, UtensilsCrossed, Apple, Utensils, Star } from 'lucide-react';
 import { Button } from '../../ui/button';
 import type { Meal } from '../../../types/api';
 
@@ -54,13 +54,13 @@ const EmptyMealSlot: React.FC<EmptyMealSlotProps> = ({
       .slice(0, 2);
   }, [availableMeals, mealType]);
 
-  const getMealTypeEmoji = () => {
+  const getMealTypeIcon = () => {
     switch (mealType) {
-      case 'breakfast': return '🥐';
-      case 'lunch': return '🥗';
-      case 'dinner': return '🍽️';
-      case 'snack': return '🍎';
-      default: return '🍴';
+      case 'breakfast': return <Coffee className="h-4 w-4 mr-1.5 inline" />;
+      case 'lunch': return <Salad className="h-4 w-4 mr-1.5 inline" />;
+      case 'dinner': return <UtensilsCrossed className="h-4 w-4 mr-1.5 inline" />;
+      case 'snack': return <Apple className="h-4 w-4 mr-1.5 inline" />;
+      default: return <Utensils className="h-4 w-4 mr-1.5 inline" />;
     }
   };
 
@@ -76,7 +76,7 @@ const EmptyMealSlot: React.FC<EmptyMealSlotProps> = ({
           onClick={onAdd}
         >
           <Plus className="h-5 w-5 flex-shrink-0" />
-          <span className="text-base">{getMealTypeEmoji()} Add {getMealTypeLabel()}</span>
+          <span className="text-base">{getMealTypeIcon()} Add {getMealTypeLabel()}</span>
         </button>
 
         {suggestions.length > 0 && onSelectSuggestion && (
@@ -99,7 +99,11 @@ const EmptyMealSlot: React.FC<EmptyMealSlotProps> = ({
                   {meal.cook_time_minutes && meal.cook_time_minutes > 0 && (
                     <div className="text-muted-foreground text-xs mt-1">
                       {meal.cook_time_minutes} min
-                      {meal.kid_rating && meal.kid_rating >= 4 && ' • ⭐ Kid favorite'}
+                      {meal.kid_rating && meal.kid_rating >= 4 && (
+                        <span className="inline-flex items-center ml-1">
+                          <Star className="h-3 w-3 inline text-amber-500 fill-amber-500 mr-0.5" /> Kid favorite
+                        </span>
+                      )}
                     </div>
                   )}
                 </button>

@@ -20,7 +20,9 @@ import {
   ChefHat,
   Cookie,
   AlertCircle,
-  Timer
+  Timer,
+  Apple,
+  Globe
 } from 'lucide-react';
 import { scaleIngredients, calculateServingMultiplier } from '../utils/ingredientScaler';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -799,7 +801,7 @@ const PlanPageEnhanced: React.FC = () => {
               }}
             >
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-xs text-muted-foreground">Morning Snack 🍎</h4>
+                <h4 className="font-semibold text-xs text-muted-foreground flex items-center gap-1"><Apple className="h-3 w-3" /> Morning Snack</h4>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -901,7 +903,7 @@ const PlanPageEnhanced: React.FC = () => {
               }}
             >
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-xs text-muted-foreground">Afternoon Snack 🍊</h4>
+                <h4 className="font-semibold text-xs text-muted-foreground flex items-center gap-1"><Apple className="h-3 w-3" /> Afternoon Snack</h4>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1409,7 +1411,7 @@ const PlanPageEnhanced: React.FC = () => {
                 </div>
                 {item.cuisine && (
                   <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-indigo-100 text-indigo-800">
-                    🌍 {item.cuisine}
+                    <Globe className="h-3 w-3 mr-1" /> {item.cuisine}
                   </span>
                 )}
               </div>

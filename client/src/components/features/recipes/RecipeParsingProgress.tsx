@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Lightbulb } from 'lucide-react';
 import { Progress } from '../../ui/progress';
 
 interface RecipeParsingProgressProps {
@@ -110,9 +110,9 @@ export const RecipeParsingProgress: React.FC<RecipeParsingProgressProps> = ({
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-xs text-blue-800">
-              💡 <strong>Tip:</strong> This may take 30-60 seconds for complex recipes. The AI is
-              carefully extracting ingredients, instructions, and nutritional info!
+            <p className="text-xs text-blue-800 flex items-start gap-1">
+              <Lightbulb className="h-3 w-3 mt-0.5 flex-shrink-0" /> <span><strong>Tip:</strong> This may take 30-60 seconds for complex recipes. The AI is
+              carefully extracting ingredients, instructions, and nutritional info!</span>
             </p>
           </div>
         </>

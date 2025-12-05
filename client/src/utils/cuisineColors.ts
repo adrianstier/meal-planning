@@ -28,25 +28,8 @@ export const getCuisineColors = (cuisine: string | null | undefined) => {
   return CUISINE_COLORS[cuisine] || { bg: 'bg-accent/50', border: 'border-accent', text: 'text-foreground' };
 };
 
-export const getCuisineEmoji = (cuisine: string | null | undefined): string => {
-  const emojiMap: Record<string, string> = {
-    Italian: '🇮🇹',
-    Mexican: '🌮',
-    Chinese: '🥡',
-    Japanese: '🍱',
-    Thai: '🍜',
-    Indian: '🍛',
-    French: '🇫🇷',
-    Greek: '🇬🇷',
-    Spanish: '🇪🇸',
-    Korean: '🇰🇷',
-    Vietnamese: '🇻🇳',
-    American: '🍔',
-    Mediterranean: '🫒',
-    'Middle Eastern': '🥙',
-    Caribbean: '🏝️',
-    German: '🇩🇪',
-    British: '🇬🇧',
-  };
-  return cuisine ? emojiMap[cuisine] || '🌍' : '🍽️';
+// getCuisineEmoji is deprecated - use getCuisineColors for styling instead
+// This function now returns null to indicate icon should be used
+export const getCuisineEmoji = (cuisine: string | null | undefined): null => {
+  return null;
 };

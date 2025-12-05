@@ -456,6 +456,47 @@ def debug_reset_admin():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/debug/clear-sample-data', methods=['POST'])
+def debug_clear_sample_data():
+    """Clear all sample/seed data from the database - leaves user data intact"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # Clear sample meals (those created before any user existed or with no user_id)
+        cursor.execute("DELETE FROM scheduled_meals WHERE user_id IS NULL OR user_id = 0")
+        scheduled_deleted = cursor.rowcount
+
+        cursor.execute("DELETE FROM meal_plans WHERE user_id IS NULL OR user_id = 0")
+        plans_deleted = cursor.rowcount
+
+        cursor.execute("DELETE FROM meals WHERE user_id IS NULL OR user_id = 0")
+        meals_deleted = cursor.rowcount
+
+        cursor.execute("DELETE FROM meal_ingredients WHERE meal_id NOT IN (SELECT id FROM meals)")
+        ingredients_deleted = cursor.rowcount
+
+        cursor.execute("DELETE FROM family_members WHERE id <= 4")  # Sample family members
+        family_deleted = cursor.rowcount
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'deleted': {
+                'meals': meals_deleted,
+                'scheduled_meals': scheduled_deleted,
+                'meal_plans': plans_deleted,
+                'meal_ingredients': ingredients_deleted,
+                'family_members': family_deleted
+            }
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+
 @app.route('/api/debug/init-db', methods=['POST'])
 def debug_init_db():
     """Debug endpoint to fully initialize database"""

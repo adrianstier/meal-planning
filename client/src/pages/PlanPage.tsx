@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { format, startOfWeek, addDays, parseISO, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart, Clock, Baby, Package, Utensils, MoreVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Sparkles, ShoppingCart, Clock, Baby, Package, Utensils, MoreVertical, Globe } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import {
@@ -633,7 +633,7 @@ const PlanPage: React.FC = () => {
                 </div>
                 {item.cuisine && (
                   <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-indigo-100 text-indigo-800">
-                    🌍 {item.cuisine}
+                    <Globe className="h-3 w-3 mr-1" /> {item.cuisine}
                   </span>
                 )}
               </div>

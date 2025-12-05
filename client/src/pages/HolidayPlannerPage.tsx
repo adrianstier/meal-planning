@@ -827,7 +827,7 @@ const HolidayPlannerPage: React.FC = () => {
                             {selectedEvent.serving_time}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Dinner is served! 🍽️
+                            Dinner is served!
                           </div>
                         </div>
                       </div>

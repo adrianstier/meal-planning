@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Search, X, Clock, Baby, ChefHat, GripVertical, Star, Filter } from 'lucide-react';
+import { Search, X, Clock, Baby, ChefHat, GripVertical, Star, Filter, Globe } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { useDragDrop } from '../../../contexts/DragDropContext';
-import { getCuisineEmoji } from '../../../utils/cuisineColors';
+import { getCuisineColors } from '../../../utils/cuisineColors';
 import { cn } from '../../../lib/utils';
 import type { Meal } from '../../../types/api';
 
@@ -212,9 +212,12 @@ const RecipeBrowserSidebar: React.FC<RecipeBrowserSidebarProps> = ({ meals, isOp
                     <GripVertical className="h-4 w-4 text-slate-300" />
                   </div>
 
-                  {/* Cuisine emoji */}
-                  <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-lg">
-                    {meal.cuisine ? getCuisineEmoji(meal.cuisine) : '🍽️'}
+                  {/* Cuisine indicator */}
+                  <div className={cn(
+                    "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center",
+                    meal.cuisine ? getCuisineColors(meal.cuisine).bg : "bg-slate-100"
+                  )}>
+                    <Globe className={cn("h-4 w-4", meal.cuisine ? getCuisineColors(meal.cuisine).text : "text-slate-400")} />
                   </div>
 
                   {/* Content */}

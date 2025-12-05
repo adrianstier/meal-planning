@@ -53,7 +53,7 @@ class ErrorLogger {
 
     // Log to console in development
     if (process.env.NODE_ENV !== 'production') {
-      console.group(`🔴 Error [${type}]`);
+      console.group(`[Error] ${type}`);
       console.error('Message:', errorMessage);
       if (errorStack) console.error('Stack:', errorStack);
       if (context) console.error('Context:', context);

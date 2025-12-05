@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X, Coffee, Salad, UtensilsCrossed, Apple, Globe, Star, Lightbulb, Check } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -313,7 +313,7 @@ const RecipesPage: React.FC = () => {
       // Auto-save the recipe to the database
       try {
         await createMeal.mutateAsync(recipeToSave);
-        alert(`✅ Recipe "${recipeToSave.name}" has been saved to your recipe book!`);
+        alert(`Recipe "${recipeToSave.name}" has been saved to your recipe book!`);
       } catch (saveError) {
         console.error('Failed to auto-save recipe:', saveError);
         // If auto-save fails, fall back to showing the form for manual save
@@ -599,7 +599,7 @@ const RecipesPage: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All recipes</SelectItem>
-                  <SelectItem value="kid-favorites">Kid Favorites ⭐</SelectItem>
+                  <SelectItem value="kid-favorites">Kid Favorites</SelectItem>
                   <SelectItem value="kid-friendly">Kid-friendly</SelectItem>
                   <SelectItem value="bento">Bento-friendly</SelectItem>
                   <SelectItem value="leftovers">Leftover-friendly</SelectItem>
@@ -641,22 +641,22 @@ const RecipesPage: React.FC = () => {
       <Tabs defaultValue="dinner" className="w-full">
         <TabsList className="w-full flex flex-wrap justify-start gap-1.5 h-auto p-1.5 bg-slate-100 rounded-xl">
           <TabsTrigger value="breakfast" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
-            <span className="mr-1.5">🥐</span>
+            <Coffee className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Breakfast</span>
             <span className="ml-1 text-xs opacity-75">({mealsByType.breakfast.length})</span>
           </TabsTrigger>
           <TabsTrigger value="lunch" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
-            <span className="mr-1.5">🥗</span>
+            <Salad className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Lunch</span>
             <span className="ml-1 text-xs opacity-75">({mealsByType.lunch.length})</span>
           </TabsTrigger>
           <TabsTrigger value="dinner" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
-            <span className="mr-1.5">🍽️</span>
+            <UtensilsCrossed className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Dinner</span>
             <span className="ml-1 text-xs opacity-75">({mealsByType.dinner.length})</span>
           </TabsTrigger>
           <TabsTrigger value="snack" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
-            <span className="mr-1.5">🍎</span>
+            <Apple className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Snacks</span>
             <span className="ml-1 text-xs opacity-75">({mealsByType.snack.length})</span>
           </TabsTrigger>
@@ -836,7 +836,8 @@ const RecipesPage: React.FC = () => {
                       <div className="flex flex-wrap gap-1.5 my-2">
                         {meal.cuisine && (
                           <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-indigo-100 text-indigo-800">
-                            🌍 {meal.cuisine}
+                            <Globe className="h-3 w-3 mr-1" />
+                            {meal.cuisine}
                           </span>
                         )}
                         {hasTag(meal, 'kid-friendly') && (
@@ -1026,7 +1027,7 @@ const RecipesPage: React.FC = () => {
                   }}
                 />
                 <p className="text-xs text-muted-foreground">
-                  💡 <strong>Supported sites:</strong> AllRecipes, FoodNetwork, BonAppetit, Epicurious, Serious Eats, and 100+ more!
+                  <Lightbulb className="h-3 w-3 inline mr-1" /> <strong>Supported sites:</strong> AllRecipes, FoodNetwork, BonAppetit, Epicurious, Serious Eats, and 100+ more!
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Note: Some sites like NY Times Cooking require a subscription. If you get an error, copy and paste the recipe text instead.

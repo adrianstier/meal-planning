@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Bug } from 'lucide-react';
 import { errorLogger, ErrorLog } from '../utils/errorLogger';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
@@ -80,7 +81,7 @@ const ErrorLogViewer: React.FC = () => {
           className="fixed bottom-4 right-4 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 z-50"
           title="Open Error Logs (Ctrl+Shift+E)"
         >
-          🐛
+          <Bug className="h-4 w-4" />
         </button>
       )}
 

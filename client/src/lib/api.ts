@@ -35,7 +35,7 @@ api.interceptors.request.use(
   (config) => {
     // Log requests in development
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`📤 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
+      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         data: config.data,
         params: config.params,
       });
@@ -53,7 +53,7 @@ api.interceptors.response.use(
   (response) => {
     // Log successful responses in development
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`📥 API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
         status: response.status,
         data: response.data,
       });

@@ -60,17 +60,17 @@ const DiagnosticsPage: React.FC = () => {
 
       if (data && typeof data === 'object' && 'deleted' in data) {
         if (data.deleted === 0) {
-          setCleanupResult('✅ No duplicate meals found!');
+          setCleanupResult('No duplicate meals found!');
         } else {
-          setCleanupResult(`✅ Success! Deleted ${data.deleted} duplicate meals.\n\n${JSON.stringify(data.details, null, 2)}`);
+          setCleanupResult(`Success! Deleted ${data.deleted} duplicate meals.\n\n${JSON.stringify(data.details, null, 2)}`);
         }
       } else {
-        setCleanupResult(`❌ Error: ${JSON.stringify(data) || 'Unknown error'}`);
+        setCleanupResult(`Error: ${JSON.stringify(data) || 'Unknown error'}`);
       }
     } catch (error: any) {
       console.error('Cleanup error:', error);
       console.error('Error response:', error.response);
-      setCleanupResult(`❌ Failed: ${JSON.stringify(error.response?.data) || error.message}`);
+      setCleanupResult(`Failed: ${JSON.stringify(error.response?.data) || error.message}`);
     }
   };
 
@@ -78,12 +78,12 @@ const DiagnosticsPage: React.FC = () => {
     try {
       const response = await api.post('/api/errors/setup-table');
       if (response.data.success) {
-        alert('✅ Error tracking table created! Refreshing page...');
+        alert('Error tracking table created! Refreshing page...');
         window.location.reload();
       }
     } catch (error: any) {
       console.error('Failed to setup table:', error);
-      alert(`❌ Failed to setup table: ${error.response?.data?.error || error.message}`);
+      alert(`Failed to setup table: ${error.response?.data?.error || error.message}`);
     }
   };
 
@@ -96,14 +96,14 @@ const DiagnosticsPage: React.FC = () => {
         `/api/errors?limit=200&resolved=${filterResolved ? 'true' : 'false'}`
       );
       setErrors(response.data);
-      console.log(`✅ Refreshed: Loaded ${response.data.length} errors`);
+      console.log(`[Diagnostics] Refreshed: Loaded ${response.data.length} errors`);
     } catch (error: any) {
       console.error('Failed to fetch errors:', error);
 
       // Check if it's a "no such table" error
       if (error.response?.data?.error?.includes('no such table: error_logs')) {
         const setup = window.confirm(
-          '⚠️ Error tracking table not found. Would you like to create it now?'
+          'Error tracking table not found. Would you like to create it now?'
         );
         if (setup) {
           await setupErrorTable();
@@ -121,7 +121,7 @@ const DiagnosticsPage: React.FC = () => {
     try {
       const response = await api.get<ErrorStats>('/api/errors/stats');
       setStats(response.data);
-      console.log('✅ Refreshed: Stats updated', response.data);
+      console.log('[Diagnostics] Refreshed: Stats updated', response.data);
     } catch (error: any) {
       console.error('Failed to fetch error stats:', error);
 
@@ -135,12 +135,12 @@ const DiagnosticsPage: React.FC = () => {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    console.log('🔄 Refreshing diagnostics data...');
+    console.log('[Diagnostics] Refreshing data...');
     await Promise.all([
       fetchErrors(),
       fetchStats()
     ]);
-    console.log('✅ Refresh complete');
+    console.log('[Diagnostics] Refresh complete');
   };
 
   useEffect(() => {
@@ -199,7 +199,7 @@ const DiagnosticsPage: React.FC = () => {
 
       // Copy to clipboard
       await navigator.clipboard.writeText(report);
-      alert('✅ Error report copied to clipboard! Paste it in Claude Code to get instant debugging help.');
+      alert('Error report copied to clipboard! Paste it in Claude Code to get instant debugging help.');
 
       // Also download as file
       const blob = new Blob([report], { type: 'text/markdown' });
@@ -214,7 +214,7 @@ const DiagnosticsPage: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to export errors:', error);
       const errorMsg = error.response?.data?.error || error.message || 'Failed to export errors';
-      alert(`❌ Error: ${errorMsg}`);
+      alert(`Error: ${errorMsg}`);
     }
   };
 
@@ -359,7 +359,7 @@ const DiagnosticsPage: React.FC = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              💡 Tip: Click "Copy for Claude" to get a formatted error report you can paste directly into Claude Code for instant debugging help!
+              Tip: Click "Copy for Claude" to get a formatted error report you can paste directly into Claude Code for instant debugging help!
             </p>
           </CardContent>
         </Card>
@@ -513,7 +513,7 @@ const DiagnosticsPage: React.FC = () => {
             <div className="text-center py-8">
               <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
               <p className="text-muted-foreground">
-                {filterResolved ? 'No resolved errors' : 'No errors found! 🎉'}
+                {filterResolved ? 'No resolved errors' : 'No errors found!'}
               </p>
             </div>
           ) : (

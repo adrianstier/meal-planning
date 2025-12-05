@@ -569,7 +569,7 @@ const CSABoxPage: React.FC = () => {
                 <CardContent>
                   {unusedItems.length === 0 ? (
                     <p className="text-center py-6 text-muted-foreground">
-                      All items used! 🎉
+                      All items used!
                     </p>
                   ) : (
                     <div className="space-y-2">

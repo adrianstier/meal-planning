@@ -18,7 +18,7 @@ import RestaurantsPage from './pages/RestaurantsPage';
 import ProfilePage from './pages/ProfilePage';
 import DiagnosticsPage from './pages/DiagnosticsPage';
 import PricingPage from './pages/PricingPage';
-import CSABoxPage from './pages/CSABoxPage';
+import SeasonalCookingPage from './pages/SeasonalCookingPage';
 import HolidayPlannerPage from './pages/HolidayPlannerPage';
 import { errorLogger } from './utils/errorLogger';
 
@@ -88,13 +88,15 @@ function AppContent() {
             </Layout>
           </ProtectedRoute>
         } />
-        <Route path="/csa" element={
+        <Route path="/seasonal" element={
           <ProtectedRoute>
             <Layout>
-              <CSABoxPage />
+              <SeasonalCookingPage />
             </Layout>
           </ProtectedRoute>
         } />
+        {/* Redirect old CSA route to new seasonal route */}
+        <Route path="/csa" element={<Navigate to="/seasonal" replace />} />
         <Route path="/browse" element={<Navigate to="/recipes" replace />} />
         <Route path="/leftovers" element={
           <ProtectedRoute>

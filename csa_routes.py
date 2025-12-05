@@ -585,4 +585,473 @@ def delete_csa_schedule(schedule_id):
 
         return jsonify({'success': True, 'message': 'Schedule deleted successfully'})
 
-print("🥬 CSA box routes loaded successfully")
+# ============================================================================
+# UNIFIED PRODUCE TRACKING (For Seasonal Cooking Page)
+# ============================================================================
+
+@csa_bp.route('/produce', methods=['GET'])
+@login_required
+def get_all_produce():
+    """Get all produce items across all sources (CSA boxes, store purchases)"""
+    user_id = get_current_user_id()
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+
+        # Get all unused items from all active boxes, with box info
+        cursor.execute("""
+            SELECT
+                cbi.id,
+                cbi.ingredient_name,
+                cbi.quantity,
+                cbi.unit,
+                cbi.estimated_expiry_days,
+                cbi.is_used,
+                cbi.notes,
+                cbi.created_at,
+                cb.id as box_id,
+                cb.name as box_name,
+                cb.source,
+                cb.delivery_date
+            FROM csa_box_items cbi
+            JOIN csa_boxes cb ON cbi.box_id = cb.id
+            WHERE cb.user_id = ? AND cb.is_active = 1
+            ORDER BY cbi.is_used ASC,
+                     cbi.estimated_expiry_days ASC,
+                     cbi.created_at ASC
+        """, (user_id,))
+
+        items = []
+        for row in cursor.fetchall():
+            # Calculate days until expiry based on created_at and estimated_expiry_days
+            created_at = row[7]
+            expiry_days = row[4] or 7
+
+            # Parse created_at to calculate days remaining
+            try:
+                from datetime import datetime
+                created = datetime.strptime(created_at[:10], '%Y-%m-%d')
+                expiry_date = created + timedelta(days=expiry_days)
+                days_remaining = (expiry_date - datetime.now()).days
+            except:
+                days_remaining = expiry_days
+
+            items.append({
+                'id': row[0],
+                'ingredient_name': row[1],
+                'quantity': row[2],
+                'unit': row[3],
+                'estimated_expiry_days': expiry_days,
+                'days_remaining': days_remaining,
+                'is_used': bool(row[5]),
+                'notes': row[6],
+                'created_at': row[7],
+                'box_id': row[8],
+                'box_name': row[9],
+                'source': row[10] or 'CSA',
+                'delivery_date': row[11]
+            })
+
+        return jsonify({
+            'success': True,
+            'items': items,
+            'total': len(items),
+            'unused': len([i for i in items if not i['is_used']])
+        })
+
+
+@csa_bp.route('/produce/quick-add', methods=['POST'])
+@login_required
+def quick_add_produce():
+    """Quick add produce from store or as seasonal item - creates/uses a default 'My Produce' box"""
+    user_id = get_current_user_id()
+    data = request.json
+
+    if not data.get('ingredient_name'):
+        return error_response("Ingredient name is required", 400)
+
+    source = data.get('source', 'Store')  # Default to store purchase
+    expiry_days = data.get('estimated_expiry_days', 7)
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+
+        # Find or create a default produce box for this source
+        today = datetime.now().strftime('%Y-%m-%d')
+
+        # Look for an active box from this source within the last week
+        cursor.execute("""
+            SELECT id FROM csa_boxes
+            WHERE user_id = ? AND source = ? AND is_active = 1
+            AND delivery_date >= date(?, '-7 days')
+            ORDER BY delivery_date DESC
+            LIMIT 1
+        """, (user_id, source, today))
+
+        box_row = cursor.fetchone()
+
+        if box_row:
+            box_id = box_row[0]
+        else:
+            # Create a new box for this source
+            box_name = f"{source} - {datetime.now().strftime('%b %d')}"
+            cursor.execute("""
+                INSERT INTO csa_boxes (user_id, name, delivery_date, source, notes, is_active)
+                VALUES (?, ?, ?, ?, ?, 1)
+            """, (user_id, box_name, today, source, f'Auto-created for {source.lower()} produce'))
+            box_id = cursor.lastrowid
+
+        # Add the item
+        cursor.execute("""
+            INSERT INTO csa_box_items
+            (box_id, ingredient_name, quantity, unit, estimated_expiry_days, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            box_id,
+            data['ingredient_name'],
+            data.get('quantity'),
+            data.get('unit', ''),
+            expiry_days,
+            data.get('notes', '')
+        ))
+
+        item_id = cursor.lastrowid
+        conn.commit()
+
+        return jsonify({
+            'success': True,
+            'item_id': item_id,
+            'box_id': box_id,
+            'message': f'Added {data["ingredient_name"]} to {source} produce'
+        }), 201
+
+
+@csa_bp.route('/produce/<int:item_id>/use', methods=['POST'])
+@login_required
+def mark_produce_used(item_id):
+    """Mark a produce item as used (simplified endpoint)"""
+    user_id = get_current_user_id()
+    data = request.json or {}
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+
+        # Verify ownership through box
+        cursor.execute("""
+            SELECT cbi.id, cbi.box_id FROM csa_box_items cbi
+            JOIN csa_boxes cb ON cbi.box_id = cb.id
+            WHERE cbi.id = ? AND cb.user_id = ?
+        """, (item_id, user_id))
+
+        row = cursor.fetchone()
+        if not row:
+            return error_response("Item not found", 404)
+
+        cursor.execute("""
+            UPDATE csa_box_items
+            SET is_used = 1,
+                used_in_recipe_id = ?,
+                used_date = ?
+            WHERE id = ?
+        """, (
+            data.get('recipe_id'),
+            datetime.now().strftime('%Y-%m-%d'),
+            item_id
+        ))
+
+        conn.commit()
+
+        return jsonify({'success': True, 'message': 'Item marked as used'})
+
+
+@csa_bp.route('/produce/<int:item_id>', methods=['DELETE'])
+@login_required
+def delete_produce_item(item_id):
+    """Delete a produce item"""
+    user_id = get_current_user_id()
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+
+        # Verify ownership
+        cursor.execute("""
+            SELECT cbi.id FROM csa_box_items cbi
+            JOIN csa_boxes cb ON cbi.box_id = cb.id
+            WHERE cbi.id = ? AND cb.user_id = ?
+        """, (item_id, user_id))
+
+        if not cursor.fetchone():
+            return error_response("Item not found", 404)
+
+        cursor.execute("DELETE FROM csa_box_items WHERE id = ?", (item_id,))
+        conn.commit()
+
+        return jsonify({'success': True, 'message': 'Item removed'})
+
+
+@csa_bp.route('/produce/recipe-suggestions', methods=['GET'])
+@login_required
+def get_produce_recipe_suggestions():
+    """Get recipe suggestions based on ALL available produce, prioritizing expiring items"""
+    user_id = get_current_user_id()
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+
+        # Get all unused produce with expiry info
+        cursor.execute("""
+            SELECT
+                cbi.ingredient_name,
+                cbi.estimated_expiry_days,
+                cbi.created_at
+            FROM csa_box_items cbi
+            JOIN csa_boxes cb ON cbi.box_id = cb.id
+            WHERE cb.user_id = ? AND cb.is_active = 1 AND cbi.is_used = 0
+        """, (user_id,))
+
+        produce_items = []
+        for row in cursor.fetchall():
+            ingredient = row[0].lower()
+            expiry_days = row[1] or 7
+            created_at = row[2]
+
+            # Calculate days remaining
+            try:
+                created = datetime.strptime(created_at[:10], '%Y-%m-%d')
+                expiry_date = created + timedelta(days=expiry_days)
+                days_remaining = (expiry_date - datetime.now()).days
+            except:
+                days_remaining = expiry_days
+
+            produce_items.append({
+                'name': ingredient,
+                'days_remaining': days_remaining,
+                'urgency': 'critical' if days_remaining <= 2 else ('warning' if days_remaining <= 5 else 'ok')
+            })
+
+        if not produce_items:
+            return jsonify({
+                'success': True,
+                'suggestions': [],
+                'message': 'No produce items to match'
+            })
+
+        # Get all recipes
+        cursor.execute("""
+            SELECT id, name, ingredients, cuisine, cook_time_minutes, image_url
+            FROM recipes
+            WHERE user_id = ?
+        """, (user_id,))
+
+        recipes = cursor.fetchall()
+        suggestions = []
+
+        for recipe in recipes:
+            recipe_id, name, ingredients_json, cuisine, cook_time, image_url = recipe
+
+            if not ingredients_json:
+                continue
+
+            try:
+                recipe_ingredients = json.loads(ingredients_json)
+            except:
+                continue
+
+            recipe_ingredient_names = [ing.get('name', '').lower() for ing in recipe_ingredients if ing.get('name')]
+
+            # Match produce to recipe ingredients and track urgency
+            matched = []
+            expiring_matched = []
+            urgency_score = 0
+
+            for produce in produce_items:
+                produce_name = produce['name']
+                for recipe_ing in recipe_ingredient_names:
+                    if produce_name in recipe_ing or recipe_ing in produce_name:
+                        matched.append(produce_name)
+                        if produce['urgency'] == 'critical':
+                            expiring_matched.append(produce_name)
+                            urgency_score += 10
+                        elif produce['urgency'] == 'warning':
+                            expiring_matched.append(produce_name)
+                            urgency_score += 5
+                        break
+
+            if matched:
+                # Calculate scores
+                match_score = len(matched) / len(produce_items) * 100
+                missing = [ing for ing in recipe_ingredient_names
+                          if not any(p['name'] in ing for p in produce_items)]
+
+                suggestions.append({
+                    'recipe_id': recipe_id,
+                    'recipe_name': name,
+                    'cuisine': cuisine,
+                    'cook_time': cook_time,
+                    'image_url': image_url,
+                    'match_score': round(match_score, 1),
+                    'urgency_score': urgency_score,
+                    'total_score': round(match_score + urgency_score, 1),
+                    'matched_ingredients': matched,
+                    'expiring_ingredients': expiring_matched,
+                    'missing_ingredients': missing[:5],
+                    'total_matched': len(matched)
+                })
+
+        # Sort by total score (urgency + match)
+        suggestions.sort(key=lambda x: x['total_score'], reverse=True)
+
+        return jsonify({
+            'success': True,
+            'suggestions': suggestions[:20],
+            'produce_items': produce_items,
+            'total_produce': len(produce_items)
+        })
+
+
+# ============================================================================
+# AI-POWERED CSA BOX PARSING
+# ============================================================================
+
+# Try to import the CSA AI parser
+try:
+    from csa_ai_parser import CSABoxParser
+    import os
+    HAS_CSA_AI_PARSER = True
+except ImportError:
+    HAS_CSA_AI_PARSER = False
+    print("⚠️  CSA AI Parser not available")
+
+
+@csa_bp.route('/parse/text', methods=['POST'])
+@login_required
+def parse_csa_text():
+    """Parse CSA box contents from text using AI"""
+    if not HAS_CSA_AI_PARSER:
+        return error_response("AI parsing is not available", 503)
+
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+    if not api_key:
+        return error_response("AI service not configured", 503)
+
+    data = request.json
+    text = data.get('text', '').strip()
+    source = data.get('source', 'CSA')
+
+    if not text:
+        return error_response("No text provided", 400)
+
+    if len(text) > 10000:
+        return error_response("Text too long (max 10,000 characters)", 400)
+
+    try:
+        parser = CSABoxParser(api_key)
+        result = parser.parse_text(text, source)
+
+        return jsonify({
+            'success': True,
+            'parsed': result
+        })
+
+    except Exception as e:
+        return error_response(f"Failed to parse text: {str(e)}", 500)
+
+
+@csa_bp.route('/parse/image', methods=['POST'])
+@login_required
+def parse_csa_image():
+    """Parse CSA box contents from an image using AI vision"""
+    if not HAS_CSA_AI_PARSER:
+        return error_response("AI parsing is not available", 503)
+
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+    if not api_key:
+        return error_response("AI service not configured", 503)
+
+    data = request.json
+    image_data = data.get('image_data', '')
+    media_type = data.get('media_type', 'image/jpeg')
+    source = data.get('source', 'CSA')
+
+    if not image_data:
+        return error_response("No image data provided", 400)
+
+    # Validate media type
+    valid_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if media_type not in valid_types:
+        return error_response(f"Invalid image type. Supported: {', '.join(valid_types)}", 400)
+
+    # Remove data URL prefix if present
+    if ',' in image_data:
+        image_data = image_data.split(',', 1)[1]
+
+    try:
+        parser = CSABoxParser(api_key)
+        result = parser.parse_image(image_data, media_type, source)
+
+        return jsonify({
+            'success': True,
+            'parsed': result
+        })
+
+    except Exception as e:
+        return error_response(f"Failed to parse image: {str(e)}", 500)
+
+
+@csa_bp.route('/parse/add-all', methods=['POST'])
+@login_required
+def add_parsed_items():
+    """Add all parsed items to produce tracking"""
+    user_id = get_current_user_id()
+    data = request.json
+
+    items = data.get('items', [])
+    source = data.get('source', 'CSA')
+    delivery_date = data.get('delivery_date', datetime.now().strftime('%Y-%m-%d'))
+    box_name = data.get('box_name', f"{source} - {datetime.now().strftime('%b %d')}")
+
+    if not items:
+        return error_response("No items to add", 400)
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+
+        # Create a new box for this parsed CSA
+        cursor.execute("""
+            INSERT INTO csa_boxes (user_id, name, delivery_date, source, notes, is_active)
+            VALUES (?, ?, ?, ?, ?, 1)
+        """, (user_id, box_name, delivery_date, source, 'Added via AI parsing'))
+
+        box_id = cursor.lastrowid
+
+        # Add all items
+        added_count = 0
+        for item in items:
+            if not item.get('name'):
+                continue
+
+            cursor.execute("""
+                INSERT INTO csa_box_items
+                (box_id, ingredient_name, quantity, unit, estimated_expiry_days, notes)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                box_id,
+                item['name'],
+                item.get('quantity', 1),
+                item.get('unit', 'pieces'),
+                item.get('estimated_shelf_life_days', 7),
+                item.get('notes', '')
+            ))
+            added_count += 1
+
+        conn.commit()
+
+        return jsonify({
+            'success': True,
+            'box_id': box_id,
+            'items_added': added_count,
+            'message': f'Added {added_count} items to "{box_name}"'
+        }), 201
+
+
+print("🥬 CSA box & Seasonal Cooking routes loaded successfully")

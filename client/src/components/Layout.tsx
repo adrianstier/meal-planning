@@ -14,7 +14,7 @@ import {
   X,
   Utensils,
   Bug,
-  Sprout,
+  Leaf,
   ShoppingCart,
   MoreHorizontal,
   PartyPopper
@@ -43,7 +43,7 @@ const primaryNavItems = [
 // Secondary navigation - additional features
 const secondaryNavItems = [
   { path: '/holiday', label: 'Holiday Planner', icon: PartyPopper, description: 'Plan holiday meals' },
-  { path: '/csa', label: 'CSA Box', icon: Sprout, description: 'Seasonal produce' },
+  { path: '/seasonal', label: 'Seasonal Cooking', icon: Leaf, description: 'Fresh & seasonal produce' },
   { path: '/bento', label: 'Bento', icon: Package, description: 'Bento meal prep' },
   { path: '/leftovers', label: 'Leftovers', icon: UtensilsCrossed, description: 'Track leftovers' },
   { path: '/school-menu', label: 'School Menu', icon: GraduationCap, description: 'School lunches' },

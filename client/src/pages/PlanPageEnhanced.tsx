@@ -59,6 +59,7 @@ import WeeklyVarietySummary from '../components/features/plan/WeeklyVarietySumma
 import RecipeBrowserSidebar from '../components/features/plan/RecipeBrowserSidebar';
 import CompactDayCard from '../components/features/plan/CompactDayCard';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { OnboardingTour } from '../components/OnboardingTour';
 import type { MealPlan } from '../types/api';
 
 type ViewMode = 'week' | 'list' | 'compact';
@@ -123,9 +124,7 @@ const PlanPageEnhanced: React.FC = () => {
     return (localStorage.getItem('planViewMode') as ViewMode) || 'compact';
   });
 
-  const [mealDisplayMode, setMealDisplayMode] = useState<MealDisplayMode>(() => {
-    return (localStorage.getItem('mealDisplayMode') as MealDisplayMode) || 'all';
-  });
+  const [mealDisplayMode, setMealDisplayMode] = useState<MealDisplayMode>('dinners');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
@@ -139,10 +138,7 @@ const PlanPageEnhanced: React.FC = () => {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [generateBentos, setGenerateBentos] = useState(false);
   const [bentoChildName, setBentoChildName] = useState('');
-  const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(() => {
-    const stored = localStorage.getItem('recipeBrowserOpen');
-    return stored === 'true'; // Default to CLOSED - give full space to meal grid
-  });
+  const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(true);
   const [advancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
 
   // Confirmation dialog state
@@ -999,7 +995,7 @@ const PlanPageEnhanced: React.FC = () => {
     <div className="flex h-full min-h-0">
       {/* Recipe Browser - Integrated Side Panel (hidden on mobile) */}
       {recipeBrowserOpen && (
-        <div className="hidden lg:block w-80 xl:w-96 relative self-stretch border-r border-border bg-background flex-shrink-0">
+        <div data-tour-id="recipe-sidebar" className="hidden lg:block w-80 xl:w-96 relative self-stretch border-r border-border bg-background flex-shrink-0">
           <RecipeBrowserSidebar
             meals={meals}
             isOpen={recipeBrowserOpen}
@@ -1054,7 +1050,7 @@ const PlanPageEnhanced: React.FC = () => {
               </div>
 
               {/* Week Navigation */}
-              <div className="flex items-center border border-slate-200 rounded-lg bg-white shadow-sm">
+              <div data-tour-id="week-navigation" className="flex items-center border border-slate-200 rounded-lg bg-white shadow-sm">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1086,6 +1082,7 @@ const PlanPageEnhanced: React.FC = () => {
               {/* Left: View Controls */}
               <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 -mx-1 px-1">
                 <Button
+                  data-tour-id="recipe-sidebar-toggle"
                   variant={recipeBrowserOpen ? "default" : "outline"}
                   onClick={() => setRecipeBrowserOpen(!recipeBrowserOpen)}
                   size="sm"
@@ -1099,7 +1096,7 @@ const PlanPageEnhanced: React.FC = () => {
                 </Button>
 
                 {/* Meal Display Toggle */}
-                <div className="flex items-center border border-slate-200 rounded-lg bg-white shadow-sm flex-shrink-0">
+                <div data-tour-id="meal-display-toggle" className="flex items-center border border-slate-200 rounded-lg bg-white shadow-sm flex-shrink-0">
                   <Button
                     variant={mealDisplayMode === 'dinners' ? 'default' : 'ghost'}
                     size="sm"
@@ -1167,6 +1164,7 @@ const PlanPageEnhanced: React.FC = () => {
               {/* Right: Actions */}
               <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1">
                 <Button
+                  data-tour-id="generate-button"
                   onClick={handleGenerateWeek}
                   disabled={generateWeekPlan.isPending}
                   size="sm"
@@ -1176,6 +1174,7 @@ const PlanPageEnhanced: React.FC = () => {
                   <span className="hidden sm:inline">{generateWeekPlan.isPending ? 'Generating...' : 'Generate'}</span>
                 </Button>
                 <Button
+                  data-tour-id="shopping-button"
                   variant="outline"
                   onClick={handleGenerateShoppingList}
                   disabled={generateShoppingList.isPending}
@@ -1204,7 +1203,7 @@ const PlanPageEnhanced: React.FC = () => {
           {(() => {
             if (viewMode === 'compact') {
               return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                <div data-tour-id="week-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                   {weekDays.map(day => (
                     <CompactDayCard
                       key={day.date}
@@ -1458,6 +1457,55 @@ const PlanPageEnhanced: React.FC = () => {
         confirmText="Clear Week"
         cancelText="Cancel"
         variant="destructive"
+      />
+
+      {/* Onboarding Tour for first-time users */}
+      <OnboardingTour
+        tourKey="plan-page-enhanced"
+        steps={[
+          {
+            id: "welcome",
+            target: "[data-tour-id='week-grid']",
+            title: "Welcome to Your Meal Planner!",
+            content: "This is your weekly meal plan. Each card represents a day with slots for breakfast, lunch, and dinner. Let's show you around!",
+            position: "top"
+          },
+          {
+            id: "recipe-sidebar",
+            target: "[data-tour-id='recipe-sidebar']",
+            title: "Your Recipe Collection",
+            content: "Browse all your saved recipes here. You can drag and drop any recipe directly onto a meal slot to plan it for that day.",
+            position: "right"
+          },
+          {
+            id: "meal-display",
+            target: "[data-tour-id='meal-display-toggle']",
+            title: "Customize Your View",
+            content: "Toggle between showing just dinners, 3 meals (breakfast, lunch, dinner), or all meals including snacks.",
+            position: "bottom"
+          },
+          {
+            id: "week-nav",
+            target: "[data-tour-id='week-navigation']",
+            title: "Navigate Between Weeks",
+            content: "Use these arrows to move between weeks, or click 'This Week' to jump back to the current week.",
+            position: "bottom"
+          },
+          {
+            id: "generate",
+            target: "[data-tour-id='generate-button']",
+            title: "Auto-Generate Meal Plans",
+            content: "Click Generate to automatically fill your week with meals from your recipe collection. It avoids duplicates and balances cuisines!",
+            position: "bottom"
+          },
+          {
+            id: "shopping",
+            target: "[data-tour-id='shopping-button']",
+            title: "Create Shopping Lists",
+            content: "Once your week is planned, click Shop to generate a shopping list with all the ingredients you'll need, organized by category.",
+            position: "bottom"
+          }
+        ]}
       />
         </div>
       </div>

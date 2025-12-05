@@ -524,6 +524,45 @@ def debug_db_counts():
         return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 
+@app.route('/api/debug/add-missing-columns', methods=['POST'])
+def debug_add_missing_columns():
+    """Add missing columns to meals table"""
+    try:
+        conn = db.connect()
+        cursor = conn.cursor()
+        results = []
+
+        # List of columns to add if missing
+        columns_to_add = [
+            ('difficulty', 'TEXT'),
+            ('tags', 'TEXT'),
+            ('ingredients', 'TEXT'),
+            ('instructions', 'TEXT'),
+            ('cuisine', 'TEXT'),
+            ('image_url', 'TEXT'),
+            ('servings', 'INTEGER DEFAULT 4'),
+            ('cook_time_minutes', 'INTEGER'),
+            ('source_url', 'TEXT'),
+        ]
+
+        for col_name, col_type in columns_to_add:
+            try:
+                cursor.execute(f"ALTER TABLE meals ADD COLUMN {col_name} {col_type}")
+                results.append(f"Added {col_name}")
+            except sqlite3.OperationalError as e:
+                if "duplicate column" in str(e).lower():
+                    results.append(f"{col_name} already exists")
+                else:
+                    results.append(f"Error adding {col_name}: {e}")
+
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'results': results})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+
 @app.route('/api/debug/init-db', methods=['POST'])
 def debug_init_db():
     """Debug endpoint to fully initialize database"""

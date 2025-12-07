@@ -35,6 +35,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null);
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>({
     top: 0,
     left: 0,
@@ -162,6 +163,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
       if (element && isElementVisible(element)) {
         setTargetElement(element);
+        setTargetRect(element.getBoundingClientRect());
 
         // Calculate tooltip position
         const position = calculateTooltipPosition(element, step.position || 'bottom');
@@ -169,6 +171,11 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
         // Scroll element into view
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Update rect after scroll completes
+        setTimeout(() => {
+          setTargetRect(element.getBoundingClientRect());
+        }, 400);
       } else {
         // Element not found or not visible, skip to next valid step
         const nextValidIndex = validSteps.find(idx => idx > currentStep);
@@ -189,6 +196,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     const handleResize = () => {
       const step = steps[currentStep];
       if (step && targetElement) {
+        setTargetRect(targetElement.getBoundingClientRect());
         const position = calculateTooltipPosition(targetElement, step.position || 'bottom');
         setTooltipPosition(position);
       }
@@ -336,21 +344,26 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
         <div className="absolute inset-0 bg-black/60" />
 
         {/* Highlight target element with pulsing ring */}
-        {targetElement && (
+        {targetRect && (
           <div
-            className="absolute rounded-lg pointer-events-none transition-all duration-300"
+            className="fixed rounded-lg pointer-events-none transition-all duration-300"
             style={{
-              top: targetElement.getBoundingClientRect().top + window.scrollY - 6,
-              left: targetElement.getBoundingClientRect().left + window.scrollX - 6,
-              width: targetElement.offsetWidth + 12,
-              height: targetElement.offsetHeight + 12,
+              top: targetRect.top - 8,
+              left: targetRect.left - 8,
+              width: targetRect.width + 16,
+              height: targetRect.height + 16,
               boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
             }}
           >
-            {/* Animated ring */}
-            <div className="absolute inset-0 rounded-lg border-2 border-primary animate-pulse" />
-            <div className="absolute inset-[-4px] rounded-xl border-2 border-primary/50 animate-ping"
-                 style={{ animationDuration: '2s' }} />
+            {/* Solid visible ring */}
+            <div className="absolute inset-0 rounded-lg border-[3px] border-primary shadow-lg shadow-primary/30" />
+            {/* Animated outer ring */}
+            <div
+              className="absolute inset-[-6px] rounded-xl border-[3px] border-primary/60"
+              style={{
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }}
+            />
           </div>
         )}
       </div>

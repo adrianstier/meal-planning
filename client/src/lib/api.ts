@@ -17,10 +17,8 @@ import type {
   RestaurantFilters,
 } from '../types/api';
 
-// API base URL - use relative URLs in production, localhost in development
-const API_BASE_URL = process.env.REACT_APP_API_URL || (
-  process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5001'
-);
+// API base URL - always use relative URLs to leverage proxy in dev and same-origin in prod
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

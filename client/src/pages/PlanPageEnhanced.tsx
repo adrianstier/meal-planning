@@ -942,7 +942,7 @@ const PlanPageEnhanced: React.FC = () => {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-1 h-4 rounded-full bg-violet-400" />
+                <div className="w-1 h-4 rounded-full bg-teal-400" />
                 <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                   Dinner
                 </h4>
@@ -1168,7 +1168,7 @@ const PlanPageEnhanced: React.FC = () => {
                   onClick={handleGenerateWeek}
                   disabled={generateWeekPlan.isPending}
                   size="sm"
-                  className="h-9 min-h-[36px] flex-shrink-0 gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-sm"
+                  className="h-9 min-h-[36px] flex-shrink-0 gap-1.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-sm"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{generateWeekPlan.isPending ? 'Generating...' : 'Generate'}</span>

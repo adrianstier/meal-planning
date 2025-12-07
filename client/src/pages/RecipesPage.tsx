@@ -510,7 +510,7 @@ const RecipesPage: React.FC = () => {
               <Button
                 variant={selectMode ? "default" : "outline"}
                 onClick={toggleSelectMode}
-                className={selectMode ? "bg-violet-600 hover:bg-violet-700" : ""}
+                className={selectMode ? "bg-teal-500 hover:bg-teal-600" : ""}
               >
                 {selectMode ? (
                   <>
@@ -526,7 +526,7 @@ const RecipesPage: React.FC = () => {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-200 hover:shadow-xl transition-all duration-200 flex-1 sm:flex-initial">
+                  <Button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-lg shadow-teal-200 hover:shadow-xl transition-all duration-200 flex-1 sm:flex-initial">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Recipe
                     <ChevronDown className="ml-2 h-4 w-4" />
@@ -640,27 +640,27 @@ const RecipesPage: React.FC = () => {
       {/* Recipes by Type */}
       <Tabs defaultValue="dinner" className="w-full">
         <TabsList className="w-full flex flex-wrap justify-start gap-1.5 h-auto p-1.5 bg-slate-100 rounded-xl">
-          <TabsTrigger value="breakfast" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+          <TabsTrigger value="breakfast" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-teal-500 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
             <Coffee className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Breakfast</span>
             <span className="ml-1 text-xs opacity-75">({mealsByType.breakfast.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="lunch" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+          <TabsTrigger value="lunch" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-teal-500 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
             <Salad className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Lunch</span>
             <span className="ml-1 text-xs opacity-75">({mealsByType.lunch.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="dinner" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+          <TabsTrigger value="dinner" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-teal-500 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
             <UtensilsCrossed className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Dinner</span>
             <span className="ml-1 text-xs opacity-75">({mealsByType.dinner.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="snack" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+          <TabsTrigger value="snack" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-teal-500 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
             <Apple className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Snacks</span>
             <span className="ml-1 text-xs opacity-75">({mealsByType.snack.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="favorites" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+          <TabsTrigger value="favorites" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-teal-500 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
             <Heart className="h-4 w-4 mr-1.5 fill-red-400 text-red-400" />
             <span className="hidden sm:inline">Favorites</span>
             <span className="ml-1 text-xs opacity-75">({mealsByType.favorites.length})</span>
@@ -722,7 +722,7 @@ const RecipesPage: React.FC = () => {
                     onDragEnd={() => {
                       setDraggedRecipe(null);
                     }}
-                    className={`group flex flex-col ${selectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden border-slate-200 bg-white rounded-xl ${selectMode && selectedMealIds.has(meal.id) ? 'ring-2 ring-violet-500 ring-offset-2' : ''}`}
+                    className={`group flex flex-col ${selectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden border-slate-200 bg-white rounded-xl ${selectMode && selectedMealIds.has(meal.id) ? 'ring-2 ring-teal-500 ring-offset-2' : ''}`}
                     onClick={() => {
                       if (selectMode) {
                         toggleMealSelection(meal.id);
@@ -757,7 +757,7 @@ const RecipesPage: React.FC = () => {
                         <div className="absolute top-2 left-2 z-20">
                           <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
                             selectedMealIds.has(meal.id)
-                              ? 'bg-violet-600 border-violet-600'
+                              ? 'bg-teal-500 border-teal-500'
                               : 'bg-white/90 border-slate-300 backdrop-blur-sm'
                           }`}>
                             {selectedMealIds.has(meal.id) && (

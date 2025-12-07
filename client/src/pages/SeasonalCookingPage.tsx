@@ -661,7 +661,7 @@ const SeasonalCookingPage: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => setShowAIParser(true)} variant="default" className="h-10 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700">
+          <Button onClick={() => setShowAIParser(true)} variant="default" className="h-10 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600">
             <Wand2 className="h-4 w-4 mr-2" />
             AI Import
           </Button>
@@ -1024,7 +1024,7 @@ const SeasonalCookingPage: React.FC = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-violet-600" />
+                  <Sparkles className="h-5 w-5 text-teal-500" />
                   <CardTitle className="text-lg">Recipe Suggestions</CardTitle>
                 </div>
                 <Button
@@ -1210,7 +1210,7 @@ const SeasonalCookingPage: React.FC = () => {
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center">
                     <Wand2 className="h-5 w-5 text-white" />
                   </div>
                   <div>
@@ -1293,7 +1293,7 @@ Example:
                       <Button
                         onClick={handleParseText}
                         disabled={aiParsing || !aiParseText.trim()}
-                        className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+                        className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
                       >
                         {aiParsing ? (
                           <>

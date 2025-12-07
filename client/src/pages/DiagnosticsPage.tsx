@@ -289,7 +289,7 @@ const DiagnosticsPage: React.FC = () => {
             size="sm"
             onClick={exportForClaude}
             disabled={errors.length === 0}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 min-h-[40px]"
+            className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 h-10 min-h-[40px]"
           >
             <Copy className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Copy for Claude</span>

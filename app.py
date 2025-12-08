@@ -1001,13 +1001,19 @@ def parse_recipe():
                     elif 'ssl' in error_str or 'certificate' in error_str:
                         error_type = 'ssl'
                         user_message = 'SSL certificate error. Please try copying and pasting the recipe text instead.'
+                    elif 'should be implemented' in error_str or 'notimplementederror' in error_str:
+                        error_type = 'unsupported'
+                        user_message = 'This recipe website is not supported for automatic parsing. Please copy and paste the recipe text instead, or try a recipe from a major cooking site like AllRecipes, Food Network, or Bon Appétit.'
+                    elif 'timeout' in error_str or 'timed out' in error_str:
+                        error_type = 'timeout'
+                        user_message = 'The recipe site took too long to respond. Please try again or copy and paste the recipe text instead.'
                     else:
                         error_type = 'unknown'
                         user_message = f'Failed to parse recipe from URL: {str(url_error)}'
 
-                    # For blocking/paywall errors, provide clear user message
+                    # For blocking/paywall/unsupported errors, provide clear user message
                     # Don't try AI parser fallback since it needs the actual recipe content
-                    if error_type in ['blocked', 'paywall', 'not_found']:
+                    if error_type in ['blocked', 'paywall', 'not_found', 'unsupported', 'timeout']:
                         print(f"⚠️  URL scraper failed ({error_type}): {user_message}")
                         return jsonify({'success': False, 'error': user_message}), 500
 

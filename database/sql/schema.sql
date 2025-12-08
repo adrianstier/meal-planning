@@ -36,6 +36,16 @@ CREATE TABLE meals (
     cook_time_minutes INTEGER,
     adult_friendly BOOLEAN DEFAULT 1,
     notes TEXT,
+    -- Extended recipe fields (added for React frontend)
+    difficulty TEXT,
+    servings INTEGER,
+    tags TEXT,
+    ingredients TEXT,
+    instructions TEXT,
+    cuisine TEXT,
+    image_url TEXT,
+    source_url TEXT,
+    top_comments TEXT,
     FOREIGN KEY (meal_type_id) REFERENCES meal_types(id)
 );
 

@@ -4765,6 +4765,42 @@ def init_database():
         print("📊 Attempting to initialize database...")
         db.initialize_database()
 
+    # Always run meals table columns migration (ensures columns exist on existing databases)
+    try:
+        print("🔄 Ensuring meals table has all required columns...")
+        conn = db.connect()
+        cursor = conn.cursor()
+
+        # List of columns to add if missing
+        columns_to_add = [
+            ('difficulty', 'TEXT'),
+            ('tags', 'TEXT'),
+            ('ingredients', 'TEXT'),
+            ('instructions', 'TEXT'),
+            ('cuisine', 'TEXT'),
+            ('image_url', 'TEXT'),
+            ('servings', 'INTEGER'),
+            ('cook_time_minutes', 'INTEGER'),
+            ('source_url', 'TEXT'),
+            ('top_comments', 'TEXT'),
+        ]
+
+        for col_name, col_type in columns_to_add:
+            try:
+                cursor.execute(f"ALTER TABLE meals ADD COLUMN {col_name} {col_type}")
+                print(f"  ✅ Added {col_name} column")
+            except sqlite3.OperationalError as e:
+                if "duplicate column" in str(e).lower():
+                    pass  # Column already exists, that's fine
+                else:
+                    print(f"  ⚠️  Could not add {col_name}: {e}")
+
+        conn.commit()
+        conn.close()
+        print("✅ Meals table columns verified")
+    except Exception as e:
+        print(f"⚠️  Meals columns migration: {e}")
+
     # Run migration for users table if needed
     try:
         conn = db.connect()

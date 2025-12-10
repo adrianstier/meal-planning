@@ -1011,16 +1011,15 @@ def parse_recipe():
                         error_type = 'unknown'
                         user_message = f'Failed to parse recipe from URL: {str(url_error)}'
 
-                    # For blocking/paywall/unsupported errors, provide clear user message
-                    # Don't try AI parser fallback since it needs the actual recipe content
-                    if error_type in ['blocked', 'paywall', 'not_found', 'unsupported', 'timeout']:
+                    # For blocking/paywall errors, don't try AI fallback (it can't access the content either)
+                    if error_type in ['blocked', 'paywall', 'not_found']:
                         print(f"⚠️  URL scraper failed ({error_type}): {user_message}")
                         return jsonify({'success': False, 'error': user_message}), 500
 
-                    # For other errors, fall back to AI parser if available
+                    # For unsupported sites, timeout, or other errors - try AI parser as fallback
                     if recipe_parser:
                         print(f"⚠️  URL scraper failed ({error_type}). Falling back to AI parser...")
-                        # Continue to AI parser below
+                        # Continue to AI parser below - it will fetch and parse the URL
                         pass
                     else:
                         return jsonify({'success': False, 'error': user_message}), 500

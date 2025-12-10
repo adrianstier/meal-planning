@@ -266,23 +266,140 @@ Return ONLY valid JSON, no other text."""
         except Exception as e:
             raise Exception(f"Failed to parse recipe from image: {str(e)}")
 
+    def _fetch_webpage_content(self, url: str) -> Optional[str]:
+        """
+        Fetch webpage content and extract text for recipe parsing
+        Returns cleaned text content or None if failed
+        """
+        if not HAS_BEAUTIFULSOUP:
+            print("⚠️  BeautifulSoup not available - cannot fetch webpage content")
+            return None
+
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+
+            # Remove script and style elements
+            for element in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+                element.decompose()
+
+            # Try to find recipe-specific content first
+            recipe_content = None
+
+            # Method 1: Look for JSON-LD structured data (most accurate)
+            for script in soup.find_all('script', type='application/ld+json'):
+                try:
+                    data = json.loads(script.string)
+                    # Handle both single object and array formats
+                    if isinstance(data, list):
+                        for item in data:
+                            if isinstance(item, dict) and item.get('@type') == 'Recipe':
+                                data = item
+                                break
+                    if isinstance(data, dict) and data.get('@type') == 'Recipe':
+                        # Extract recipe info from structured data
+                        parts = []
+                        if data.get('name'):
+                            parts.append(f"Recipe: {data['name']}")
+                        if data.get('description'):
+                            parts.append(f"Description: {data['description']}")
+                        if data.get('recipeIngredient'):
+                            ingredients = data['recipeIngredient']
+                            if isinstance(ingredients, list):
+                                parts.append("Ingredients:\n" + "\n".join(f"- {i}" for i in ingredients))
+                        if data.get('recipeInstructions'):
+                            instructions = data['recipeInstructions']
+                            if isinstance(instructions, list):
+                                steps = []
+                                for i, inst in enumerate(instructions, 1):
+                                    if isinstance(inst, dict):
+                                        steps.append(f"{i}. {inst.get('text', '')}")
+                                    else:
+                                        steps.append(f"{i}. {inst}")
+                                parts.append("Instructions:\n" + "\n".join(steps))
+                            elif isinstance(instructions, str):
+                                parts.append(f"Instructions: {instructions}")
+                        if data.get('prepTime'):
+                            parts.append(f"Prep time: {data['prepTime']}")
+                        if data.get('cookTime'):
+                            parts.append(f"Cook time: {data['cookTime']}")
+                        if data.get('recipeYield'):
+                            parts.append(f"Servings: {data['recipeYield']}")
+                        if parts:
+                            recipe_content = "\n\n".join(parts)
+                            print(f"✅ Extracted recipe from JSON-LD structured data")
+                            break
+                except (json.JSONDecodeError, TypeError, KeyError):
+                    continue
+
+            # Method 2: Look for article or recipe container
+            if not recipe_content:
+                article = soup.find('article') or soup.find('div', class_=re.compile(r'recipe|wprm-recipe|tasty-recipe', re.I))
+                if article:
+                    recipe_content = article.get_text(separator='\n', strip=True)
+                    print(f"✅ Extracted recipe from article/recipe container")
+
+            # Method 3: Get main content area
+            if not recipe_content:
+                main = soup.find('main') or soup.find('div', class_=re.compile(r'content|post|entry', re.I))
+                if main:
+                    recipe_content = main.get_text(separator='\n', strip=True)
+                    print(f"✅ Extracted recipe from main content")
+
+            # Method 4: Fallback to body
+            if not recipe_content:
+                body = soup.find('body')
+                if body:
+                    recipe_content = body.get_text(separator='\n', strip=True)
+                    print(f"⚠️  Fallback to body content")
+
+            if recipe_content:
+                # Clean up the text - remove excessive whitespace
+                lines = [line.strip() for line in recipe_content.split('\n') if line.strip()]
+                recipe_content = '\n'.join(lines)
+                # Limit content length to avoid token limits
+                if len(recipe_content) > 8000:
+                    recipe_content = recipe_content[:8000] + "\n\n[Content truncated...]"
+                return recipe_content
+
+            return None
+
+        except Exception as e:
+            print(f"⚠️  Failed to fetch webpage content: {e}")
+            return None
+
     def parse_recipe(self, recipe_input: str) -> Dict:
         """
         Parse a recipe from text or URL
         Returns structured meal data with image if URL provided
         """
 
-        # Check if input is a URL and try to extract image
+        # Check if input is a URL and try to extract image and content
         image_url = None
         source_url = None
+        recipe_text = recipe_input
+
         if self._is_url(recipe_input):
             source_url = recipe_input
             image_url = self._extract_image_from_url(recipe_input)
 
+            # Fetch the actual webpage content for AI parsing
+            fetched_content = self._fetch_webpage_content(recipe_input)
+            if fetched_content:
+                recipe_text = f"Source URL: {recipe_input}\n\n{fetched_content}"
+            else:
+                # If we can't fetch content, include the URL and hope Claude can work with it
+                recipe_text = f"Recipe URL (please parse based on common recipe patterns): {recipe_input}"
+
         prompt = f"""Parse the following recipe and extract structured information.
 
 Recipe input:
-{recipe_input}
+{recipe_text}
 
 Please analyze this recipe and provide a JSON response with the following structure:
 {{

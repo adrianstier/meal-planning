@@ -168,8 +168,26 @@ const PlanPageEnhanced: React.FC = () => {
   // Handle drop event
   const handleDrop = async (date: string, mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner', e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
-    if (!draggedRecipe) {
+    console.log('Drop event triggered:', { date, mealType, draggedRecipe });
+
+    // Try to get meal from dataTransfer if draggedRecipe is null
+    let mealToAdd = draggedRecipe?.meal;
+    if (!mealToAdd) {
+      try {
+        const data = e.dataTransfer.getData('application/json');
+        if (data) {
+          mealToAdd = JSON.parse(data);
+          console.log('Got meal from dataTransfer:', mealToAdd);
+        }
+      } catch (err) {
+        console.error('Failed to parse drag data:', err);
+      }
+    }
+
+    if (!mealToAdd) {
+      console.warn('No meal to add - draggedRecipe is null and no dataTransfer data');
       return;
     }
 
@@ -180,11 +198,15 @@ const PlanPageEnhanced: React.FC = () => {
         backendMealType = 'snack'; // Backend still uses generic 'snack'
       }
 
+      console.log('Adding to plan:', { meal_id: mealToAdd.id, plan_date: date, meal_type: backendMealType });
+
       await addPlanItem.mutateAsync({
-        meal_id: draggedRecipe.meal.id,
+        meal_id: mealToAdd.id,
         plan_date: date,
         meal_type: backendMealType,
       });
+
+      console.log('Successfully added meal to plan!');
     } catch (error) {
       console.error('Failed to add meal to plan:', error);
     }

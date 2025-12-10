@@ -532,8 +532,9 @@ def debug_add_missing_columns():
         cursor = conn.cursor()
         results = []
 
-        # List of columns to add if missing
+        # List of columns to add if missing (comprehensive list for React frontend)
         columns_to_add = [
+            ('meal_type', 'TEXT'),
             ('difficulty', 'TEXT'),
             ('tags', 'TEXT'),
             ('ingredients', 'TEXT'),
@@ -543,6 +544,14 @@ def debug_add_missing_columns():
             ('servings', 'INTEGER DEFAULT 4'),
             ('cook_time_minutes', 'INTEGER'),
             ('source_url', 'TEXT'),
+            ('top_comments', 'TEXT'),
+            ('is_favorite', 'BOOLEAN DEFAULT 0'),
+            ('makes_leftovers', 'BOOLEAN DEFAULT 0'),
+            ('leftover_servings', 'INTEGER'),
+            ('leftover_days', 'INTEGER'),
+            ('kid_rating', 'INTEGER'),
+            ('last_cooked', 'DATE'),
+            ('user_id', 'INTEGER'),
         ]
 
         for col_name, col_type in columns_to_add:
@@ -4770,8 +4779,9 @@ def init_database():
         conn = db.connect()
         cursor = conn.cursor()
 
-        # List of columns to add if missing
+        # List of columns to add if missing (comprehensive list for React frontend)
         columns_to_add = [
+            ('meal_type', 'TEXT'),
             ('difficulty', 'TEXT'),
             ('tags', 'TEXT'),
             ('ingredients', 'TEXT'),
@@ -4782,6 +4792,13 @@ def init_database():
             ('cook_time_minutes', 'INTEGER'),
             ('source_url', 'TEXT'),
             ('top_comments', 'TEXT'),
+            ('is_favorite', 'BOOLEAN DEFAULT 0'),
+            ('makes_leftovers', 'BOOLEAN DEFAULT 0'),
+            ('leftover_servings', 'INTEGER'),
+            ('leftover_days', 'INTEGER'),
+            ('kid_rating', 'INTEGER'),
+            ('last_cooked', 'DATE'),
+            ('user_id', 'INTEGER'),
         ]
 
         for col_name, col_type in columns_to_add:

@@ -31,6 +31,7 @@ CREATE TABLE meals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     meal_type_id INTEGER NOT NULL,
+    meal_type TEXT,
     kid_friendly_level INTEGER DEFAULT 5, -- 1-10 scale
     prep_time_minutes INTEGER,
     cook_time_minutes INTEGER,
@@ -46,7 +47,16 @@ CREATE TABLE meals (
     image_url TEXT,
     source_url TEXT,
     top_comments TEXT,
-    FOREIGN KEY (meal_type_id) REFERENCES meal_types(id)
+    -- Additional fields for multi-user support
+    is_favorite BOOLEAN DEFAULT 0,
+    makes_leftovers BOOLEAN DEFAULT 0,
+    leftover_servings INTEGER,
+    leftover_days INTEGER,
+    kid_rating INTEGER,
+    last_cooked DATE,
+    user_id INTEGER,
+    FOREIGN KEY (meal_type_id) REFERENCES meal_types(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 -- Meal components (links meals to ingredients with portions)

@@ -746,7 +746,7 @@ const PlanPageEnhanced: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-6 w-6 -mr-1 opacity-60 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
                 onClick={() => handleAddMeal(day.date, 'breakfast')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -848,7 +848,7 @@ const PlanPageEnhanced: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-6 w-6 -mr-1 opacity-60 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
                 onClick={() => handleAddMeal(day.date, 'lunch')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -950,7 +950,7 @@ const PlanPageEnhanced: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-6 w-6 -mr-1 opacity-60 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
                 onClick={() => handleAddMeal(day.date, 'dinner')}
               >
                 <Plus className="h-3.5 w-3.5" />

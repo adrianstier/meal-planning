@@ -157,24 +157,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
+    console.log('[AuthContext] login starting for:', email);
     setLoading(true);
+
+    // Add timeout to login to prevent infinite spinner
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Login timeout - please try again')), 15000);
+    });
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      console.log('[AuthContext] Calling signInWithPassword...');
+      const authResult = await Promise.race([
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }),
+        timeoutPromise
+      ]);
+
+      const { data, error } = authResult as { data: { user: SupabaseUser | null; session: Session | null }; error: Error | null };
+      console.log('[AuthContext] signInWithPassword result:', error ? `error: ${error.message}` : 'success');
 
       if (error) {
         throw new Error(error.message);
       }
 
       if (data.user) {
+        console.log('[AuthContext] Fetching profile after login...');
         const profile = await fetchProfile(data.user.id);
+        console.log('[AuthContext] Profile fetched:', profile ? 'success' : 'not found');
         setUser(profile);
         setSupabaseUser(data.user);
         setSession(data.session);
       }
     } finally {
+      console.log('[AuthContext] login complete, setting loading=false');
       setLoading(false);
     }
   };

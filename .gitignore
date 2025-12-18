@@ -1,41 +1,7 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-/lib/
-/lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
 # Environment
 .env
-.venv
+.env.local
+.env.*.local
 
 # API Keys (keep private!)
 key.txt
@@ -55,59 +21,30 @@ Thumbs.db
 # Logs
 *.log
 
-# React build
+# React/Node
 client/build/
 client/dist/
 client/node_modules/
+node_modules/
+npm-debug.log*
 
-# Static files - built by Railway build script
-templates/static/js/
-templates/static/css/
-templates/static/media/
-templates/index.html
-templates/manifest.json
-templates/favicon.ico
-templates/logo192.png
-templates/logo512.png
-templates/asset-manifest.json
-templates/robots.txt
+# Vercel
+.vercel
 
-# Keep recipe images (not built, user uploaded)
-!templates/static/recipe_images/
-
-# Backups
-*_backup/
-*.bak
+# Supabase
+supabase/.branches
+supabase/.temp
 
 # Test coverage
 .coverage
 htmlcov/
 .pytest_cache/
 
-# Railway
-.railway/
-
-# R Project files
-*.Rproj
-.Rproj.user/
-
-# Debug and test artifacts
-debug-login.js
-analyze-ui.js
-analyze_ui.py
-get_db_path.py
-monitor_*.sh
-*.png
-!docs/**/*.png
-!client/public/**/*.png
-
 # Playwright test artifacts
 test-results/
 playwright-report/
 playwright/.cache/
 
-# Node
-node_modules/
-package-lock.json
-npm-debug.log*
-.vercel
+# Backups
+*_backup/
+*.bak

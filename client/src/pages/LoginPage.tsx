@@ -27,9 +27,10 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
-        await login(username, password);
+        // Supabase uses email for login
+        await login(email, password);
       } else {
-        if (!email || !displayName) {
+        if (!email || !displayName || !username) {
           setError('Please fill in all fields to create your account.');
           setLoading(false);
           return;
@@ -90,20 +91,20 @@ export default function LoginPage() {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-              {/* Username Field */}
+              {/* Email Field - Required for both login and register */}
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium">
-                  Username
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email address
                 </Label>
                 <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  placeholder="Enter your username"
-                  autoComplete="username"
+                  placeholder="you@example.com"
+                  autoComplete="email"
                   className="transition-all duration-150"
                   aria-describedby={error ? 'login-error' : undefined}
                 />
@@ -113,22 +114,22 @@ export default function LoginPage() {
               {!isLogin && (
                 <div className="space-y-5 animate-fade-in">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">
-                      Email address
+                    <Label htmlFor="username" className="text-sm font-medium">
+                      Username
                     </Label>
                     <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="username"
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
                       required={!isLogin}
                       disabled={loading}
-                      placeholder="you@example.com"
-                      autoComplete="email"
+                      placeholder="Choose a username"
+                      autoComplete="username"
                       className="transition-all duration-150"
                     />
                     <p className="text-xs text-muted-foreground">
-                      We'll never share your email
+                      Your unique identifier
                     </p>
                   </div>
 

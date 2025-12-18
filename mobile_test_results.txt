@@ -1,4 +1,0 @@
-Error: Project(s) "Mobile Safari" not found. Available projects: "chromium", "mobile-chrome", "tablet"
-    at filterProjects (/Users/adrianstiermbp2023/node_modules/playwright/lib/runner/projectUtils.js:80:11)
-    at runTests (/Users/adrianstiermbp2023/node_modules/playwright/lib/program.js:217:42)
-    at i.<anonymous> (/Users/adrianstiermbp2023/node_modules/playwright/lib/program.js:71:7)

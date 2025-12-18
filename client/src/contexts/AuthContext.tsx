@@ -78,9 +78,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const checkAuth = async () => {
+    console.log('[AuthContext] checkAuth starting...');
+
     // If credentials are missing, skip auth check and show login page
     if (isMissingCredentials) {
-      console.error('Supabase credentials missing - skipping auth check');
+      console.error('[AuthContext] Supabase credentials missing - skipping auth check');
       setUser(null);
       setSupabaseUser(null);
       setSession(null);
@@ -88,23 +90,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
+    // Add a timeout to prevent infinite loading
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Auth check timeout after 10s')), 10000);
+    });
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log('[AuthContext] Getting session from Supabase...');
+      const sessionResult = await Promise.race([
+        supabase.auth.getSession(),
+        timeoutPromise
+      ]);
+
+      const { data: { session } } = sessionResult as { data: { session: Session | null } };
+      console.log('[AuthContext] Session result:', session ? 'found' : 'none');
+
       setSession(session);
       setSupabaseUser(session?.user ?? null);
 
       if (session?.user) {
+        console.log('[AuthContext] Fetching profile for user:', session.user.id);
         const profile = await fetchProfile(session.user.id);
+        console.log('[AuthContext] Profile result:', profile ? 'found' : 'none');
         setUser(profile);
       } else {
         setUser(null);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('[AuthContext] Auth check failed:', error);
       setUser(null);
       setSupabaseUser(null);
       setSession(null);
     } finally {
+      console.log('[AuthContext] checkAuth complete, setting loading=false');
       setLoading(false);
     }
   };

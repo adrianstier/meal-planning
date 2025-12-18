@@ -131,3 +131,39 @@ export const useBulkDeleteMeals = () => {
     },
   });
 };
+
+export const useParseRecipeFromUrl = () => {
+  return useMutation({
+    mutationFn: async (url: string) => {
+      try {
+        const response = await mealsApi.parseRecipeFromUrl(url);
+        return response;
+      } catch (error) {
+        console.error('Parse recipe from URL mutation error:', error);
+        throw error;
+      }
+    },
+    retry: false,
+    onError: (error) => {
+      console.error('Recipe URL parse failed:', error);
+    },
+  });
+};
+
+export const useParseRecipeFromUrlAI = () => {
+  return useMutation({
+    mutationFn: async (url: string) => {
+      try {
+        const response = await mealsApi.parseRecipeFromUrlAI(url);
+        return response;
+      } catch (error) {
+        console.error('Parse recipe from URL (AI) mutation error:', error);
+        throw error;
+      }
+    },
+    retry: false,
+    onError: (error) => {
+      console.error('Recipe URL AI parse failed:', error);
+    },
+  });
+};

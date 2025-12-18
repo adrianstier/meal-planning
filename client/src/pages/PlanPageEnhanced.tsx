@@ -22,7 +22,16 @@ import {
   AlertCircle,
   Timer,
   Apple,
-  Globe
+  Globe,
+  StickyNote,
+  Star,
+  Clock,
+  ExternalLink,
+  Flame,
+  Leaf,
+  Heart,
+  ListChecks,
+  MessageSquare
 } from 'lucide-react';
 import { scaleIngredients, calculateServingMultiplier } from '../utils/ingredientScaler';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -1273,19 +1282,53 @@ const PlanPageEnhanced: React.FC = () => {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedMeal?.meal_name}</DialogTitle>
-            <DialogDescription>
-              <div className="flex gap-3 text-sm mt-2">
+            <DialogTitle className="text-xl">{selectedMeal?.meal_name}</DialogTitle>
+            <DialogDescription asChild>
+              <div className="flex flex-wrap gap-3 text-sm mt-3">
                 {selectedMeal?.cook_time_minutes && (
-                  <span>{selectedMeal.cook_time_minutes} min</span>
+                  <Badge variant="outline" className="gap-1.5 font-normal">
+                    <Clock className="h-3.5 w-3.5 text-orange-500" />
+                    {selectedMeal.cook_time_minutes} min
+                  </Badge>
                 )}
                 {selectedMeal?.difficulty && (
-                  <span className="capitalize">{selectedMeal.difficulty}</span>
+                  <Badge variant="outline" className="gap-1.5 font-normal capitalize">
+                    <Flame className={cn(
+                      "h-3.5 w-3.5",
+                      selectedMeal.difficulty === 'easy' ? 'text-green-500' :
+                      selectedMeal.difficulty === 'medium' ? 'text-amber-500' : 'text-red-500'
+                    )} />
+                    {selectedMeal.difficulty}
+                  </Badge>
                 )}
-                {selectedMeal?.servings && <span>{selectedMeal.servings} servings</span>}
+                {selectedMeal?.servings && (
+                  <Badge variant="outline" className="gap-1.5 font-normal">
+                    <Users className="h-3.5 w-3.5 text-blue-500" />
+                    {selectedMeal.servings} servings
+                  </Badge>
+                )}
+                {selectedMeal?.cuisine && (
+                  <Badge variant="outline" className="gap-1.5 font-normal">
+                    <Globe className="h-3.5 w-3.5 text-purple-500" />
+                    {selectedMeal.cuisine}
+                  </Badge>
+                )}
               </div>
             </DialogDescription>
           </DialogHeader>
+
+          {/* Notes Section - Prominent display */}
+          {selectedMeal?.notes && selectedMeal.notes.trim() && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <StickyNote className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-amber-800 mb-1">Notes</h3>
+                  <p className="text-amber-900 text-sm whitespace-pre-wrap">{selectedMeal.notes}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Serving Adjustment Controls */}
           {selectedMeal?.servings && selectedMeal.servings > 0 && (
@@ -1343,28 +1386,35 @@ const PlanPageEnhanced: React.FC = () => {
               </div>
             </div>
           )}
+
           <div className="space-y-6">
             {selectedMeal?.tags && (
               <div>
-                <h3 className="font-semibold mb-2">Tags</h3>
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-pink-500" />
+                  Tags
+                </h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedMeal.tags.split(',').map((tag, i) => (
-                    <span
+                    <Badge
                       key={i}
-                      className="px-3 py-1 text-sm rounded-full bg-secondary"
+                      variant="secondary"
+                      className="px-3 py-1"
                     >
                       {tag.trim()}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
             )}
+
             {selectedMeal?.ingredients && (
               <div>
-                <h3 className="font-semibold mb-2">
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <ListChecks className="h-4 w-4 text-green-600" />
                   Ingredients
                   {adjustedServings && adjustedServings !== selectedMeal.servings && (
-                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                    <span className="text-sm font-normal text-muted-foreground">
                       (scaled for {adjustedServings} servings)
                     </span>
                   )}
@@ -1381,9 +1431,13 @@ const PlanPageEnhanced: React.FC = () => {
                 </div>
               </div>
             )}
+
             {selectedMeal?.instructions && (
               <div>
-                <h3 className="font-semibold mb-2">Instructions</h3>
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <ChefHat className="h-4 w-4 text-purple-600" />
+                  Instructions
+                </h3>
                 <div className="bg-muted p-4 rounded-lg">
                   <pre className="whitespace-pre-wrap font-sans text-sm">
                     {selectedMeal.instructions}
@@ -1392,6 +1446,7 @@ const PlanPageEnhanced: React.FC = () => {
               </div>
             )}
           </div>
+
           <DialogFooter>
             <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
           </DialogFooter>

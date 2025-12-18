@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Pencil, Sparkles, Calendar as CalendarIcon, Package, Beef, Apple, Carrot, Croissant, Milk, Cookie, Star, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Pencil, Sparkles, Calendar as CalendarIcon, Package, Beef, Apple, Carrot, Croissant, Milk, Cookie, Star, AlertTriangle, Check } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -314,7 +314,7 @@ const BentoPage: React.FC = () => {
                               disabled={alreadyAdded}
                               className="h-8 text-xs min-h-[32px] px-2"
                             >
-                              {alreadyAdded && '✓ '}{itemName}
+                              {alreadyAdded && <Check className="h-3 w-3 mr-1 inline" />}{itemName}
                             </Button>
                           );
                         })}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Baby, Package, Utensils, MoreVertical, Trash2, Copy, ArrowRight, Repeat } from 'lucide-react';
+import { Clock, Baby, Package, Utensils, MoreVertical, Trash2, Copy, ArrowRight, Repeat, StickyNote } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +65,15 @@ const MealCard: React.FC<MealCardProps> = ({
       badges.push(
         <span key="leftovers" className="inline-flex items-center text-xs text-purple-700">
           <Utensils className="h-3 w-3" />
+        </span>
+      );
+    }
+
+    // Show notes indicator if meal has notes
+    if (meal.notes && meal.notes.trim()) {
+      badges.push(
+        <span key="notes" className="inline-flex items-center text-xs text-amber-600" title="Has notes">
+          <StickyNote className="h-3 w-3" />
         </span>
       );
     }

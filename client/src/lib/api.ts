@@ -162,6 +162,18 @@ export const mealsApi = {
     return wrapResponse(data as Meal);
   },
 
+  parseRecipeFromUrlAI: async (url: string) => {
+    const { data, error } = await supabase.functions.invoke('parse-recipe-url-ai', {
+      body: { url },
+    });
+
+    if (error) {
+      errorLogger.logApiError(error, '/functions/parse-recipe-url-ai', 'POST');
+      throw error;
+    }
+    return wrapResponse(data as Meal);
+  },
+
   search: async (query: string) => {
     const { data, error } = await supabase
       .from('meals')

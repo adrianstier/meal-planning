@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X, Coffee, Salad, UtensilsCrossed, Apple, Globe, Star, Lightbulb, Check } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X, Coffee, Salad, UtensilsCrossed, Apple, Globe, Star, Lightbulb, Check, Brain, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -28,7 +28,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { RecipeParsingProgress } from '../components/features/recipes/RecipeParsingProgress';
-import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage, useBulkDeleteMeals } from '../hooks/useMeals';
+import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage, useBulkDeleteMeals, useParseRecipeFromUrl, useParseRecipeFromUrlAI } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
 import StarRating from '../components/StarRating';
 import { useDragDrop } from '../contexts/DragDropContext';
@@ -83,7 +83,12 @@ const RecipesPage: React.FC = () => {
   const bulkDeleteMeals = useBulkDeleteMeals();
   const parseRecipe = useParseRecipe();
   const parseRecipeFromImage = useParseRecipeFromImage();
+  const parseRecipeFromUrl = useParseRecipeFromUrl();
+  const parseRecipeFromUrlAI = useParseRecipeFromUrlAI();
   const { setDraggedRecipe } = useDragDrop();
+
+  // Track if we should suggest AI parsing after fast parse fails
+  const [showAISuggestion, setShowAISuggestion] = useState(false);
 
   // Multi-select handlers
   const toggleSelectMode = () => {
@@ -183,69 +188,103 @@ const RecipesPage: React.FC = () => {
     }
   };
 
+  // Helper to process parsed recipe data into form data
+  const processParseResult = (parsedData: any) => {
+    // Pre-fill form with parsed data
+    let ingredientsText = '';
+    if (parsedData.ingredients && Array.isArray(parsedData.ingredients)) {
+      ingredientsText = parsedData.ingredients
+        .map((ing: { quantity?: string; name: string }) => {
+          const quantity = ing.quantity ? `${ing.quantity} ` : '';
+          const name = ing.name || '';
+          return `${quantity}${name}`.trim();
+        })
+        .filter((line: string) => line.length > 0)
+        .join('\n');
+    } else if (typeof parsedData.ingredients === 'string') {
+      ingredientsText = parsedData.ingredients;
+    }
+
+    let instructionsText = '';
+    if (parsedData.instructions && Array.isArray(parsedData.instructions)) {
+      instructionsText = parsedData.instructions.join('\n');
+    } else if (typeof parsedData.instructions === 'string') {
+      instructionsText = parsedData.instructions;
+    }
+
+    setFormData({
+      ...formData,
+      name: parsedData.name || '',
+      meal_type: parsedData.meal_type || 'dinner',
+      cook_time_minutes: parsedData.cook_time_minutes,
+      servings: parsedData.servings,
+      difficulty: parsedData.difficulty || 'medium',
+      tags: parsedData.tags || '',
+      ingredients: ingredientsText,
+      instructions: instructionsText,
+      image_url: parsedData.image_url,
+      source_url: parsedData.source_url,
+      cuisine: parsedData.cuisine,
+    });
+  };
+
+  // Quick import - uses fast JSON-LD parsing only
   const handleParseFromUrl = async () => {
     if (!recipeUrl.trim()) {
       alert('Please enter a recipe URL');
       return;
     }
 
+    setShowAISuggestion(false);
+
     try {
-      // For now, we'll just use the same parsing endpoint with the URL as text
-      // The backend might need to be updated to fetch URL content
-      const result = await parseRecipe.mutateAsync(recipeUrl);
-
-      console.log('Parse result:', result);
-      console.log('Parse result.data:', result.data);
-
+      const result = await parseRecipeFromUrl.mutateAsync(recipeUrl);
       const parsedData = result.data;
 
       setParsedRecipe(parsedData);
       setUrlDialogOpen(false);
-
-      // Pre-fill form with parsed data (same logic as handleParseRecipe)
-      let ingredientsText = '';
-      if (parsedData.ingredients && Array.isArray(parsedData.ingredients)) {
-        ingredientsText = parsedData.ingredients
-          .map((ing: { quantity?: string; name: string }) => {
-            const quantity = ing.quantity ? `${ing.quantity} ` : '';
-            const name = ing.name || '';
-            return `${quantity}${name}`.trim();
-          })
-          .filter(line => line.length > 0)
-          .join('\n');
-      } else if (typeof parsedData.ingredients === 'string') {
-        ingredientsText = parsedData.ingredients;
-      }
-
-      let instructionsText = '';
-      if (parsedData.instructions && Array.isArray(parsedData.instructions)) {
-        instructionsText = parsedData.instructions.join('\n');
-      } else if (typeof parsedData.instructions === 'string') {
-        instructionsText = parsedData.instructions;
-      }
-
-      setFormData({
-        ...formData,
-        name: parsedData.name || '',
-        meal_type: parsedData.meal_type || 'dinner',
-        cook_time_minutes: parsedData.cook_time_minutes,
-        servings: parsedData.servings,
-        difficulty: parsedData.difficulty || 'medium',
-        tags: parsedData.tags || '',
-        ingredients: ingredientsText,
-        instructions: instructionsText,
-        image_url: parsedData.image_url,
-        source_url: parsedData.source_url,
-        cuisine: parsedData.cuisine,
-      });
+      processParseResult(parsedData);
       setAddDialogOpen(true);
       setRecipeUrl('');
-    } catch (error) {
+      setShowAISuggestion(false);
+    } catch (error: any) {
       console.error('Failed to parse recipe from URL:', error);
-      // Ensure dialog state is reset even on error
+      // Check if the error suggests using AI parsing
+      const needsAI = error?.context?.needsAI || error?.needsAI ||
+        (error?.message && (error.message.includes('AI Enhanced') || error.message.includes('No structured')));
+
+      if (needsAI) {
+        setShowAISuggestion(true);
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        alert(`Failed to parse recipe from URL: ${errorMessage}`);
+      }
+    }
+  };
+
+  // AI-enhanced import - uses Claude to parse the page
+  const handleParseFromUrlAI = async () => {
+    if (!recipeUrl.trim()) {
+      alert('Please enter a recipe URL');
+      return;
+    }
+
+    setShowAISuggestion(false);
+
+    try {
+      const result = await parseRecipeFromUrlAI.mutateAsync(recipeUrl);
+      const parsedData = result.data;
+
+      setParsedRecipe(parsedData);
+      setUrlDialogOpen(false);
+      processParseResult(parsedData);
+      setAddDialogOpen(true);
+      setRecipeUrl('');
+      setShowAISuggestion(false);
+    } catch (error) {
+      console.error('Failed to parse recipe from URL with AI:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to parse recipe from URL: ${errorMessage}`);
-      // Don't close the dialog so user can try again
+      alert(`AI parsing failed: ${errorMessage}`);
     }
   };
 
@@ -998,53 +1037,144 @@ const RecipesPage: React.FC = () => {
       </Dialog>
 
       {/* Parse Recipe from URL Dialog */}
-      <Dialog open={urlDialogOpen} onOpenChange={setUrlDialogOpen}>
+      <Dialog open={urlDialogOpen} onOpenChange={(open) => {
+        setUrlDialogOpen(open);
+        if (!open) {
+          setShowAISuggestion(false);
+          setRecipeUrl('');
+        }
+      }}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Parse Recipe from URL</DialogTitle>
+            <DialogTitle>Import Recipe from URL</DialogTitle>
             <DialogDescription>
-              Enter a recipe URL and let AI extract the details for you
+              Paste a recipe URL and we'll extract the details automatically
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {parseRecipe.isPending ? (
-              <RecipeParsingProgress
-                isVisible={parseRecipe.isPending}
-              />
-            ) : (
-              <div className="space-y-2">
-                <Label htmlFor="recipe-url">Recipe URL</Label>
-                <Input
-                  id="recipe-url"
-                  type="url"
-                  placeholder="https://example.com/recipe"
-                  value={recipeUrl}
-                  onChange={(e) => setRecipeUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && recipeUrl.trim()) {
-                      handleParseFromUrl();
-                    }
-                  }}
+            {(parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending) ? (
+              <div className="py-8">
+                <RecipeParsingProgress
+                  isVisible={parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
                 />
-                <p className="text-xs text-muted-foreground">
-                  <Lightbulb className="h-3 w-3 inline mr-1" /> <strong>Supported sites:</strong> AllRecipes, FoodNetwork, BonAppetit, Epicurious, Serious Eats, and 100+ more!
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Note: Some sites like NY Times Cooking require a subscription. If you get an error, copy and paste the recipe text instead.
-                </p>
+                {parseRecipeFromUrlAI.isPending && (
+                  <p className="text-center text-sm text-muted-foreground mt-4">
+                    AI is analyzing the page... this may take a moment
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="recipe-url">Recipe URL</Label>
+                  <Input
+                    id="recipe-url"
+                    type="url"
+                    placeholder="https://example.com/recipe"
+                    value={recipeUrl}
+                    onChange={(e) => {
+                      setRecipeUrl(e.target.value);
+                      setShowAISuggestion(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && recipeUrl.trim()) {
+                        handleParseFromUrl();
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* AI Suggestion Banner */}
+                {showAISuggestion && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <Brain className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-amber-800">
+                          No structured recipe data found
+                        </h4>
+                        <p className="text-sm text-amber-700 mt-1">
+                          This page doesn't have standard recipe markup. Try AI-enhanced parsing to extract the recipe.
+                        </p>
+                        <Button
+                          size="sm"
+                          className="mt-3 bg-amber-600 hover:bg-amber-700"
+                          onClick={handleParseFromUrlAI}
+                        >
+                          <Brain className="h-4 w-4 mr-2" />
+                          Try AI Enhanced
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!showAISuggestion && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">
+                      <Lightbulb className="h-3 w-3 inline mr-1 text-amber-500" />
+                      <strong>Quick Import</strong> works with most recipe sites (AllRecipes, FoodNetwork, BonAppetit, etc.)
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <Brain className="h-3 w-3 inline mr-1 text-purple-500" />
+                      <strong>AI Enhanced</strong> can extract recipes from any page but takes longer
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUrlDialogOpen(false)} disabled={parseRecipe.isPending}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUrlDialogOpen(false);
+                setShowAISuggestion(false);
+                setRecipeUrl('');
+              }}
+              disabled={parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
+            >
               Cancel
             </Button>
-            <Button
-              onClick={handleParseFromUrl}
-              disabled={!recipeUrl || parseRecipe.isPending}
-            >
-              {parseRecipe.isPending ? 'Parsing...' : 'Parse Recipe'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleParseFromUrlAI}
+                disabled={!recipeUrl || parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
+                className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+              >
+                {parseRecipeFromUrlAI.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="h-4 w-4 mr-2" />
+                    AI Enhanced
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleParseFromUrl}
+                disabled={!recipeUrl || parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
+                className="bg-teal-500 hover:bg-teal-600"
+              >
+                {parseRecipeFromUrl.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Quick Import
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

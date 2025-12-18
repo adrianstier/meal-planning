@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, isMissingCredentials } from '../lib/supabase';
 
 interface Profile {
   id: string;
@@ -78,6 +78,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const checkAuth = async () => {
+    // If credentials are missing, skip auth check and show login page
+    if (isMissingCredentials) {
+      console.error('Supabase credentials missing - skipping auth check');
+      setUser(null);
+      setSupabaseUser(null);
+      setSession(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
@@ -102,6 +112,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Get initial session
     checkAuth();
+
+    // Skip auth listener if credentials are missing
+    if (isMissingCredentials) {
+      return;
+    }
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

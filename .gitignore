@@ -48,3 +48,4 @@ playwright/.cache/
 # Backups
 *_backup/
 *.bak
+.env*.local

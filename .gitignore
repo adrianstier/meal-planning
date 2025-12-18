@@ -49,3 +49,4 @@ playwright/.cache/
 *_backup/
 *.bak
 .env*.local
+# Trigger rebuild

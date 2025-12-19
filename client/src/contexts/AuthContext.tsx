@@ -160,6 +160,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('[AuthContext] login starting for:', email);
     setLoading(true);
 
+    // First, test basic connectivity to Supabase
+    try {
+      console.log('[AuthContext] Testing Supabase connectivity...');
+      const testResponse = await fetch('https://ppeltiyvdigahereijha.supabase.co/auth/v1/health', {
+        method: 'GET',
+        headers: {
+          'apikey': process.env.REACT_APP_SUPABASE_ANON_KEY || '',
+        },
+      });
+      console.log('[AuthContext] Health check response:', testResponse.status);
+    } catch (healthErr) {
+      console.error('[AuthContext] Health check failed:', healthErr);
+    }
+
     // Add timeout to login to prevent infinite spinner
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Login timeout - please try again')), 15000);

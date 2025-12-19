@@ -160,7 +160,9 @@ function formatJsonLdRecipe(jsonLd: any, url: string, imageUrl: string | null): 
 
   // Determine meal type from category
   let mealType = 'dinner';
-  const categoryLower = (jsonLd.recipeCategory || '').toLowerCase();
+  const category = jsonLd.recipeCategory;
+  const categoryStr = Array.isArray(category) ? category.join(' ') : (category || '');
+  const categoryLower = String(categoryStr).toLowerCase();
   if (categoryLower.includes('breakfast')) mealType = 'breakfast';
   else if (categoryLower.includes('lunch')) mealType = 'lunch';
   else if (categoryLower.includes('snack') || categoryLower.includes('appetizer')) mealType = 'snack';

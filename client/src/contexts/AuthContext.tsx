@@ -252,51 +252,91 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Skip auth listener if credentials are missing
     if (isMissingCredentials) {
-      checkAuth();
+      console.error('[Auth] Supabase credentials missing - showing login');
+      setLoading(false);
       return;
     }
 
-    // Check if this is an OAuth callback (has hash with access_token)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const isOAuthCallback = hashParams.has('access_token');
+    console.log('[Auth] Initializing auth...');
 
-    if (isOAuthCallback) {
-      console.log('[Auth] OAuth callback detected, waiting for session...');
-    }
-
-    // Safety timeout - ensure loading never gets stuck for more than 10 seconds
+    // Safety timeout - ensure loading never gets stuck
     const safetyTimeout = setTimeout(() => {
-      if (!initialCheckComplete.current) {
-        console.warn('[Auth] Safety timeout - forcing loading to false');
-        setLoading(false);
-        initialCheckComplete.current = true;
-      }
-    }, 10000);
+      console.warn('[Auth] Safety timeout reached - forcing loading to false');
+      setLoading(false);
+      initialCheckComplete.current = true;
+    }, 5000);
 
-    // Set up auth state listener FIRST to avoid race conditions
+    // Helper to process session
+    const processSession = async (sessionData: Session | null) => {
+      console.log('[Auth] Processing session:', !!sessionData?.user);
+      setSession(sessionData);
+      setSupabaseUser(sessionData?.user ?? null);
+
+      if (sessionData?.user) {
+        const emailConfirmed = !!sessionData.user.email_confirmed_at;
+        setEmailConfirmationPending(!emailConfirmed);
+
+        if (emailConfirmed) {
+          console.log('[Auth] Fetching profile for:', sessionData.user.email);
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', sessionData.user.id)
+              .single();
+            console.log('[Auth] Profile fetched:', !!profile);
+            setUser(profile as User | null);
+          } catch (err) {
+            console.error('[Auth] Profile fetch failed:', err);
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+        setEmailConfirmationPending(false);
+      }
+    };
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log('[Auth] Auth state change:', event, !!newSession);
-
-        // If initial check hasn't completed, queue this event
-        if (!initialCheckComplete.current) {
-          authStateQueue.current.push({ event, session: newSession });
-          return;
-        }
-
-        await handleAuthStateChange(event, newSession);
+        await processSession(newSession);
         setLoading(false);
+        initialCheckComplete.current = true;
+        clearTimeout(safetyTimeout);
       }
     );
 
-    // Then perform initial auth check
-    checkAuth();
+    // Perform initial auth check
+    const doInitialCheck = async () => {
+      try {
+        console.log('[Auth] Getting initial session...');
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('[Auth] Initial session:', !!currentSession, currentSession?.user?.email);
+        await processSession(currentSession);
+      } catch (error) {
+        console.error('[Auth] Initial auth check failed:', error);
+        setUser(null);
+        setSupabaseUser(null);
+        setSession(null);
+      } finally {
+        console.log('[Auth] Initial check done, loading=false');
+        setLoading(false);
+        initialCheckComplete.current = true;
+        clearTimeout(safetyTimeout);
+      }
+    };
+
+    doInitialCheck();
 
     return () => {
       clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
-  }, [checkAuth, handleAuthStateChange]);
+  }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);

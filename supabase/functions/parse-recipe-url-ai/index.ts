@@ -131,7 +131,7 @@ function extractMainContent(html: string): string {
     .replace(/\n\s+/g, '\n')
     .trim();
 
-  return content.substring(0, 12000); // Limit content size for faster AI processing
+  return content.substring(0, 6000); // Limit content size for faster AI processing
 }
 
 function extractImageUrl(html: string, jsonLd: any): string | null {
@@ -227,8 +227,8 @@ Return JSON only:
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2048,
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 1500,
         messages: [{ role: 'user', content: userPrompt }],
         system: systemPrompt,
       }),

@@ -74,6 +74,14 @@ import type { MealPlan } from '../types/api';
 type ViewMode = 'week' | 'list' | 'compact';
 type MealDisplayMode = 'dinners' | '3-meals' | 'all';
 
+// History action type for undo/redo functionality
+interface HistoryAction {
+  type: 'add' | 'delete' | 'move' | 'update';
+  mealPlanId?: number;
+  previousState?: MealPlan;
+  newState?: MealPlan;
+}
+
 // Meal type configurations with colors and icons for enhanced UX
 const mealTypeConfig = {
   breakfast: {
@@ -156,13 +164,11 @@ const PlanPageEnhanced: React.FC = () => {
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   // Undo/Redo state
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryAction[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
   // Enhanced UX states
-  const [showStats, setShowStats] = useState(true);
   const [copiedMeal, setCopiedMeal] = useState<MealPlan | null>(null);
-  const [filterMealType, setFilterMealType] = useState<string>('all');
 
   const { data: weekPlan, isLoading, error } = useWeekPlan(currentWeekStart);
   const { data: meals } = useMeals();
@@ -384,7 +390,7 @@ const PlanPageEnhanced: React.FC = () => {
   }, [weekDays, mealsByDate]);
 
   // Undo/Redo functions
-  const saveToHistory = useCallback((action: any) => {
+  const saveToHistory = useCallback((action: HistoryAction) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(action);
     setHistory(newHistory);
@@ -408,40 +414,40 @@ const PlanPageEnhanced: React.FC = () => {
   }, [history, historyIndex]);
 
   // Toggle cuisine selection
-  const toggleCuisine = (cuisine: string) => {
+  const toggleCuisine = useCallback((cuisine: string) => {
     setSelectedCuisines(prev =>
       prev.includes(cuisine)
         ? prev.filter(c => c !== cuisine)
         : [...prev, cuisine]
     );
-  };
+  }, []);
 
-  const goToPreviousWeek = () => {
+  const goToPreviousWeek = useCallback(() => {
     const prevWeek = addDays(parseISO(currentWeekStart), -7);
     setCurrentWeekStart(format(prevWeek, 'yyyy-MM-dd'));
-  };
+  }, [currentWeekStart]);
 
-  const goToNextWeek = () => {
+  const goToNextWeek = useCallback(() => {
     const nextWeek = addDays(parseISO(currentWeekStart), 7);
     setCurrentWeekStart(format(nextWeek, 'yyyy-MM-dd'));
-  };
+  }, [currentWeekStart]);
 
-  const goToThisWeek = () => {
+  const goToThisWeek = useCallback(() => {
     const today = new Date();
     setCurrentWeekStart(format(startOfWeek(today, { weekStartsOn: 0 }), 'yyyy-MM-dd'));
-  };
+  }, []);
 
-  const handleAddMeal = (date: string, mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner') => {
+  const handleAddMeal = useCallback((date: string, mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner') => {
     setSelectedSlot({ date, mealType });
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleDeleteMeal = (mealPlanId: number) => {
+  const handleDeleteMeal = useCallback((mealPlanId: number) => {
     setPendingDeleteId(mealPlanId);
     setDeleteConfirmOpen(true);
-  };
+  }, []);
 
-  const confirmDeleteMeal = async () => {
+  const confirmDeleteMeal = useCallback(async () => {
     if (pendingDeleteId === null) return;
 
     try {
@@ -452,21 +458,21 @@ const PlanPageEnhanced: React.FC = () => {
     } finally {
       setPendingDeleteId(null);
     }
-  };
+  }, [pendingDeleteId, deletePlanItem, saveToHistory]);
 
-  const handleClearWeek = () => {
+  const handleClearWeek = useCallback(() => {
     setClearWeekConfirmOpen(true);
-  };
+  }, []);
 
-  const confirmClearWeek = async () => {
+  const confirmClearWeek = useCallback(async () => {
     try {
       await clearWeekPlan.mutateAsync(currentWeekStart);
     } catch (error) {
       console.error('Failed to clear week:', error);
     }
-  };
+  }, [clearWeekPlan, currentWeekStart]);
 
-  const handleCopyMeal = (meal: MealPlan) => {
+  const handleCopyMeal = useCallback((meal: MealPlan) => {
     setCopiedMeal(meal);
     // Show toast notification
     const toast = document.createElement('div');
@@ -474,33 +480,33 @@ const PlanPageEnhanced: React.FC = () => {
     toast.textContent = 'Meal copied! Click any empty slot to paste.';
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
-  };
+  }, []);
 
-  const handlePasteMeal = async (date: string, mealType: string) => {
+  const handlePasteMeal = useCallback(async (date: string, mealType: string) => {
     if (!copiedMeal) return;
     try {
       await addPlanItem.mutateAsync({
         meal_id: copiedMeal.meal_id,
         plan_date: date,
-        meal_type: mealType as any
+        meal_type: mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack'
       });
       setCopiedMeal(null);
     } catch (error) {
       console.error('Failed to paste meal:', error);
     }
-  };
+  }, [copiedMeal, addPlanItem]);
 
-  const handleMoveMeal = (meal: MealPlan) => {
+  const handleMoveMeal = useCallback((_meal: MealPlan) => {
     // TODO: Show dialog to select target slot
     alert('Move meal feature - select a slot to move to');
-  };
+  }, []);
 
-  const handleSwapMeal = (meal: MealPlan) => {
+  const handleSwapMeal = useCallback((_meal: MealPlan) => {
     // TODO: Show dialog to select meal to swap with
     alert('Swap meal feature - select another meal to swap with');
-  };
+  }, []);
 
-  const handleQuickAddSuggestion = async (mealId: number, date: string, mealType: string) => {
+  const handleQuickAddSuggestion = useCallback(async (mealId: number, date: string, mealType: string) => {
     try {
       await addPlanItem.mutateAsync({
         meal_id: mealId,
@@ -510,10 +516,10 @@ const PlanPageEnhanced: React.FC = () => {
     } catch (error) {
       console.error('Failed to add suggested meal:', error);
     }
-  };
+  }, [addPlanItem]);
 
   // Enhanced badge renderer with better colors and icons
-  const renderEnhancedBadges = (meal: any) => {
+  const renderEnhancedBadges = (meal: MealPlan) => {
     const badges = [];
 
     if (meal.cook_time_minutes) {
@@ -779,8 +785,9 @@ const PlanPageEnhanced: React.FC = () => {
                 size="icon"
                 className="h-6 w-6 -mr-1 opacity-60 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
                 onClick={() => handleAddMeal(day.date, 'breakfast')}
+                aria-label={`Add breakfast for ${day.dayName}`}
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
             </div>
             {dayMeals.breakfast.length > 0 ? (
@@ -834,8 +841,9 @@ const PlanPageEnhanced: React.FC = () => {
                   size="icon"
                   className="h-6 w-6"
                   onClick={() => handleAddMeal(day.date, 'morning_snack')}
+                  aria-label={`Add morning snack for ${day.dayName}`}
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3 w-3" aria-hidden="true" />
                 </Button>
               </div>
               {dayMeals.morning_snack.map((meal) => (
@@ -881,8 +889,9 @@ const PlanPageEnhanced: React.FC = () => {
                 size="icon"
                 className="h-6 w-6 -mr-1 opacity-60 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
                 onClick={() => handleAddMeal(day.date, 'lunch')}
+                aria-label={`Add lunch for ${day.dayName}`}
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
             </div>
             {dayMeals.lunch.length > 0 ? (
@@ -936,8 +945,9 @@ const PlanPageEnhanced: React.FC = () => {
                   size="icon"
                   className="h-6 w-6"
                   onClick={() => handleAddMeal(day.date, 'afternoon_snack')}
+                  aria-label={`Add afternoon snack for ${day.dayName}`}
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3 w-3" aria-hidden="true" />
                 </Button>
               </div>
               {dayMeals.afternoon_snack.map((meal) => (
@@ -983,8 +993,9 @@ const PlanPageEnhanced: React.FC = () => {
                 size="icon"
                 className="h-6 w-6 -mr-1 opacity-60 hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
                 onClick={() => handleAddMeal(day.date, 'dinner')}
+                aria-label={`Add dinner for ${day.dayName}`}
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
             </div>
             {dayMeals.dinner.length > 0 ? (
@@ -1087,8 +1098,9 @@ const PlanPageEnhanced: React.FC = () => {
                   size="icon"
                   onClick={goToPreviousWeek}
                   className="h-9 w-9 hover:bg-slate-100"
+                  aria-label="Go to previous week"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
                   variant="ghost"
@@ -1102,8 +1114,9 @@ const PlanPageEnhanced: React.FC = () => {
                   size="icon"
                   onClick={goToNextWeek}
                   className="h-9 w-9 hover:bg-slate-100"
+                  aria-label="Go to next week"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -1173,9 +1186,10 @@ const PlanPageEnhanced: React.FC = () => {
                       viewMode === 'compact' && "shadow-sm"
                     )}
                     onClick={() => setViewMode('compact')}
-                    title="Compact View"
+                    aria-label="Switch to compact view"
+                    aria-pressed={viewMode === 'compact'}
                   >
-                    <Minimize2 className="h-3.5 w-3.5" />
+                    <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </Button>
                   <Button
                     variant={viewMode === 'week' ? 'default' : 'ghost'}
@@ -1185,9 +1199,10 @@ const PlanPageEnhanced: React.FC = () => {
                       viewMode === 'week' && "shadow-sm"
                     )}
                     onClick={() => setViewMode('week')}
-                    title="Grid View"
+                    aria-label="Switch to grid view"
+                    aria-pressed={viewMode === 'week'}
                   >
-                    <LayoutGrid className="h-3.5 w-3.5" />
+                    <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
                   </Button>
                 </div>
               </div>

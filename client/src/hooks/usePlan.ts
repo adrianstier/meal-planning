@@ -67,11 +67,17 @@ export const useGenerateWeekPlan = () => {
   });
 };
 
+interface GeneratedMealPlanItem {
+  meal_id: number;
+  date: string;
+  meal_type: string;
+}
+
 export const useApplyGeneratedPlan = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (plan: any[]) => planApi.applyGenerated(plan),
+    mutationFn: (plan: GeneratedMealPlanItem[]) => planApi.applyGenerated(plan),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plan'] });
     },

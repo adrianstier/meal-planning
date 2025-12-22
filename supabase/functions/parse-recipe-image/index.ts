@@ -1,9 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import {
+  getCorsHeaders,
+  handleCorsPrelight,
+  MAX_IMAGE_SIZE_BYTES,
+  validateJWT,
+  checkRateLimitSync,
+  rateLimitExceededResponse,
+  handleAnthropicError,
+  log,
+  logError,
+} from "../_shared/cors.ts";
 
 interface ParsedRecipe {
   name: string;
@@ -28,8 +34,29 @@ interface ParsedRecipe {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  const requestId = crypto.randomUUID();
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
+  // Handle CORS preflight
+  const preflightResponse = handleCorsPrelight(req);
+  if (preflightResponse) return preflightResponse;
+
+  // Validate JWT authentication
+  const authResult = await validateJWT(req);
+  if (!authResult.authenticated) {
+    log({ requestId, event: 'auth_failed', error: authResult.error });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized', details: authResult.error }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Check rate limit
+  const rateLimitResult = checkRateLimitSync(authResult.userId!);
+  if (!rateLimitResult.allowed) {
+    log({ requestId, event: 'rate_limit_exceeded', userId: authResult.userId, resetIn: rateLimitResult.resetIn });
+    return rateLimitExceededResponse(corsHeaders, rateLimitResult.resetIn);
   }
 
   try {
@@ -41,6 +68,17 @@ Deno.serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Validate image size (base64 is ~4/3 the size of binary)
+    const estimatedBytes = (image_data.length * 3) / 4;
+    if (estimatedBytes > MAX_IMAGE_SIZE_BYTES) {
+      return new Response(
+        JSON.stringify({ error: 'Image too large. Maximum size is 10MB.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    log({ requestId, event: 'parse_image_started', imageSize: estimatedBytes });
 
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
     if (!ANTHROPIC_API_KEY) {
@@ -62,52 +100,17 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const systemPrompt = `You are an expert at reading recipes from images. You can extract recipe information from:
-- Photos of recipe cards or cookbook pages
-- Screenshots of recipe websites
-- Handwritten recipe notes
-- Photos of recipe ingredient lists
+    const systemPrompt = `Extract recipe data from image. Be concise.
 
-Extract ALL visible information. If something is partially visible or unclear, make reasonable inferences.
+Read: recipe cards, cookbook pages, screenshots, handwritten notes.
+Infer unclear text reasonably.
+Kid-friendliness (1-10): 10=kid favorites, 1=sophisticated.
+Difficulty: easy (<30min), medium (30-60min), hard (>60min).
+Meal type: breakfast/lunch/dinner/snack.
+Estimate nutrition from ingredients if not shown.`;
 
-For nutrition: Estimate based on visible ingredients if not explicitly shown.
-
-For kid-friendliness (1-10):
-- 10: Kid favorites (pizza, mac & cheese, chicken nuggets)
-- 7-9: Generally appealing to kids
-- 4-6: Some kids might like
-- 1-3: Sophisticated/spicy dishes
-
-For difficulty: easy (<30min), medium (30-60min), hard (>60min or advanced)
-
-For meal_type: breakfast, lunch, dinner, or snack`;
-
-    const userPrompt = `Look at this recipe image and extract all the information you can see.
-
-Return a JSON object with:
-{
-  "name": "Recipe name",
-  "meal_type": "breakfast|lunch|dinner|snack",
-  "ingredients": "Full ingredient list, one per line",
-  "instructions": "Numbered steps",
-  "prep_time_minutes": number or null,
-  "cook_time_minutes": number or null,
-  "servings": number,
-  "difficulty": "easy|medium|hard",
-  "cuisine": "Cuisine type or null",
-  "tags": "comma-separated tags",
-  "notes": "Any tips or notes visible",
-  "calories": estimated or null,
-  "protein_g": estimated or null,
-  "carbs_g": estimated or null,
-  "fat_g": estimated or null,
-  "fiber_g": estimated or null,
-  "kid_friendly_level": 1-10,
-  "makes_leftovers": true/false,
-  "leftover_days": number or null
-}
-
-Return ONLY valid JSON, no explanation.`;
+    const userPrompt = `Extract recipe from image. Return JSON only:
+{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null}`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -117,8 +120,8 @@ Return ONLY valid JSON, no explanation.`;
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        model: Deno.env.get('ANTHROPIC_MODEL') || 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
         messages: [
           {
             role: 'user',
@@ -143,16 +146,35 @@ Return ONLY valid JSON, no explanation.`;
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Anthropic API error:', errorText);
+      const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      const { userMessage, statusCode } = handleAnthropicError(response, errorData);
+
+      logError({
+        requestId,
+        event: 'anthropic_api_error',
+        statusCode: response.status,
+        error: errorData.error?.message || 'Unknown',
+        userId: authResult.userId
+      });
+
       return new Response(
-        JSON.stringify({ error: 'AI parsing failed', details: errorText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: userMessage }),
+        { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const aiResponse = await response.json();
     const content = aiResponse.content[0]?.text;
+
+    // Log token usage for cost tracking
+    log({
+      requestId,
+      event: 'ai_usage',
+      model: aiResponse.model,
+      inputTokens: aiResponse.usage?.input_tokens,
+      outputTokens: aiResponse.usage?.output_tokens,
+      userId: authResult.userId,
+    });
 
     if (!content) {
       return new Response(
@@ -200,15 +222,17 @@ Return ONLY valid JSON, no explanation.`;
       leftover_days: parsedRecipe.leftover_days || null,
     };
 
+    log({ requestId, event: 'parse_image_success', recipeName: recipe.name });
+
     return new Response(
       JSON.stringify(recipe),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Parse recipe image error:', error);
+    logError({ requestId, event: 'parse_image_error', error });
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: String(error) }),
+      JSON.stringify({ error: 'Failed to parse recipe from image. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

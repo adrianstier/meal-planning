@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { errorLogger } from '../utils/errorLogger';
+import { rateLimiters, checkRateLimit } from '../utils/rateLimiter';
 import type {
   Meal,
   MealPlan,
@@ -18,6 +19,108 @@ import type {
   BentoPlan,
 } from '../types/api';
 
+// ============================================================================
+// TYPES FOR INTERNAL USE
+// ============================================================================
+
+interface ScheduledMealUpdate {
+  meal_id?: number;
+  meal_type?: string;
+  notes?: string;
+  servings?: number;
+  meal_date?: string;
+  day_of_week?: string;
+}
+
+interface GeneratedMealPlanItem {
+  meal_id: number;
+  date: string;
+  meal_type: string;
+}
+
+// ============================================================================
+// VALIDATION UTILITIES
+// ============================================================================
+
+const EDGE_FUNCTION_TIMEOUT = 60000; // 60 seconds for AI operations
+
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+function validateMealInput(meal: Partial<Meal>): ValidationResult {
+  if (meal.name !== undefined) {
+    if (!meal.name.trim()) return { valid: false, error: 'Meal name is required' };
+    if (meal.name.length > 255) return { valid: false, error: 'Meal name too long (max 255 characters)' };
+  }
+  if (meal.servings !== undefined) {
+    if (meal.servings < 1 || meal.servings > 999) return { valid: false, error: 'Servings must be between 1 and 999' };
+  }
+  if (meal.cook_time_minutes !== undefined && meal.cook_time_minutes < 0) {
+    return { valid: false, error: 'Cook time cannot be negative' };
+  }
+  if (meal.leftover_servings !== undefined && meal.leftover_servings < 0) {
+    return { valid: false, error: 'Leftover servings cannot be negative' };
+  }
+  if (meal.leftover_days !== undefined && meal.leftover_days < 0) {
+    return { valid: false, error: 'Leftover days cannot be negative' };
+  }
+  if (meal.kid_rating !== undefined) {
+    if (meal.kid_rating < 1 || meal.kid_rating > 10) {
+      return { valid: false, error: 'Kid rating must be between 1 and 10' };
+    }
+  }
+  return { valid: true };
+}
+
+function validateUrl(url: string): ValidationResult {
+  if (!url || url.length > 2048) return { valid: false, error: 'Invalid URL' };
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { valid: false, error: 'URL must use http or https' };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+}
+
+function validateRecipeText(text: string): ValidationResult {
+  if (!text || !text.trim()) return { valid: false, error: 'Recipe text is required' };
+  if (text.length > 100000) return { valid: false, error: 'Recipe text too long (max 100KB)' };
+  return { valid: true };
+}
+
+// ============================================================================
+// TIMEOUT WRAPPER FOR EDGE FUNCTIONS
+// ============================================================================
+
+async function invokeWithTimeout<T>(
+  functionName: string,
+  body: Record<string, unknown>,
+  timeoutMs: number = EDGE_FUNCTION_TIMEOUT
+): Promise<{ data: T; error: null } | { data: null; error: Error }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const result = await Promise.race([
+      supabase.functions.invoke(functionName, { body }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs / 1000}s`)), timeoutMs)
+      ),
+    ]);
+
+    clearTimeout(timeoutId);
+    return result as { data: T; error: null } | { data: null; error: Error };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+  }
+}
+
 // Helper to get current user ID
 const getCurrentUserId = async (): Promise<string> => {
   const { data: { user } } = await supabase.auth.getUser();
@@ -28,21 +131,47 @@ const getCurrentUserId = async (): Promise<string> => {
 // Helper to wrap responses in expected format
 const wrapResponse = <T>(data: T) => ({ data });
 
+// Pagination response type
+interface PaginatedResponse<T> {
+  data: T[];
+  count: number;
+  hasMore: boolean;
+}
+
+// Default pagination limits
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 100;
+
 // ============================================================================
 // MEALS API
 // ============================================================================
 
 export const mealsApi = {
-  getAll: async () => {
-    const { data, error } = await supabase
+  getAll: async (options?: { limit?: number; offset?: number }) => {
+    const limit = Math.min(options?.limit || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = options?.offset || 0;
+
+    const { data, error, count } = await supabase
       .from('meals')
-      .select('*')
-      .order('name');
+      .select('*', { count: 'exact' })
+      .order('name')
+      .range(offset, offset + limit - 1);
 
     if (error) {
       errorLogger.logApiError(error, '/meals', 'GET');
       throw error;
     }
+
+    // Return paginated response if pagination was requested
+    if (options?.limit !== undefined || options?.offset !== undefined) {
+      return {
+        data: data as Meal[],
+        count: count || 0,
+        hasMore: (count || 0) > offset + limit,
+      } as PaginatedResponse<Meal>;
+    }
+
+    // Return simple response for backwards compatibility
     return wrapResponse(data as Meal[]);
   },
 
@@ -61,11 +190,24 @@ export const mealsApi = {
   },
 
   create: async (meal: Partial<Meal>) => {
+    // Validate input
+    const validation = validateMealInput(meal);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
     const userId = await getCurrentUserId();
+
+    // Sanitize input
+    const sanitizedMeal = {
+      ...meal,
+      name: meal.name?.trim(),
+      user_id: userId,
+    };
 
     const { data, error } = await supabase
       .from('meals')
-      .insert({ ...meal, user_id: userId })
+      .insert(sanitizedMeal)
       .select()
       .single();
 
@@ -77,9 +219,21 @@ export const mealsApi = {
   },
 
   update: async (id: number, meal: Partial<Meal>) => {
+    // Validate input
+    const validation = validateMealInput(meal);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    const sanitizedMeal = {
+      ...meal,
+      name: meal.name?.trim(),
+      updated_at: new Date().toISOString(),
+    };
+
     const { data, error } = await supabase
       .from('meals')
-      .update({ ...meal, updated_at: new Date().toISOString() })
+      .update(sanitizedMeal)
       .eq('id', id)
       .select()
       .single();
@@ -118,19 +272,42 @@ export const mealsApi = {
   },
 
   parseRecipe: async (text: string) => {
-    // Call Edge Function for AI parsing
-    const { data, error } = await supabase.functions.invoke('parse-recipe', {
-      body: { recipe_text: text },
+    // Validate input
+    const validation = validateRecipeText(text);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    // Check client-side rate limit before calling AI
+    checkRateLimit(rateLimiters.aiParsing, 'parseRecipe', 'AI parsing limit reached.');
+
+    // Call Edge Function for AI parsing with timeout
+    const { data, error } = await invokeWithTimeout<Meal>('parse-recipe', {
+      recipe_text: text.trim(),
     });
 
     if (error) {
       errorLogger.logApiError(error, '/functions/parse-recipe', 'POST');
-      throw error;
+      throw new Error('Failed to parse recipe. Please try again.');
     }
     return wrapResponse(data as Meal);
   },
 
   parseRecipeFromImage: async (imageFile: File) => {
+    // Validate file size (10MB max)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    if (imageFile.size > MAX_FILE_SIZE) {
+      throw new Error('Image too large. Maximum size is 10MB.');
+    }
+
+    // Validate file type
+    if (!imageFile.type.startsWith('image/')) {
+      throw new Error('Invalid file type. Please upload an image.');
+    }
+
+    // Check client-side rate limit before calling AI
+    checkRateLimit(rateLimiters.aiParsing, 'parseRecipeFromImage', 'AI parsing limit reached.');
+
     // Convert file to base64
     const reader = new FileReader();
     const base64 = await new Promise<string>((resolve, reject) => {
@@ -139,37 +316,49 @@ export const mealsApi = {
       reader.readAsDataURL(imageFile);
     });
 
-    const { data, error } = await supabase.functions.invoke('parse-recipe-image', {
-      body: { image_data: base64, image_type: imageFile.type },
+    const { data, error } = await invokeWithTimeout<Meal>('parse-recipe-image', {
+      image_data: base64,
+      image_type: imageFile.type,
     });
 
     if (error) {
       errorLogger.logApiError(error, '/functions/parse-recipe-image', 'POST');
-      throw error;
+      throw new Error('Failed to parse recipe from image. Please try again.');
     }
     return wrapResponse(data as Meal);
   },
 
   parseRecipeFromUrl: async (url: string) => {
-    const { data, error } = await supabase.functions.invoke('parse-recipe-url', {
-      body: { url },
-    });
+    // Validate URL
+    const validation = validateUrl(url);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    const { data, error } = await invokeWithTimeout<Meal>('parse-recipe-url', { url });
 
     if (error) {
       errorLogger.logApiError(error, '/functions/parse-recipe-url', 'POST');
-      throw error;
+      throw new Error('Failed to parse recipe from URL. Please check the URL and try again.');
     }
     return wrapResponse(data as Meal);
   },
 
   parseRecipeFromUrlAI: async (url: string) => {
-    const { data, error } = await supabase.functions.invoke('parse-recipe-url-ai', {
-      body: { url },
-    });
+    // Validate URL
+    const validation = validateUrl(url);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    // Check client-side rate limit before calling AI
+    checkRateLimit(rateLimiters.aiParsing, 'parseRecipeFromUrlAI', 'AI parsing limit reached.');
+
+    const { data, error } = await invokeWithTimeout<Meal>('parse-recipe-url-ai', { url });
 
     if (error) {
       errorLogger.logApiError(error, '/functions/parse-recipe-url-ai', 'POST');
-      throw error;
+      throw new Error('Failed to parse recipe from URL. Please check the URL and try again.');
     }
     return wrapResponse(data as Meal);
   },
@@ -323,7 +512,7 @@ export const planApi = {
   },
 
   update: async (id: number, plan: Partial<MealPlan>) => {
-    const updateData: any = {};
+    const updateData: ScheduledMealUpdate = {};
     if (plan.meal_id !== undefined) updateData.meal_id = plan.meal_id;
     if (plan.meal_type !== undefined) updateData.meal_type = plan.meal_type;
     if (plan.notes !== undefined) updateData.notes = plan.notes;
@@ -441,7 +630,7 @@ export const planApi = {
     return wrapResponse(data);
   },
 
-  applyGenerated: async (plan: any[]) => {
+  applyGenerated: async (plan: GeneratedMealPlanItem[]) => {
     const userId = await getCurrentUserId();
 
     // Insert all scheduled meals
@@ -585,16 +774,29 @@ export const leftoversApi = {
 // ============================================================================
 
 export const schoolMenuApi = {
-  getAll: async () => {
-    const { data, error } = await supabase
+  getAll: async (options?: { limit?: number; offset?: number }) => {
+    const limit = Math.min(options?.limit || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = options?.offset || 0;
+
+    const { data, error, count } = await supabase
       .from('school_menu_items')
-      .select('*')
-      .order('menu_date', { ascending: false });
+      .select('*', { count: 'exact' })
+      .order('menu_date', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       errorLogger.logApiError(error, '/school-menu', 'GET');
       throw error;
     }
+
+    if (options?.limit !== undefined || options?.offset !== undefined) {
+      return {
+        data: data as SchoolMenuItem[],
+        count: count || 0,
+        hasMore: (count || 0) > offset + limit,
+      } as PaginatedResponse<SchoolMenuItem>;
+    }
+
     return wrapResponse(data as SchoolMenuItem[]);
   },
 
@@ -903,11 +1105,15 @@ export const shoppingApi = {
 // ============================================================================
 
 export const historyApi = {
-  getAll: async () => {
-    const { data, error } = await supabase
+  getAll: async (options?: { limit?: number; offset?: number }) => {
+    const limit = Math.min(options?.limit || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = options?.offset || 0;
+
+    const { data, error, count } = await supabase
       .from('meal_history')
-      .select('*, meal:meals(name)')
-      .order('cooked_date', { ascending: false });
+      .select('*, meal:meals(name)', { count: 'exact' })
+      .order('cooked_date', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       errorLogger.logApiError(error, '/history', 'GET');
@@ -922,6 +1128,14 @@ export const historyApi = {
       rating: item.rating,
       notes: item.notes,
     })) as MealHistory[];
+
+    if (options?.limit !== undefined || options?.offset !== undefined) {
+      return {
+        data: transformed,
+        count: count || 0,
+        hasMore: (count || 0) > offset + limit,
+      } as PaginatedResponse<MealHistory>;
+    }
 
     return wrapResponse(transformed);
   },

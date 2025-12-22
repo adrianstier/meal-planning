@@ -229,7 +229,7 @@ CREATE POLICY "Users can view own error logs"
 
 CREATE POLICY "Users can create error logs"
     ON public.error_logs FOR INSERT
-    WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+    WITH CHECK (auth.uid() = user_id);
 
 -- ============================================================================
 -- CSA BOXES

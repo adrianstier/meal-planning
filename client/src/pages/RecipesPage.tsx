@@ -746,13 +746,30 @@ const RecipesPage: React.FC = () => {
                         font-family: system-ui;
                       `;
 
-                      dragPreview.innerHTML = `
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                          ${meal.image_url ? `<img src="${meal.image_url}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px;" />` : ''}
-                          <div style="font-weight: 600; font-size: 14px; color: #1f2937;">${meal.name}</div>
-                          <div style="font-size: 12px; color: #6b7280;">${meal.cook_time_minutes || 30} min • ${meal.servings || 4} servings</div>
-                        </div>
-                      `;
+                      // Build drag preview using DOM methods to prevent XSS
+                      const container = document.createElement('div');
+                      container.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+
+                      // Safely add image if URL is valid
+                      if (meal.image_url && meal.image_url.startsWith('http')) {
+                        const img = document.createElement('img');
+                        img.src = meal.image_url;
+                        img.style.cssText = 'width: 100%; height: 100px; object-fit: cover; border-radius: 4px;';
+                        container.appendChild(img);
+                      }
+
+                      // Use textContent to prevent XSS
+                      const nameDiv = document.createElement('div');
+                      nameDiv.style.cssText = 'font-weight: 600; font-size: 14px; color: #1f2937;';
+                      nameDiv.textContent = meal.name;
+                      container.appendChild(nameDiv);
+
+                      const detailsDiv = document.createElement('div');
+                      detailsDiv.style.cssText = 'font-size: 12px; color: #6b7280;';
+                      detailsDiv.textContent = `${meal.cook_time_minutes || 30} min • ${meal.servings || 4} servings`;
+                      container.appendChild(detailsDiv);
+
+                      dragPreview.appendChild(container);
 
                       document.body.appendChild(dragPreview);
                       e.dataTransfer.setDragImage(dragPreview, 100, 50);

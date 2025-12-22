@@ -16,7 +16,7 @@ export interface ErrorLog {
 
 class ErrorLogger {
   private logs: ErrorLog[] = [];
-  private maxLogs = 100;
+  private maxLogs = 20; // Reduced from 100 for privacy
   private readonly STORAGE_KEY = 'meal_planner_error_logs';
 
   constructor() {
@@ -77,50 +77,12 @@ class ErrorLogger {
 
   /**
    * Send error log to backend API
+   * Currently disabled as we're using Supabase directly
    */
-  private async sendToBackend(errorLog: ErrorLog): Promise<void> {
-    try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || (
-        process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5001'
-      );
-
-      const response = await fetch(`${API_BASE_URL}/api/errors/log`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          error_type: errorLog.type,
-          message: errorLog.message,
-          stack_trace: errorLog.stack,
-          component: errorLog.context?.component,
-          url: errorLog.url,
-          browser_info: {
-            userAgent: errorLog.userAgent,
-            screenWidth: window.screen.width,
-            screenHeight: window.screen.height,
-            viewport: {
-              width: window.innerWidth,
-              height: window.innerHeight,
-            },
-            language: navigator.language,
-            platform: navigator.platform,
-          },
-          metadata: {
-            ...errorLog.context,
-            env: errorLog.env,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        console.warn('Failed to send error to backend:', response.status);
-      }
-    } catch (err) {
-      // Silently fail - don't create error loops
-      console.warn('Error sending log to backend:', err);
-    }
+  private async sendToBackend(_errorLog: ErrorLog): Promise<void> {
+    // Backend error logging disabled - using client-side only
+    // Future: could log to Supabase error_logs table if needed
+    return;
   }
 
   /**
@@ -271,13 +233,24 @@ class ErrorLogger {
   }
 
   /**
-   * Save logs to localStorage
+   * Save logs to localStorage with sanitization
    */
   private saveLogs(): void {
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.logs));
+      // Sanitize logs before storing - remove PII and sensitive data
+      const sanitizedLogs = this.logs.map(log => ({
+        timestamp: log.timestamp,
+        type: log.type,
+        message: log.message,
+        env: log.env,
+        // Only include component info from context, not full details
+        context: log.context?.component ? { component: log.context.component } : undefined,
+        // Exclude: userAgent, url, stack, full context with potential PII
+      }));
+
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sanitizedLogs));
     } catch (error) {
-      console.warn('Failed to save error logs to localStorage:', error);
+      // Silently fail - don't let storage errors break the app
     }
   }
 

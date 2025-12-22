@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
+import { User as SupabaseUser, Session, AuthChangeEvent, Provider } from '@supabase/supabase-js';
 import { supabase, isMissingCredentials } from '../lib/supabase';
+
+// Supported OAuth providers
+export type OAuthProvider = 'google' | 'apple' | 'github';
 
 interface Profile {
   id: string;
@@ -23,18 +26,27 @@ interface User {
   last_login?: string;
 }
 
+// Constants for auth operations
+const AUTH_TIMEOUT_MS = 15000;
+const PROFILE_POLL_INTERVAL_MS = 200;
+const PROFILE_POLL_MAX_ATTEMPTS = 15; // 3 seconds max
+
 interface AuthContextType {
   user: User | null;
   supabaseUser: SupabaseUser | null;
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  emailConfirmationPending: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string, displayName: string) => Promise<void>;
+  loginWithOAuth: (provider: OAuthProvider) => Promise<void>;
+  register: (username: string, email: string, password: string, displayName: string) => Promise<{ emailConfirmationRequired: boolean }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   updateUser: (user: User) => void;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,9 +68,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
 
-  // Fetch user profile from profiles table
-  const fetchProfile = async (userId: string): Promise<User | null> => {
+  // Track if initial auth check is complete to prevent race conditions
+  const initialCheckComplete = useRef(false);
+  const authStateQueue = useRef<Array<{ event: AuthChangeEvent; session: Session | null }>>([]);
+
+  // Fetch user profile from profiles table with retry logic
+  const fetchProfile = useCallback(async (userId: string): Promise<User | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -67,120 +84,187 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        // Don't log PGRST116 (no rows) as error - profile may not exist yet
+        if (error.code !== 'PGRST116') {
+          console.error('[Auth] Error fetching profile:', error.code);
+        }
         return null;
       }
       return data as User;
     } catch (err) {
-      console.error('Profile fetch failed:', err);
+      console.error('[Auth] Profile fetch failed');
       return null;
     }
-  };
+  }, []);
 
-  const checkAuth = async () => {
-    console.log('[AuthContext] checkAuth starting...');
+  // Poll for profile with exponential backoff (for after registration)
+  const pollForProfile = useCallback(async (userId: string): Promise<User | null> => {
+    for (let attempt = 0; attempt < PROFILE_POLL_MAX_ATTEMPTS; attempt++) {
+      const profile = await fetchProfile(userId);
+      if (profile) {
+        return profile;
+      }
+      // Wait with slight exponential backoff
+      await new Promise(resolve =>
+        setTimeout(resolve, PROFILE_POLL_INTERVAL_MS * Math.min(attempt + 1, 3))
+      );
+    }
+    return null;
+  }, [fetchProfile]);
 
+  // Create profile for OAuth users if one doesn't exist
+  const ensureProfileExists = useCallback(async (user: SupabaseUser): Promise<User | null> => {
+    // First try to fetch existing profile
+    let profile = await fetchProfile(user.id);
+
+    if (profile) {
+      return profile;
+    }
+
+    // Profile doesn't exist - create one for OAuth user
+    // Extract info from user metadata
+    const metadata = user.user_metadata || {};
+    const email = user.email || '';
+    const displayName = metadata.full_name || metadata.name || email.split('@')[0];
+    const username = metadata.preferred_username ||
+                     metadata.user_name ||
+                     email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') +
+                     Math.random().toString(36).substring(2, 6);
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: email,
+          username: username,
+          display_name: displayName,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // Profile might have been created by trigger, try fetching again
+        profile = await pollForProfile(user.id);
+        return profile;
+      }
+
+      return data as User;
+    } catch (err) {
+      console.error('[Auth] Failed to create profile for OAuth user');
+      // Try polling as fallback
+      return await pollForProfile(user.id);
+    }
+  }, [fetchProfile, pollForProfile]);
+
+  // Process auth state updates
+  const handleAuthStateChange = useCallback(async (
+    event: AuthChangeEvent,
+    newSession: Session | null
+  ) => {
+    setSession(newSession);
+    setSupabaseUser(newSession?.user ?? null);
+
+    if (newSession?.user) {
+      // Check if email is confirmed (OAuth users are always confirmed)
+      const emailConfirmed = !!newSession.user.email_confirmed_at;
+      setEmailConfirmationPending(!emailConfirmed);
+
+      if (emailConfirmed) {
+        // For OAuth users or regular users, ensure profile exists
+        const profile = await ensureProfileExists(newSession.user);
+        setUser(profile);
+      } else {
+        // Don't set user profile if email not confirmed
+        setUser(null);
+      }
+    } else {
+      setUser(null);
+      setEmailConfirmationPending(false);
+    }
+  }, [ensureProfileExists]);
+
+  const checkAuth = useCallback(async () => {
     // If credentials are missing, skip auth check and show login page
     if (isMissingCredentials) {
-      console.error('[AuthContext] Supabase credentials missing - skipping auth check');
+      console.error('[Auth] Supabase credentials missing');
       setUser(null);
       setSupabaseUser(null);
       setSession(null);
       setLoading(false);
+      initialCheckComplete.current = true;
       return;
     }
 
     // Add a timeout to prevent infinite loading
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Auth check timeout after 10s')), 10000);
+      setTimeout(() => reject(new Error('Auth check timeout')), AUTH_TIMEOUT_MS);
     });
 
     try {
-      console.log('[AuthContext] Getting session from Supabase...');
       const sessionResult = await Promise.race([
         supabase.auth.getSession(),
         timeoutPromise
       ]);
 
-      const { data: { session } } = sessionResult as { data: { session: Session | null } };
-      console.log('[AuthContext] Session result:', session ? 'found' : 'none');
+      const { data: { session: currentSession } } = sessionResult as { data: { session: Session | null } };
 
-      setSession(session);
-      setSupabaseUser(session?.user ?? null);
-
-      if (session?.user) {
-        console.log('[AuthContext] Fetching profile for user:', session.user.id);
-        const profile = await fetchProfile(session.user.id);
-        console.log('[AuthContext] Profile result:', profile ? 'found' : 'none');
-        setUser(profile);
-      } else {
-        setUser(null);
-      }
+      await handleAuthStateChange('INITIAL_SESSION' as AuthChangeEvent, currentSession);
     } catch (error) {
-      console.error('[AuthContext] Auth check failed:', error);
+      console.error('[Auth] Auth check failed');
       setUser(null);
       setSupabaseUser(null);
       setSession(null);
     } finally {
-      console.log('[AuthContext] checkAuth complete, setting loading=false');
       setLoading(false);
+      initialCheckComplete.current = true;
+
+      // Process any queued auth events that came in during initial check
+      while (authStateQueue.current.length > 0) {
+        const queued = authStateQueue.current.shift();
+        if (queued) {
+          await handleAuthStateChange(queued.event, queued.session);
+        }
+      }
     }
-  };
+  }, [handleAuthStateChange]);
 
   useEffect(() => {
-    // Get initial session
-    checkAuth();
-
     // Skip auth listener if credentials are missing
     if (isMissingCredentials) {
+      checkAuth();
       return;
     }
 
-    // Listen for auth changes
+    // Set up auth state listener FIRST to avoid race conditions
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event);
-        setSession(session);
-        setSupabaseUser(session?.user ?? null);
-
-        if (session?.user) {
-          const profile = await fetchProfile(session.user.id);
-          setUser(profile);
-        } else {
-          setUser(null);
+      async (event, newSession) => {
+        // If initial check hasn't completed, queue this event
+        if (!initialCheckComplete.current) {
+          authStateQueue.current.push({ event, session: newSession });
+          return;
         }
+
+        await handleAuthStateChange(event, newSession);
         setLoading(false);
       }
     );
 
+    // Then perform initial auth check
+    checkAuth();
+
     return () => subscription.unsubscribe();
-  }, []);
+  }, [checkAuth, handleAuthStateChange]);
 
   const login = async (email: string, password: string) => {
-    console.log('[AuthContext] login starting for:', email);
     setLoading(true);
-
-    // First, test basic connectivity to Supabase
-    try {
-      console.log('[AuthContext] Testing Supabase connectivity...');
-      const testResponse = await fetch('https://ppeltiyvdigahereijha.supabase.co/auth/v1/health', {
-        method: 'GET',
-        headers: {
-          'apikey': process.env.REACT_APP_SUPABASE_ANON_KEY || '',
-        },
-      });
-      console.log('[AuthContext] Health check response:', testResponse.status);
-    } catch (healthErr) {
-      console.error('[AuthContext] Health check failed:', healthErr);
-    }
 
     // Add timeout to login to prevent infinite spinner
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Login timeout - please try again')), 15000);
+      setTimeout(() => reject(new Error('Login timeout - please try again')), AUTH_TIMEOUT_MS);
     });
 
     try {
-      console.log('[AuthContext] Calling signInWithPassword...');
       const authResult = await Promise.race([
         supabase.auth.signInWithPassword({
           email,
@@ -190,24 +274,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       ]);
 
       const { data, error } = authResult as { data: { user: SupabaseUser | null; session: Session | null }; error: Error | null };
-      console.log('[AuthContext] signInWithPassword result:', error ? `error: ${error.message}` : 'success');
 
       if (error) {
         throw new Error(error.message);
       }
 
-      if (data.user) {
-        console.log('[AuthContext] Fetching profile after login...');
-        const profile = await fetchProfile(data.user.id);
-        console.log('[AuthContext] Profile fetched:', profile ? 'success' : 'not found');
-        setUser(profile);
-        setSupabaseUser(data.user);
-        setSession(data.session);
+      if (data.user && data.session) {
+        // Check if email is confirmed
+        const emailConfirmed = !!data.user.email_confirmed_at;
+        setEmailConfirmationPending(!emailConfirmed);
+
+        if (emailConfirmed) {
+          const profile = await fetchProfile(data.user.id);
+          setUser(profile);
+          setSupabaseUser(data.user);
+          setSession(data.session);
+        } else {
+          throw new Error('Please confirm your email before logging in.');
+        }
       }
     } finally {
-      console.log('[AuthContext] login complete, setting loading=false');
       setLoading(false);
     }
+  };
+
+  const loginWithOAuth = async (provider: OAuthProvider) => {
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider as Provider,
+        options: {
+          redirectTo: `${window.location.origin}/plan`,
+          queryParams: provider === 'google' ? {
+            access_type: 'offline',
+            prompt: 'consent',
+          } : undefined,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // OAuth redirects to provider, so we don't need to do anything else here
+      // The auth state change listener will handle the callback
+    } catch (error) {
+      setLoading(false);
+      throw error;
+    }
+    // Note: We don't set loading to false here because the page will redirect
   };
 
   const register = async (
@@ -215,7 +331,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     email: string,
     password: string,
     displayName: string
-  ) => {
+  ): Promise<{ emailConfirmationRequired: boolean }> => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -233,33 +349,77 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(error.message);
       }
 
-      // Note: User might need to confirm email depending on Supabase settings
-      if (data.user) {
-        // Profile is created automatically via trigger
-        // Wait a moment for trigger to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const profile = await fetchProfile(data.user.id);
-        setUser(profile);
-        setSupabaseUser(data.user);
-        setSession(data.session);
+      // Check if email confirmation is required
+      // If session is null but user exists, email confirmation is pending
+      const emailConfirmationRequired = !!data.user && !data.session;
+
+      if (emailConfirmationRequired) {
+        setEmailConfirmationPending(true);
+        return { emailConfirmationRequired: true };
       }
+
+      // Email confirmation not required - user is logged in
+      if (data.user && data.session) {
+        // Profile is created automatically via trigger
+        // Poll for profile with exponential backoff instead of arbitrary sleep
+        const profile = await pollForProfile(data.user.id);
+
+        if (profile) {
+          setUser(profile);
+          setSupabaseUser(data.user);
+          setSession(data.session);
+        } else {
+          // Profile creation failed - still let user in, profile can be created later
+          console.warn('[Auth] Profile not created after registration');
+          setSupabaseUser(data.user);
+          setSession(data.session);
+        }
+      }
+
+      return { emailConfirmationRequired: false };
     } finally {
       setLoading(false);
     }
   };
 
   const logout = async () => {
+    // Clear local state first to ensure user appears logged out immediately
+    // This prevents issues where network failures leave user in a weird state
+    setUser(null);
+    setSupabaseUser(null);
+    setSession(null);
+    setEmailConfirmationPending(false);
+
     try {
-      const { error } = await supabase.auth.signOut();
+      // Attempt to sign out on server
+      // Use 'local' scope to only clear local session if server is unreachable
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
       if (error) {
-        console.error('Logout error:', error);
+        console.error('[Auth] Logout error');
       }
     } catch (error) {
-      console.error('Logout request failed:', error);
-    } finally {
-      setUser(null);
-      setSupabaseUser(null);
-      setSession(null);
+      // Network error - local state already cleared, user is effectively logged out
+      console.error('[Auth] Logout request failed');
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login?reset=true`,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      throw new Error(error.message);
     }
   };
 
@@ -284,18 +444,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(data as User);
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     supabaseUser,
     session,
     loading,
     isAdmin: user?.is_admin ?? false,
+    emailConfirmationPending,
     login,
+    loginWithOAuth,
     register,
     logout,
     checkAuth,
     updateUser,
     updateProfile,
+    resetPassword,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,9 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import {
+  getCorsHeaders,
+  handleCorsPrelight,
+  MAX_URL_LENGTH,
+  isValidUrl,
+  validateJWT,
+  log,
+  logError,
+} from "../_shared/cors.ts";
 
 interface ParsedRecipe {
   name: string;
@@ -37,35 +41,62 @@ async function fetchWebpage(url: string): Promise<string> {
   return await response.text();
 }
 
-function extractJsonLd(html: string): any | null {
+// JSON-LD Recipe Schema types
+interface JsonLdRecipe {
+  '@type': string | string[];
+  '@graph'?: JsonLdItem[];
+  name?: string;
+  image?: string | string[] | { url: string };
+  recipeIngredient?: string | string[];
+  recipeInstructions?: string | RecipeInstruction[];
+  recipeYield?: string | string[];
+  recipeCategory?: string | string[];
+  keywords?: string | string[];
+  cookTime?: string;
+  prepTime?: string;
+  recipeCuisine?: string;
+  description?: string;
+}
+
+interface RecipeInstruction {
+  text?: string;
+  itemListElement?: { text?: string }[];
+}
+
+interface JsonLdItem {
+  '@type': string | string[];
+  [key: string]: unknown;
+}
+
+function isRecipeType(item: JsonLdItem): boolean {
+  return item['@type'] === 'Recipe' ||
+    (Array.isArray(item['@type']) && item['@type'].includes('Recipe'));
+}
+
+function extractJsonLd(html: string): JsonLdRecipe | null {
   const jsonLdRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   let match;
 
   while ((match = jsonLdRegex.exec(html)) !== null) {
     try {
-      const data = JSON.parse(match[1]);
+      const data = JSON.parse(match[1]) as JsonLdItem | JsonLdItem[];
 
       if (Array.isArray(data)) {
-        const recipe = data.find((item: any) =>
-          item['@type'] === 'Recipe' ||
-          (Array.isArray(item['@type']) && item['@type'].includes('Recipe'))
-        );
-        if (recipe) return recipe;
+        const recipe = data.find(isRecipeType);
+        if (recipe) return recipe as JsonLdRecipe;
       }
 
-      if (data['@graph']) {
-        const recipe = data['@graph'].find((item: any) =>
-          item['@type'] === 'Recipe' ||
-          (Array.isArray(item['@type']) && item['@type'].includes('Recipe'))
-        );
-        if (recipe) return recipe;
+      const dataObj = data as JsonLdRecipe;
+
+      if (dataObj['@graph']) {
+        const recipe = dataObj['@graph'].find(isRecipeType);
+        if (recipe) return recipe as JsonLdRecipe;
       }
 
-      if (data['@type'] === 'Recipe' ||
-          (Array.isArray(data['@type']) && data['@type'].includes('Recipe'))) {
-        return data;
+      if (isRecipeType(data as JsonLdItem)) {
+        return dataObj;
       }
-    } catch (e) {
+    } catch (_e) {
       // Continue searching
     }
   }
@@ -73,11 +104,11 @@ function extractJsonLd(html: string): any | null {
   return null;
 }
 
-function extractImageUrl(html: string, jsonLd: any): string | null {
+function extractImageUrl(html: string, jsonLd: JsonLdRecipe | null): string | null {
   if (jsonLd?.image) {
     if (typeof jsonLd.image === 'string') return jsonLd.image;
     if (Array.isArray(jsonLd.image)) return jsonLd.image[0];
-    if (jsonLd.image.url) return jsonLd.image.url;
+    if (typeof jsonLd.image === 'object' && 'url' in jsonLd.image) return jsonLd.image.url;
   }
 
   const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
@@ -97,7 +128,7 @@ function parseDuration(duration: string | undefined): number | null {
   return null;
 }
 
-function formatJsonLdRecipe(jsonLd: any, url: string, imageUrl: string | null): ParsedRecipe {
+function formatJsonLdRecipe(jsonLd: JsonLdRecipe, url: string, imageUrl: string | null): ParsedRecipe {
   // Parse ingredients
   let ingredients = '';
   if (jsonLd.recipeIngredient) {
@@ -111,12 +142,12 @@ function formatJsonLdRecipe(jsonLd: any, url: string, imageUrl: string | null): 
   if (jsonLd.recipeInstructions) {
     if (Array.isArray(jsonLd.recipeInstructions)) {
       instructions = jsonLd.recipeInstructions
-        .map((step: any, i: number) => {
+        .map((step: string | RecipeInstruction, i: number) => {
           if (typeof step === 'string') return `${i + 1}. ${step}`;
           if (step.text) return `${i + 1}. ${step.text}`;
           if (step.itemListElement) {
             return step.itemListElement
-              .map((s: any, j: number) => `${i + 1}.${j + 1}. ${s.text || s}`)
+              .map((s: { text?: string }, j: number) => `${i + 1}.${j + 1}. ${s.text || ''}`)
               .join('\n');
           }
           return '';
@@ -124,7 +155,7 @@ function formatJsonLdRecipe(jsonLd: any, url: string, imageUrl: string | null): 
         .filter(Boolean)
         .join('\n');
     } else {
-      instructions = jsonLd.recipeInstructions;
+      instructions = jsonLd.recipeInstructions as string;
     }
   }
 
@@ -185,21 +216,36 @@ function formatJsonLdRecipe(jsonLd: any, url: string, imageUrl: string | null): 
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  const requestId = crypto.randomUUID();
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
+  // Handle CORS preflight
+  const preflightResponse = handleCorsPrelight(req);
+  if (preflightResponse) return preflightResponse;
+
+  // Validate JWT authentication
+  const authResult = await validateJWT(req);
+  if (!authResult.authenticated) {
+    log({ requestId, event: 'auth_failed', error: authResult.error });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized', details: authResult.error }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
     const { url } = await req.json();
 
-    if (!url || !url.startsWith('http')) {
+    // Input validation
+    if (!url || url.length > MAX_URL_LENGTH || !isValidUrl(url)) {
       return new Response(
         JSON.stringify({ error: 'Valid URL is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Fast parsing URL:', url);
+    log({ requestId, event: 'parse_url_started', url: url.substring(0, 100) });
     const html = await fetchWebpage(url);
 
     // Try to extract structured JSON-LD data
@@ -219,7 +265,7 @@ Deno.serve(async (req: Request) => {
     const imageUrl = extractImageUrl(html, jsonLd);
     const recipe = formatJsonLdRecipe(jsonLd, url, imageUrl);
 
-    console.log('Successfully parsed recipe:', recipe.name);
+    log({ requestId, event: 'parse_url_success', recipeName: recipe.name });
 
     return new Response(
       JSON.stringify(recipe),
@@ -227,9 +273,9 @@ Deno.serve(async (req: Request) => {
     );
 
   } catch (error) {
-    console.error('Parse recipe URL error:', error);
+    logError({ requestId, event: 'parse_url_error', error });
     return new Response(
-      JSON.stringify({ error: 'Failed to fetch or parse recipe', details: String(error) }),
+      JSON.stringify({ error: 'Failed to fetch or parse recipe. Please check the URL and try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -1,9 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import {
+  getCorsHeaders,
+  handleCorsPrelight,
+  MAX_RECIPE_TEXT_LENGTH,
+  MAX_URL_LENGTH,
+  isValidUrl,
+  sanitizeText,
+  validateJWT,
+  checkRateLimitSync,
+  rateLimitExceededResponse,
+  handleAnthropicError,
+  log,
+  logError,
+} from "../_shared/cors.ts";
 
 interface ParsedRecipe {
   name: string;
@@ -30,20 +39,61 @@ interface ParsedRecipe {
 }
 
 Deno.serve(async (req: Request) => {
+  const requestId = crypto.randomUUID();
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  const preflightResponse = handleCorsPrelight(req);
+  if (preflightResponse) return preflightResponse;
+
+  // Validate JWT authentication
+  const authResult = await validateJWT(req);
+  if (!authResult.authenticated) {
+    log({ requestId, event: 'auth_failed', error: authResult.error });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized', details: authResult.error }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Check rate limit
+  const rateLimitResult = checkRateLimitSync(authResult.userId!);
+  if (!rateLimitResult.allowed) {
+    log({ requestId, event: 'rate_limit_exceeded', userId: authResult.userId, resetIn: rateLimitResult.resetIn });
+    return rateLimitExceededResponse(corsHeaders, rateLimitResult.resetIn);
   }
 
   try {
     const { recipe_text, source_url } = await req.json();
 
+    // Input validation
     if (!recipe_text || recipe_text.trim().length === 0) {
       return new Response(
         JSON.stringify({ error: 'Recipe text is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    if (recipe_text.length > MAX_RECIPE_TEXT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: 'Recipe text exceeds maximum length (100KB)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (source_url && (source_url.length > MAX_URL_LENGTH || !isValidUrl(source_url))) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid source URL' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize input
+    const sanitizedText = sanitizeText(recipe_text, MAX_RECIPE_TEXT_LENGTH);
+    const sanitizedUrl = source_url ? sanitizeText(source_url, MAX_URL_LENGTH) : null;
+
+    log({ requestId, event: 'parse_recipe_started', textLength: sanitizedText.length });
 
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
     if (!ANTHROPIC_API_KEY) {
@@ -53,69 +103,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const systemPrompt = `You are an expert recipe parser and nutritionist. Your job is to extract comprehensive, structured data from recipe text.
+    const systemPrompt = `Extract structured recipe data. Be concise.
 
-IMPORTANT: Extract ALL available information. Be thorough and accurate.
+Ingredients: One per line with quantities.
+Instructions: Numbered steps.
+Nutrition: Estimate if not provided.
+Kid-friendliness (1-10): 10=kid favorites, 1=sophisticated/spicy.
+Difficulty: easy (<30min), medium (30-60min), hard (>60min).
+Meal type: breakfast/lunch/dinner/snack.
+Cuisine: Origin or "Fusion".
+Tags: Comma-separated (quick, healthy, vegetarian, etc.).
+Leftovers: 3-5 days for cooked, 1-2 for fresh.`;
 
-For ingredients, format as a clean list with quantities, one per line. Include any ingredient notes (e.g., "divided", "optional").
+    const userPrompt = `Parse recipe:
 
-For instructions, number each step clearly. Include timing cues, temperatures, and technique tips.
+${sanitizedText}
 
-For nutrition, estimate based on standard USDA values if not explicitly provided. Be conservative with estimates.
+${sanitizedUrl ? `Source: ${sanitizedUrl}` : ''}
 
-For kid-friendliness (1-10 scale):
-- 10: Universally loved (mac & cheese, pizza, chicken nuggets)
-- 7-9: Generally kid-friendly with mild flavors
-- 4-6: Some kids might like it, has some complex flavors
-- 1-3: Sophisticated/spicy/unusual ingredients most kids dislike
-
-For difficulty:
-- easy: Under 30 min active time, basic techniques, common ingredients
-- medium: 30-60 min active time, some skill required
-- hard: Over 60 min active time, advanced techniques, or precise timing
-
-For meal_type, choose the MOST appropriate: breakfast, lunch, dinner, snack
-
-For cuisine, identify the origin (Italian, Mexican, Asian, American, Mediterranean, Indian, etc.) or "Fusion" if mixed.
-
-For tags, include relevant categories separated by commas: quick, healthy, comfort-food, vegetarian, vegan, gluten-free, dairy-free, one-pot, meal-prep, budget-friendly, date-night, weeknight, weekend-project, etc.
-
-For leftovers: estimate if this recipe stores well and for how many days (typically 3-5 for most cooked dishes, 1-2 for salads/fresh items).
-
-If the recipe mentions tips, variations, or highly-rated comments from users, include the best ones in top_comments.`;
-
-    const userPrompt = `Parse this recipe and extract ALL information into a structured format:
-
-${recipe_text}
-
-${source_url ? `Source URL: ${source_url}` : ''}
-
-Return a JSON object with these fields:
-{
-  "name": "Recipe name (clean, title case)",
-  "meal_type": "breakfast|lunch|dinner|snack",
-  "ingredients": "Full ingredient list, one per line with quantities",
-  "instructions": "Numbered steps with full details",
-  "prep_time_minutes": number or null,
-  "cook_time_minutes": number or null,
-  "servings": number (default 4 if not specified),
-  "difficulty": "easy|medium|hard",
-  "cuisine": "Cuisine type or null",
-  "tags": "comma-separated relevant tags",
-  "notes": "Any important tips, substitutions, or variations",
-  "calories": estimated calories per serving or null,
-  "protein_g": estimated protein in grams or null,
-  "carbs_g": estimated carbs in grams or null,
-  "fat_g": estimated fat in grams or null,
-  "fiber_g": estimated fiber in grams or null,
-  "kid_friendly_level": 1-10 rating,
-  "makes_leftovers": true/false,
-  "leftover_days": number of days leftovers keep or null,
-  "top_comments": "Best tips or variations from comments if available",
-  "source_url": "${source_url || 'null'}"
-}
-
-Return ONLY valid JSON, no markdown or explanation.`;
+Return JSON only:
+{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null,"top_comments":null,"source_url":"${sanitizedUrl || ''}"}`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -125,8 +132,8 @@ Return ONLY valid JSON, no markdown or explanation.`;
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        model: Deno.env.get('ANTHROPIC_MODEL') || 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
         messages: [
           {
             role: 'user',
@@ -138,16 +145,35 @@ Return ONLY valid JSON, no markdown or explanation.`;
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Anthropic API error:', errorText);
+      const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      const { userMessage, statusCode } = handleAnthropicError(response, errorData);
+
+      logError({
+        requestId,
+        event: 'anthropic_api_error',
+        statusCode: response.status,
+        error: errorData.error?.message || 'Unknown',
+        userId: authResult.userId
+      });
+
       return new Response(
-        JSON.stringify({ error: 'AI parsing failed', details: errorText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: userMessage }),
+        { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const aiResponse = await response.json();
     const content = aiResponse.content[0]?.text;
+
+    // Log token usage for cost tracking
+    log({
+      requestId,
+      event: 'ai_usage',
+      model: aiResponse.model,
+      inputTokens: aiResponse.usage?.input_tokens,
+      outputTokens: aiResponse.usage?.output_tokens,
+      userId: authResult.userId,
+    });
 
     if (!content) {
       return new Response(
@@ -196,8 +222,10 @@ Return ONLY valid JSON, no markdown or explanation.`;
       makes_leftovers: parsedRecipe.makes_leftovers ?? true,
       leftover_days: parsedRecipe.leftover_days || null,
       top_comments: parsedRecipe.top_comments || null,
-      source_url: source_url || parsedRecipe.source_url || null,
+      source_url: sanitizedUrl || parsedRecipe.source_url || null,
     };
+
+    log({ requestId, event: 'parse_recipe_success', recipeName: recipe.name });
 
     return new Response(
       JSON.stringify(recipe),
@@ -205,9 +233,9 @@ Return ONLY valid JSON, no markdown or explanation.`;
     );
 
   } catch (error) {
-    console.error('Parse recipe error:', error);
+    logError({ requestId, event: 'parse_recipe_error', error });
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: String(error) }),
+      JSON.stringify({ error: 'Failed to parse recipe. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

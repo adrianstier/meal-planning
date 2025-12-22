@@ -1,4 +1,3 @@
-// Force rebuild - 2025-12-18 v2
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,10 +20,6 @@ import PricingPage from './pages/PricingPage';
 import SeasonalCookingPage from './pages/SeasonalCookingPage';
 import HolidayPlannerPage from './pages/HolidayPlannerPage';
 import { errorLogger } from './utils/errorLogger';
-
-// Debug: Log environment at startup
-console.log('[App] Starting - Supabase URL configured:', !!process.env.REACT_APP_SUPABASE_URL);
-console.log('[App] Supabase URL prefix:', process.env.REACT_APP_SUPABASE_URL?.substring(0, 30));
 
 // Create a client
 const queryClient = new QueryClient({

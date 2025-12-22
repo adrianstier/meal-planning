@@ -162,6 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     event: AuthChangeEvent,
     newSession: Session | null
   ) => {
+    console.log('[Auth] handleAuthStateChange:', event, !!newSession?.user);
     setSession(newSession);
     setSupabaseUser(newSession?.user ?? null);
 
@@ -169,11 +170,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Check if email is confirmed (OAuth users are always confirmed)
       const emailConfirmed = !!newSession.user.email_confirmed_at;
       setEmailConfirmationPending(!emailConfirmed);
+      console.log('[Auth] Email confirmed:', emailConfirmed);
 
       if (emailConfirmed) {
         // For OAuth users or regular users, ensure profile exists
-        const profile = await ensureProfileExists(newSession.user);
-        setUser(profile);
+        // Add timeout to prevent hanging
+        console.log('[Auth] Fetching/creating profile for:', newSession.user.email);
+        try {
+          const profilePromise = ensureProfileExists(newSession.user);
+          const timeoutPromise = new Promise<null>((resolve) => {
+            setTimeout(() => {
+              console.warn('[Auth] Profile fetch timed out');
+              resolve(null);
+            }, 5000);
+          });
+          const profile = await Promise.race([profilePromise, timeoutPromise]);
+          console.log('[Auth] Profile result:', !!profile, profile?.email);
+          setUser(profile);
+        } catch (err) {
+          console.error('[Auth] Profile fetch error:', err);
+          setUser(null);
+        }
       } else {
         // Don't set user profile if email not confirmed
         setUser(null);
@@ -202,16 +219,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     try {
+      console.log('[Auth] Checking session...');
       const sessionResult = await Promise.race([
         supabase.auth.getSession(),
         timeoutPromise
       ]);
 
       const { data: { session: currentSession } } = sessionResult as { data: { session: Session | null } };
+      console.log('[Auth] Session check result:', !!currentSession, currentSession?.user?.email);
 
       await handleAuthStateChange('INITIAL_SESSION' as AuthChangeEvent, currentSession);
     } catch (error) {
-      console.error('[Auth] Auth check failed');
+      console.error('[Auth] Auth check failed:', error);
       setUser(null);
       setSupabaseUser(null);
       setSession(null);
@@ -223,6 +242,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       while (authStateQueue.current.length > 0) {
         const queued = authStateQueue.current.shift();
         if (queued) {
+          console.log('[Auth] Processing queued event:', queued.event);
           await handleAuthStateChange(queued.event, queued.session);
         }
       }
@@ -236,9 +256,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
+    // Check if this is an OAuth callback (has hash with access_token)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const isOAuthCallback = hashParams.has('access_token');
+
+    if (isOAuthCallback) {
+      console.log('[Auth] OAuth callback detected, waiting for session...');
+    }
+
+    // Safety timeout - ensure loading never gets stuck for more than 10 seconds
+    const safetyTimeout = setTimeout(() => {
+      if (!initialCheckComplete.current) {
+        console.warn('[Auth] Safety timeout - forcing loading to false');
+        setLoading(false);
+        initialCheckComplete.current = true;
+      }
+    }, 10000);
+
     // Set up auth state listener FIRST to avoid race conditions
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        console.log('[Auth] Auth state change:', event, !!newSession);
+
         // If initial check hasn't completed, queue this event
         if (!initialCheckComplete.current) {
           authStateQueue.current.push({ event, session: newSession });
@@ -253,7 +292,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Then perform initial auth check
     checkAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
   }, [checkAuth, handleAuthStateChange]);
 
   const login = async (email: string, password: string) => {

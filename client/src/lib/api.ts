@@ -97,13 +97,17 @@ function validateRecipeText(text: string): ValidationResult {
 // TIMEOUT WRAPPER FOR EDGE FUNCTIONS
 // ============================================================================
 
+interface EdgeFunctionError extends Error {
+  status?: number;
+  responseBody?: Record<string, unknown>;
+}
+
 async function invokeWithTimeout<T>(
   functionName: string,
   body: Record<string, unknown>,
   timeoutMs: number = EDGE_FUNCTION_TIMEOUT
-): Promise<{ data: T; error: null } | { data: null; error: Error }> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+): Promise<{ data: T; error: null } | { data: null; error: EdgeFunctionError }> {
+  const timeoutId = setTimeout(() => {}, timeoutMs);
 
   try {
     const result = await Promise.race([
@@ -114,10 +118,56 @@ async function invokeWithTimeout<T>(
     ]);
 
     clearTimeout(timeoutId);
-    return result as { data: T; error: null } | { data: null; error: Error };
+
+    // Supabase functions.invoke returns { data, error, response }
+    // When there's an HTTP error (non-2xx), error is a FunctionsHttpError and response.context is the Response
+    const { data, error, response } = result as {
+      data: T | null;
+      error: (Error & { context?: Response }) | null;
+      response?: Response
+    };
+
+    if (error) {
+      // For FunctionsHttpError, the response is in error.context (and also in response)
+      const edgeError: EdgeFunctionError = new Error(error.message);
+      edgeError.name = error.name;
+
+      // The response object from Supabase - either from the result or from error.context
+      const errorResponse = response || (error as { context?: Response }).context;
+
+      if (errorResponse) {
+        try {
+          edgeError.status = errorResponse.status;
+          // Read the response body - it hasn't been consumed yet for error responses
+          const responseText = await errorResponse.text();
+          try {
+            edgeError.responseBody = JSON.parse(responseText);
+          } catch {
+            // Not JSON, store as message
+            edgeError.responseBody = { error: responseText };
+          }
+        } catch (e) {
+          // Response may already have been consumed
+          console.error('Failed to read error response body:', e);
+        }
+      }
+
+      return { data: null, error: edgeError };
+    }
+
+    // Check if data contains an error field (Edge Function returning error with 200 status)
+    if (data && typeof data === 'object' && 'error' in data && !('name' in data)) {
+      const errorData = data as { error: string; [key: string]: unknown };
+      const edgeError: EdgeFunctionError = new Error(errorData.error);
+      edgeError.responseBody = errorData;
+      return { data: null, error: edgeError };
+    }
+
+    return { data: data as T, error: null };
   } catch (error) {
     clearTimeout(timeoutId);
-    return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    const edgeError: EdgeFunctionError = error instanceof Error ? error : new Error(String(error));
+    return { data: null, error: edgeError };
   }
 }
 
@@ -288,7 +338,11 @@ export const mealsApi = {
 
     if (error) {
       errorLogger.logApiError(error, '/functions/parse-recipe', 'POST');
-      throw new Error('Failed to parse recipe. Please try again.');
+
+      // Extract error message from response body if available
+      const edgeError = error as EdgeFunctionError;
+      const errorMessage = edgeError.responseBody?.error as string || error.message || 'Failed to parse recipe. Please try again.';
+      throw new Error(errorMessage);
     }
     return wrapResponse(data as Meal);
   },
@@ -323,7 +377,11 @@ export const mealsApi = {
 
     if (error) {
       errorLogger.logApiError(error, '/functions/parse-recipe-image', 'POST');
-      throw new Error('Failed to parse recipe from image. Please try again.');
+
+      // Extract error message from response body if available
+      const edgeError = error as EdgeFunctionError;
+      const errorMessage = edgeError.responseBody?.error as string || error.message || 'Failed to parse recipe from image. Please try again.';
+      throw new Error(errorMessage);
     }
     return wrapResponse(data as Meal);
   },
@@ -339,7 +397,33 @@ export const mealsApi = {
 
     if (error) {
       errorLogger.logApiError(error, '/functions/parse-recipe-url', 'POST');
-      throw new Error('Failed to parse recipe from URL. Please check the URL and try again.');
+
+      // Check if the error response indicates AI parsing is needed
+      const edgeError = error as EdgeFunctionError;
+
+      // Log for debugging
+      console.log('[parseRecipeFromUrl] Error response:', {
+        message: error.message,
+        status: edgeError.status,
+        responseBody: edgeError.responseBody,
+        needsAI: edgeError.responseBody?.needsAI,
+      });
+
+      if (edgeError.responseBody?.needsAI) {
+        // Create an error that preserves the needsAI flag for the UI to detect
+        const aiError: EdgeFunctionError = new Error(
+          edgeError.responseBody?.message as string ||
+          'No structured recipe data found. Try AI Enhanced parsing.'
+        );
+        aiError.responseBody = edgeError.responseBody;
+        throw aiError;
+      }
+
+      // For other errors, use the message from the response if available
+      const errorMessage = edgeError.responseBody?.error as string ||
+        error.message ||
+        'Failed to parse recipe from URL. Please check the URL and try again.';
+      throw new Error(errorMessage);
     }
     return wrapResponse(data as Meal);
   },
@@ -358,7 +442,11 @@ export const mealsApi = {
 
     if (error) {
       errorLogger.logApiError(error, '/functions/parse-recipe-url-ai', 'POST');
-      throw new Error('Failed to parse recipe from URL. Please check the URL and try again.');
+
+      // Extract error message from response body if available
+      const edgeError = error as EdgeFunctionError;
+      const errorMessage = edgeError.responseBody?.error as string || error.message || 'Failed to parse recipe from URL. Please check the URL and try again.';
+      throw new Error(errorMessage);
     }
     return wrapResponse(data as Meal);
   },

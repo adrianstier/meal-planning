@@ -250,7 +250,9 @@ const RecipesPage: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to parse recipe from URL:', error);
       // Check if the error suggests using AI parsing
-      const needsAI = error?.context?.needsAI || error?.needsAI ||
+      const needsAI = error?.responseBody?.needsAI ||
+        error?.context?.needsAI ||
+        error?.needsAI ||
         (error?.message && (error.message.includes('AI Enhanced') || error.message.includes('No structured')));
 
       if (needsAI) {

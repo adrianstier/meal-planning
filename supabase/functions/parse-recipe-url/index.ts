@@ -5,6 +5,8 @@ import {
   MAX_URL_LENGTH,
   isValidUrl,
   validateJWT,
+  jsonResponse,
+  errorResponse,
   log,
   logError,
 } from "../_shared/cors.ts";
@@ -17,102 +19,83 @@ interface ParsedRecipe {
   prep_time_minutes: number | null;
   cook_time_minutes: number | null;
   servings: number;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: string;
   cuisine: string | null;
   tags: string;
   notes: string | null;
-  source_url: string | null;
+  source_url: string;
   image_url: string | null;
 }
 
-async function fetchWebpage(url: string): Promise<string> {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
-    },
-  });
+async function fetchPage(url: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return await response.text();
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return await response.text();
 }
 
-// JSON-LD Recipe Schema types
-interface JsonLdRecipe {
-  '@type': string | string[];
-  '@graph'?: JsonLdItem[];
-  name?: string;
-  image?: string | string[] | { url: string };
-  recipeIngredient?: string | string[];
-  recipeInstructions?: string | RecipeInstruction[];
-  recipeYield?: string | string[];
-  recipeCategory?: string | string[];
-  keywords?: string | string[];
-  cookTime?: string;
-  prepTime?: string;
-  recipeCuisine?: string;
-  description?: string;
-}
-
-interface RecipeInstruction {
-  text?: string;
-  itemListElement?: { text?: string }[];
-}
-
-interface JsonLdItem {
-  '@type': string | string[];
-  [key: string]: unknown;
-}
-
-function isRecipeType(item: JsonLdItem): boolean {
-  return item['@type'] === 'Recipe' ||
-    (Array.isArray(item['@type']) && item['@type'].includes('Recipe'));
-}
-
-function extractJsonLd(html: string): JsonLdRecipe | null {
-  const jsonLdRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+// deno-lint-ignore no-explicit-any
+function findRecipeInJsonLd(html: string): any | null {
+  const regex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   let match;
 
-  while ((match = jsonLdRegex.exec(html)) !== null) {
+  while ((match = regex.exec(html)) !== null) {
     try {
-      const data = JSON.parse(match[1]) as JsonLdItem | JsonLdItem[];
+      const data = JSON.parse(match[1]);
 
+      // Check if it's directly a Recipe
+      if (data["@type"] === "Recipe" || (Array.isArray(data["@type"]) && data["@type"].includes("Recipe"))) {
+        return data;
+      }
+
+      // Check in @graph
+      if (data["@graph"] && Array.isArray(data["@graph"])) {
+        const recipe = data["@graph"].find(
+          // deno-lint-ignore no-explicit-any
+          (item: any) => item["@type"] === "Recipe" || (Array.isArray(item["@type"]) && item["@type"].includes("Recipe"))
+        );
+        if (recipe) return recipe;
+      }
+
+      // Check if it's an array
       if (Array.isArray(data)) {
-        const recipe = data.find(isRecipeType);
-        if (recipe) return recipe as JsonLdRecipe;
+        const recipe = data.find(
+          // deno-lint-ignore no-explicit-any
+          (item: any) => item["@type"] === "Recipe" || (Array.isArray(item["@type"]) && item["@type"].includes("Recipe"))
+        );
+        if (recipe) return recipe;
       }
-
-      const dataObj = data as JsonLdRecipe;
-
-      if (dataObj['@graph']) {
-        const recipe = dataObj['@graph'].find(isRecipeType);
-        if (recipe) return recipe as JsonLdRecipe;
-      }
-
-      if (isRecipeType(data as JsonLdItem)) {
-        return dataObj;
-      }
-    } catch (_e) {
-      // Continue searching
+    } catch {
+      continue;
     }
   }
-
   return null;
 }
 
-function extractImageUrl(html: string, jsonLd: JsonLdRecipe | null): string | null {
-  if (jsonLd?.image) {
-    if (typeof jsonLd.image === 'string') return jsonLd.image;
-    if (Array.isArray(jsonLd.image)) return jsonLd.image[0];
-    if (typeof jsonLd.image === 'object' && 'url' in jsonLd.image) return jsonLd.image.url;
-  }
-
+function extractImageUrl(html: string): string | null {
+  // Try og:image first
   const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
   if (ogMatch) return ogMatch[1];
+
+  // Try twitter:image
+  const twitterMatch = html.match(/<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
+  if (twitterMatch) return twitterMatch[1];
 
   return null;
 }
@@ -121,85 +104,90 @@ function parseDuration(duration: string | undefined): number | null {
   if (!duration) return null;
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
   if (match) {
-    const hours = parseInt(match[1] || '0', 10);
-    const minutes = parseInt(match[2] || '0', 10);
+    const hours = parseInt(match[1] || "0", 10);
+    const minutes = parseInt(match[2] || "0", 10);
     return hours * 60 + minutes;
   }
   return null;
 }
 
-function formatJsonLdRecipe(jsonLd: JsonLdRecipe, url: string, imageUrl: string | null): ParsedRecipe {
+// deno-lint-ignore no-explicit-any
+function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): ParsedRecipe {
   // Parse ingredients
-  let ingredients = '';
+  let ingredients = "";
   if (jsonLd.recipeIngredient) {
     ingredients = Array.isArray(jsonLd.recipeIngredient)
-      ? jsonLd.recipeIngredient.join('\n')
-      : jsonLd.recipeIngredient;
+      ? jsonLd.recipeIngredient.join("\n")
+      : String(jsonLd.recipeIngredient);
   }
 
   // Parse instructions
-  let instructions = '';
+  let instructions = "";
   if (jsonLd.recipeInstructions) {
     if (Array.isArray(jsonLd.recipeInstructions)) {
       instructions = jsonLd.recipeInstructions
-        .map((step: string | RecipeInstruction, i: number) => {
-          if (typeof step === 'string') return `${i + 1}. ${step}`;
+        // deno-lint-ignore no-explicit-any
+        .map((step: any, i: number) => {
+          if (typeof step === "string") return `${i + 1}. ${step}`;
           if (step.text) return `${i + 1}. ${step.text}`;
           if (step.itemListElement) {
-            return step.itemListElement
-              .map((s: { text?: string }, j: number) => `${i + 1}.${j + 1}. ${s.text || ''}`)
-              .join('\n');
+            // deno-lint-ignore no-explicit-any
+            return step.itemListElement.map((s: any, j: number) => `${i + 1}.${j + 1}. ${s.text || ""}`).join("\n");
           }
-          return '';
+          return "";
         })
         .filter(Boolean)
-        .join('\n');
+        .join("\n");
     } else {
-      instructions = jsonLd.recipeInstructions as string;
+      instructions = String(jsonLd.recipeInstructions);
     }
   }
 
-  // Servings
+  // Parse servings
   let servings = 4;
   if (jsonLd.recipeYield) {
-    const yieldStr = Array.isArray(jsonLd.recipeYield)
-      ? jsonLd.recipeYield[0]
-      : jsonLd.recipeYield;
-    const servingsMatch = String(yieldStr).match(/\d+/);
-    if (servingsMatch) servings = parseInt(servingsMatch[0], 10);
+    const yieldStr = Array.isArray(jsonLd.recipeYield) ? jsonLd.recipeYield[0] : jsonLd.recipeYield;
+    const match = String(yieldStr).match(/\d+/);
+    if (match) servings = parseInt(match[0], 10);
   }
 
-  // Tags from category and keywords
+  // Parse tags
   const tags: string[] = [];
   if (jsonLd.recipeCategory) {
-    tags.push(...(Array.isArray(jsonLd.recipeCategory) ? jsonLd.recipeCategory : [jsonLd.recipeCategory]));
+    const cats = Array.isArray(jsonLd.recipeCategory) ? jsonLd.recipeCategory : [jsonLd.recipeCategory];
+    tags.push(...cats);
   }
   if (jsonLd.keywords) {
-    const keywords = typeof jsonLd.keywords === 'string'
-      ? jsonLd.keywords.split(',').map((k: string) => k.trim())
-      : jsonLd.keywords;
-    tags.push(...keywords);
+    const kw = typeof jsonLd.keywords === "string" ? jsonLd.keywords.split(",").map((k: string) => k.trim()) : jsonLd.keywords;
+    tags.push(...kw);
   }
 
-  // Determine difficulty from cook time
-  const cookTime = parseDuration(jsonLd.cookTime);
+  // Calculate difficulty
   const prepTime = parseDuration(jsonLd.prepTime);
-  const totalTime = (cookTime || 0) + (prepTime || 0);
-  let difficulty: 'easy' | 'medium' | 'hard' = 'medium';
-  if (totalTime > 0 && totalTime <= 30) difficulty = 'easy';
-  else if (totalTime > 60) difficulty = 'hard';
+  const cookTime = parseDuration(jsonLd.cookTime);
+  const totalTime = (prepTime || 0) + (cookTime || 0);
+  let difficulty = "medium";
+  if (totalTime > 0 && totalTime <= 30) difficulty = "easy";
+  else if (totalTime > 60) difficulty = "hard";
 
-  // Determine meal type from category
-  let mealType = 'dinner';
-  const category = jsonLd.recipeCategory;
-  const categoryStr = Array.isArray(category) ? category.join(' ') : (category || '');
-  const categoryLower = String(categoryStr).toLowerCase();
-  if (categoryLower.includes('breakfast')) mealType = 'breakfast';
-  else if (categoryLower.includes('lunch')) mealType = 'lunch';
-  else if (categoryLower.includes('snack') || categoryLower.includes('appetizer')) mealType = 'snack';
+  // Determine meal type
+  let mealType = "dinner";
+  const category = Array.isArray(jsonLd.recipeCategory) ? jsonLd.recipeCategory.join(" ") : (jsonLd.recipeCategory || "");
+  const categoryLower = category.toLowerCase();
+  if (categoryLower.includes("breakfast")) mealType = "breakfast";
+  else if (categoryLower.includes("lunch")) mealType = "lunch";
+  else if (categoryLower.includes("snack") || categoryLower.includes("appetizer")) mealType = "snack";
+
+  // Get image from JSON-LD if not found in meta tags
+  let finalImageUrl = imageUrl;
+  if (!finalImageUrl && jsonLd.image) {
+    if (typeof jsonLd.image === "string") finalImageUrl = jsonLd.image;
+    else if (Array.isArray(jsonLd.image)) finalImageUrl = jsonLd.image[0];
+    else if (jsonLd.image.url) finalImageUrl = jsonLd.image.url;
+  }
 
   return {
-    name: jsonLd.name || 'Untitled Recipe',
+    name: jsonLd.name || "Untitled Recipe",
     meal_type: mealType,
     ingredients,
     instructions,
@@ -208,75 +196,69 @@ function formatJsonLdRecipe(jsonLd: JsonLdRecipe, url: string, imageUrl: string 
     servings,
     difficulty,
     cuisine: jsonLd.recipeCuisine || null,
-    tags: tags.slice(0, 10).join(', '),
+    tags: tags.slice(0, 10).join(", "),
     notes: jsonLd.description || null,
     source_url: url,
-    image_url: imageUrl,
+    image_url: finalImageUrl,
   };
 }
 
 Deno.serve(async (req: Request) => {
-  const requestId = crypto.randomUUID();
-  const origin = req.headers.get('origin');
-  const corsHeaders = getCorsHeaders(origin);
+  const requestId = crypto.randomUUID().substring(0, 8);
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
-  // Handle CORS preflight
-  const preflightResponse = handleCorsPrelight(req);
-  if (preflightResponse) return preflightResponse;
+  // CORS preflight
+  const preflight = handleCorsPrelight(req);
+  if (preflight) return preflight;
 
-  // Validate JWT authentication
-  const authResult = await validateJWT(req);
-  if (!authResult.authenticated) {
-    log({ requestId, event: 'auth_failed', error: authResult.error });
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized', details: authResult.error }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  // Auth
+  const auth = await validateJWT(req);
+  if (!auth.authenticated) {
+    return errorResponse(auth.error || "Unauthorized", corsHeaders, 401);
   }
 
   try {
-    const { url } = await req.json();
+    const body = await req.json();
+    const url = body.url;
 
-    // Input validation
-    if (!url || url.length > MAX_URL_LENGTH || !isValidUrl(url)) {
-      return new Response(
-        JSON.stringify({ error: 'Valid URL is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!url || !isValidUrl(url) || url.length > MAX_URL_LENGTH) {
+      return errorResponse("Valid URL is required", corsHeaders, 400);
     }
 
-    log({ requestId, event: 'parse_url_started', url: url.substring(0, 100) });
-    const html = await fetchWebpage(url);
+    log({ requestId, event: "parse_url_start", url: url.substring(0, 80) });
 
-    // Try to extract structured JSON-LD data
-    const jsonLd = extractJsonLd(html);
+    // Fetch the page
+    let html: string;
+    try {
+      html = await fetchPage(url);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown";
+      return errorResponse(`Failed to fetch URL: ${msg}`, corsHeaders, 422);
+    }
+
+    // Extract JSON-LD
+    const jsonLd = findRecipeInJsonLd(html);
 
     if (!jsonLd) {
-      return new Response(
-        JSON.stringify({
-          error: 'No structured recipe data found',
-          message: 'This page doesn\'t have standard recipe markup. Try "AI Enhanced" parsing instead.',
-          needsAI: true
-        }),
-        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      // No structured data - suggest AI parsing
+      log({ requestId, event: "no_jsonld" });
+      return errorResponse(
+        "No structured recipe data found. Try AI Enhanced parsing.",
+        corsHeaders,
+        422,
+        { needsAI: true, message: "This page doesn't have standard recipe markup. Use AI Enhanced parsing instead." }
       );
     }
 
-    const imageUrl = extractImageUrl(html, jsonLd);
-    const recipe = formatJsonLdRecipe(jsonLd, url, imageUrl);
+    const imageUrl = extractImageUrl(html);
+    const recipe = formatRecipe(jsonLd, url, imageUrl);
 
-    log({ requestId, event: 'parse_url_success', recipeName: recipe.name });
-
-    return new Response(
-      JSON.stringify(recipe),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    log({ requestId, event: "parse_url_success", name: recipe.name });
+    return jsonResponse(recipe, corsHeaders);
 
   } catch (error) {
-    logError({ requestId, event: 'parse_url_error', error });
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch or parse recipe. Please check the URL and try again.' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    logError({ requestId, event: "parse_url_error", error });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return errorResponse(`Failed to parse recipe: ${message}`, corsHeaders, 500);
   }
 });

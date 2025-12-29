@@ -3,13 +3,12 @@ import {
   getCorsHeaders,
   handleCorsPrelight,
   MAX_RECIPE_TEXT_LENGTH,
-  MAX_URL_LENGTH,
-  isValidUrl,
   sanitizeText,
   validateJWT,
   checkRateLimitSync,
   rateLimitExceededResponse,
-  handleAnthropicError,
+  jsonResponse,
+  errorResponse,
   log,
   logError,
 } from "../_shared/cors.ts";
@@ -22,7 +21,7 @@ interface ParsedRecipe {
   prep_time_minutes: number | null;
   cook_time_minutes: number | null;
   servings: number;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: string;
   cuisine: string | null;
   tags: string;
   notes: string | null;
@@ -34,209 +33,156 @@ interface ParsedRecipe {
   kid_friendly_level: number;
   makes_leftovers: boolean;
   leftover_days: number | null;
-  top_comments: string | null;
   source_url: string | null;
 }
 
-Deno.serve(async (req: Request) => {
-  const requestId = crypto.randomUUID();
-  const origin = req.headers.get('origin');
-  const corsHeaders = getCorsHeaders(origin);
+const ANTHROPIC_MODEL = "claude-3-5-haiku-20241022";
 
-  // Handle CORS preflight
-  const preflightResponse = handleCorsPrelight(req);
-  if (preflightResponse) return preflightResponse;
+async function callClaude(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    }),
+  });
 
-  // Validate JWT authentication
-  const authResult = await validateJWT(req);
-  if (!authResult.authenticated) {
-    log({ requestId, event: 'auth_failed', error: authResult.error });
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized', details: authResult.error }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
   }
 
-  // Check rate limit
-  const rateLimitResult = checkRateLimitSync(authResult.userId!);
-  if (!rateLimitResult.allowed) {
-    log({ requestId, event: 'rate_limit_exceeded', userId: authResult.userId, resetIn: rateLimitResult.resetIn });
-    return rateLimitExceededResponse(corsHeaders, rateLimitResult.resetIn);
+  const data = await response.json();
+  return data.content?.[0]?.text || "";
+}
+
+function extractJSON(text: string): ParsedRecipe | null {
+  // Try to find JSON in the response
+  const jsonPatterns = [
+    /```json\s*([\s\S]*?)\s*```/,
+    /```\s*([\s\S]*?)\s*```/,
+    /(\{[\s\S]*\})/,
+  ];
+
+  for (const pattern of jsonPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      try {
+        return JSON.parse(match[1].trim());
+      } catch {
+        continue;
+      }
+    }
+  }
+  return null;
+}
+
+function validateRecipe(parsed: Partial<ParsedRecipe>): ParsedRecipe {
+  return {
+    name: parsed.name?.trim() || "Untitled Recipe",
+    meal_type: ["breakfast", "lunch", "dinner", "snack"].includes(parsed.meal_type || "")
+      ? parsed.meal_type!
+      : "dinner",
+    ingredients: parsed.ingredients || "",
+    instructions: parsed.instructions || "",
+    prep_time_minutes: typeof parsed.prep_time_minutes === "number" ? parsed.prep_time_minutes : null,
+    cook_time_minutes: typeof parsed.cook_time_minutes === "number" ? parsed.cook_time_minutes : null,
+    servings: typeof parsed.servings === "number" && parsed.servings > 0 ? parsed.servings : 4,
+    difficulty: ["easy", "medium", "hard"].includes(parsed.difficulty || "") ? parsed.difficulty! : "medium",
+    cuisine: parsed.cuisine || null,
+    tags: parsed.tags || "",
+    notes: parsed.notes || null,
+    calories: typeof parsed.calories === "number" ? parsed.calories : null,
+    protein_g: typeof parsed.protein_g === "number" ? parsed.protein_g : null,
+    carbs_g: typeof parsed.carbs_g === "number" ? parsed.carbs_g : null,
+    fat_g: typeof parsed.fat_g === "number" ? parsed.fat_g : null,
+    fiber_g: typeof parsed.fiber_g === "number" ? parsed.fiber_g : null,
+    kid_friendly_level: Math.min(10, Math.max(1, typeof parsed.kid_friendly_level === "number" ? parsed.kid_friendly_level : 5)),
+    makes_leftovers: typeof parsed.makes_leftovers === "boolean" ? parsed.makes_leftovers : true,
+    leftover_days: typeof parsed.leftover_days === "number" ? parsed.leftover_days : null,
+    source_url: parsed.source_url || null,
+  };
+}
+
+Deno.serve(async (req: Request) => {
+  const requestId = crypto.randomUUID().substring(0, 8);
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+
+  // CORS preflight
+  const preflight = handleCorsPrelight(req);
+  if (preflight) return preflight;
+
+  // Auth
+  const auth = await validateJWT(req);
+  if (!auth.authenticated) {
+    return errorResponse(auth.error || "Unauthorized", corsHeaders, 401);
+  }
+
+  // Rate limit
+  const rateLimit = checkRateLimitSync(auth.userId!);
+  if (!rateLimit.allowed) {
+    return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
   }
 
   try {
-    const { recipe_text, source_url } = await req.json();
+    const body = await req.json();
+    const recipeText = body.recipe_text;
+    const sourceUrl = body.source_url || null;
 
-    // Input validation
-    if (!recipe_text || recipe_text.trim().length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Recipe text is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!recipeText || typeof recipeText !== "string") {
+      return errorResponse("Recipe text is required", corsHeaders, 400);
     }
 
-    if (recipe_text.length > MAX_RECIPE_TEXT_LENGTH) {
-      return new Response(
-        JSON.stringify({ error: 'Recipe text exceeds maximum length (100KB)' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (recipeText.length > MAX_RECIPE_TEXT_LENGTH) {
+      return errorResponse("Recipe text too long (max 100KB)", corsHeaders, 400);
     }
 
-    if (source_url && (source_url.length > MAX_URL_LENGTH || !isValidUrl(source_url))) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid source URL' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const sanitizedText = sanitizeText(recipeText, MAX_RECIPE_TEXT_LENGTH);
+    log({ requestId, event: "parse_start", textLength: sanitizedText.length });
+
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) {
+      return errorResponse("AI service not configured", corsHeaders, 500);
     }
 
-    // Sanitize input
-    const sanitizedText = sanitizeText(recipe_text, MAX_RECIPE_TEXT_LENGTH);
-    const sanitizedUrl = source_url ? sanitizeText(source_url, MAX_URL_LENGTH) : null;
+    const systemPrompt = `You are a recipe parser. Extract recipe data and return ONLY valid JSON, no other text.
 
-    log({ requestId, event: 'parse_recipe_started', textLength: sanitizedText.length });
+Format ingredients as one per line with quantities.
+Format instructions as numbered steps.
+Estimate nutrition if not provided.
+Kid-friendliness: 1-10 (10 = kid favorites like mac & cheese, 1 = spicy/complex)
+Difficulty: easy (<30min total), medium (30-60min), hard (>60min)`;
 
-    const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!ANTHROPIC_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: 'AI service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const systemPrompt = `Extract structured recipe data. Be concise.
-
-Ingredients: One per line with quantities.
-Instructions: Numbered steps.
-Nutrition: Estimate if not provided.
-Kid-friendliness (1-10): 10=kid favorites, 1=sophisticated/spicy.
-Difficulty: easy (<30min), medium (30-60min), hard (>60min).
-Meal type: breakfast/lunch/dinner/snack.
-Cuisine: Origin or "Fusion".
-Tags: Comma-separated (quick, healthy, vegetarian, etc.).
-Leftovers: 3-5 days for cooked, 1-2 for fresh.`;
-
-    const userPrompt = `Parse recipe:
+    const userPrompt = `Parse this recipe into JSON:
 
 ${sanitizedText}
 
-${sanitizedUrl ? `Source: ${sanitizedUrl}` : ''}
+Return this exact JSON structure (no markdown, no explanation):
+{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null,"source_url":${sourceUrl ? `"${sourceUrl}"` : "null"}}`;
 
-Return JSON only:
-{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null,"top_comments":null,"source_url":"${sanitizedUrl || ''}"}`;
+    const aiResponse = await callClaude(systemPrompt, userPrompt, apiKey);
+    const parsed = extractJSON(aiResponse);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
-        max_tokens: 1500,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-        system: systemPrompt,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      const { userMessage, statusCode } = handleAnthropicError(response, errorData);
-
-      logError({
-        requestId,
-        event: 'anthropic_api_error',
-        statusCode: response.status,
-        error: errorData.error?.message || 'Unknown',
-        userId: authResult.userId
-      });
-
-      return new Response(
-        JSON.stringify({ error: userMessage }),
-        { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!parsed) {
+      logError({ requestId, event: "parse_failed", reason: "no_json", response: aiResponse.substring(0, 500) });
+      return errorResponse("Failed to parse recipe. Please try again.", corsHeaders, 500);
     }
 
-    const aiResponse = await response.json();
-    const content = aiResponse.content[0]?.text;
+    const recipe = validateRecipe(parsed);
+    log({ requestId, event: "parse_success", name: recipe.name });
 
-    // Log token usage for cost tracking
-    log({
-      requestId,
-      event: 'ai_usage',
-      model: aiResponse.model,
-      inputTokens: aiResponse.usage?.input_tokens,
-      outputTokens: aiResponse.usage?.output_tokens,
-      userId: authResult.userId,
-    });
-
-    if (!content) {
-      return new Response(
-        JSON.stringify({ error: 'No response from AI' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Parse the JSON response
-    let parsedRecipe: ParsedRecipe;
-    try {
-      // Clean up potential markdown code blocks
-      const cleanJson = content.replace(/```json\n?|\n?```/g, '').trim();
-      parsedRecipe = JSON.parse(cleanJson);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError, 'Content:', content);
-      return new Response(
-        JSON.stringify({ error: 'Failed to parse AI response', raw: content }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate and set defaults
-    const recipe: ParsedRecipe = {
-      name: parsedRecipe.name || 'Untitled Recipe',
-      meal_type: ['breakfast', 'lunch', 'dinner', 'snack'].includes(parsedRecipe.meal_type)
-        ? parsedRecipe.meal_type
-        : 'dinner',
-      ingredients: parsedRecipe.ingredients || '',
-      instructions: parsedRecipe.instructions || '',
-      prep_time_minutes: parsedRecipe.prep_time_minutes || null,
-      cook_time_minutes: parsedRecipe.cook_time_minutes || null,
-      servings: parsedRecipe.servings || 4,
-      difficulty: ['easy', 'medium', 'hard'].includes(parsedRecipe.difficulty)
-        ? parsedRecipe.difficulty
-        : 'medium',
-      cuisine: parsedRecipe.cuisine || null,
-      tags: parsedRecipe.tags || '',
-      notes: parsedRecipe.notes || null,
-      calories: parsedRecipe.calories || null,
-      protein_g: parsedRecipe.protein_g || null,
-      carbs_g: parsedRecipe.carbs_g || null,
-      fat_g: parsedRecipe.fat_g || null,
-      fiber_g: parsedRecipe.fiber_g || null,
-      kid_friendly_level: Math.min(10, Math.max(1, parsedRecipe.kid_friendly_level || 5)),
-      makes_leftovers: parsedRecipe.makes_leftovers ?? true,
-      leftover_days: parsedRecipe.leftover_days || null,
-      top_comments: parsedRecipe.top_comments || null,
-      source_url: sanitizedUrl || parsedRecipe.source_url || null,
-    };
-
-    log({ requestId, event: 'parse_recipe_success', recipeName: recipe.name });
-
-    return new Response(
-      JSON.stringify(recipe),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return jsonResponse(recipe, corsHeaders);
 
   } catch (error) {
-    logError({ requestId, event: 'parse_recipe_error', error });
-    return new Response(
-      JSON.stringify({ error: 'Failed to parse recipe. Please try again.' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    logError({ requestId, event: "parse_error", error });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return errorResponse(`Failed to parse recipe: ${message}`, corsHeaders, 500);
   }
 });

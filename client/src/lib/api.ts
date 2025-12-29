@@ -107,8 +107,6 @@ async function invokeWithTimeout<T>(
   body: Record<string, unknown>,
   timeoutMs: number = EDGE_FUNCTION_TIMEOUT
 ): Promise<{ data: T; error: null } | { data: null; error: EdgeFunctionError }> {
-  const timeoutId = setTimeout(() => {}, timeoutMs);
-
   try {
     const result = await Promise.race([
       supabase.functions.invoke(functionName, { body }),
@@ -117,47 +115,33 @@ async function invokeWithTimeout<T>(
       ),
     ]);
 
-    clearTimeout(timeoutId);
-
-    // Supabase functions.invoke returns { data, error, response }
-    // When there's an HTTP error (non-2xx), error is a FunctionsHttpError and response.context is the Response
-    const { data, error, response } = result as {
-      data: T | null;
-      error: (Error & { context?: Response }) | null;
-      response?: Response
-    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = result as any;
 
     if (error) {
-      // For FunctionsHttpError, the response is in error.context (and also in response)
-      const edgeError: EdgeFunctionError = new Error(error.message);
-      edgeError.name = error.name;
+      const edgeError: EdgeFunctionError = new Error(error.message || 'Edge function error');
+      edgeError.name = error.name || 'EdgeFunctionError';
+      edgeError.status = error.status;
 
-      // The response object from Supabase - either from the result or from error.context
-      const errorResponse = response || (error as { context?: Response }).context;
-
-      if (errorResponse) {
-        try {
-          edgeError.status = errorResponse.status;
-          // Read the response body - it hasn't been consumed yet for error responses
-          const responseText = await errorResponse.text();
-          try {
-            edgeError.responseBody = JSON.parse(responseText);
-          } catch {
-            // Not JSON, store as message
-            edgeError.responseBody = { error: responseText };
-          }
-        } catch (e) {
-          // Response may already have been consumed
-          console.error('Failed to read error response body:', e);
+      // Try to extract response body from various places
+      try {
+        const ctx = error.context;
+        if (ctx && typeof ctx.json === 'function') {
+          edgeError.responseBody = await ctx.json();
+        } else if (ctx && typeof ctx.text === 'function') {
+          const text = await ctx.text();
+          try { edgeError.responseBody = JSON.parse(text); } catch { edgeError.responseBody = { error: text }; }
         }
+      } catch {
+        // Response already consumed or unavailable
       }
 
       return { data: null, error: edgeError };
     }
 
-    // Check if data contains an error field (Edge Function returning error with 200 status)
+    // Check if data contains an error (Edge Function returned error with 200)
     if (data && typeof data === 'object' && 'error' in data && !('name' in data)) {
-      const errorData = data as { error: string; [key: string]: unknown };
+      const errorData = data as { error: string; needsAI?: boolean; [key: string]: unknown };
       const edgeError: EdgeFunctionError = new Error(errorData.error);
       edgeError.responseBody = errorData;
       return { data: null, error: edgeError };
@@ -165,7 +149,6 @@ async function invokeWithTimeout<T>(
 
     return { data: data as T, error: null };
   } catch (error) {
-    clearTimeout(timeoutId);
     const edgeError: EdgeFunctionError = error instanceof Error ? error : new Error(String(error));
     return { data: null, error: edgeError };
   }

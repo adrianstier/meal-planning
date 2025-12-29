@@ -3,6 +3,7 @@
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5173',
+  'https://meal-planning-virid.vercel.app',
   'https://meal-planning-adrianstiers-projects.vercel.app',
   'https://meal-planning-git-main-adrianstiers-projects.vercel.app',
 ];

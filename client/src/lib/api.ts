@@ -42,7 +42,7 @@ interface GeneratedMealPlanItem {
 // VALIDATION UTILITIES
 // ============================================================================
 
-const EDGE_FUNCTION_TIMEOUT = 60000; // 60 seconds for AI operations
+const EDGE_FUNCTION_TIMEOUT = 90000; // 90 seconds for AI operations (some sites are slow to fetch)
 
 interface ValidationResult {
   valid: boolean;

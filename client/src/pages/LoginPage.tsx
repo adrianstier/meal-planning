@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { UtensilsCrossed, Loader2, AlertTriangle, CheckCircle2, Mail } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -82,6 +82,7 @@ type ViewMode = 'login' | 'register' | 'forgot-password' | 'email-sent' | 'reset
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [mode, setMode] = useState<ViewMode>('login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -93,9 +94,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
 
-  const { login, loginWithOAuth, register, resetPassword, updatePassword } = useAuth();
+  const { user, loading: authLoading, login, loginWithOAuth, register, resetPassword, updatePassword } = useAuth();
   const navigate = useNavigate();
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
+
+  // Redirect authenticated users to /plan
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Get the intended destination from location state, or default to /plan
+      const from = (location.state as { from?: string })?.from || '/plan';
+      navigate(from, { replace: true });
+    }
+  }, [user, authLoading, navigate, location.state]);
 
   const handleOAuthLogin = async (provider: OAuthProvider) => {
     setError('');
@@ -248,6 +258,18 @@ export default function LoginPage() {
   };
 
   const passwordStrength = getPasswordStrength(password);
+
+  // Show loading spinner while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 px-4 py-12">

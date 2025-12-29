@@ -171,11 +171,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     let mounted = true;
+    let authStateReceived = false;
+
+    // Check if this is an OAuth callback (has tokens in URL hash)
+    const isOAuthCallback = window.location.hash.includes('access_token') ||
+                            window.location.hash.includes('error');
+
+    if (isOAuthCallback) {
+      console.log('[Auth] OAuth callback detected, waiting for auth state...');
+    }
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log('[Auth] Auth state change:', event);
+        authStateReceived = true;
         if (mounted) {
           await handleSession(newSession);
           setLoading(false);
@@ -190,8 +200,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('[Auth] Initial session:', !!initialSession?.user);
 
         if (mounted) {
-          await handleSession(initialSession);
-          setLoading(false);
+          // If this is an OAuth callback but we already have a session, use it
+          // Otherwise, if it's an OAuth callback, wait for onAuthStateChange
+          if (initialSession?.user || !isOAuthCallback) {
+            await handleSession(initialSession);
+            setLoading(false);
+          }
+          // If OAuth callback with no session yet, keep loading - onAuthStateChange will handle it
         }
       } catch (error) {
         console.error('[Auth] Init failed:', error);
@@ -206,13 +221,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     initializeAuth();
 
-    // Safety timeout - never stay loading forever
+    // Safety timeout - longer for OAuth callbacks to allow token exchange
+    const timeoutDuration = isOAuthCallback ? 8000 : 3000;
     const safetyTimeout = setTimeout(() => {
-      if (mounted) {
+      if (mounted && !authStateReceived) {
         console.warn('[Auth] Safety timeout - forcing load complete');
         setLoading(false);
       }
-    }, 3000);
+    }, timeoutDuration);
 
     return () => {
       mounted = false;

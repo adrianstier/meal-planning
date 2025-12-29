@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, supabaseUrl, supabaseAnonKey } from './supabase';
 import { errorLogger } from '../utils/errorLogger';
 import { rateLimiters, checkRateLimit } from '../utils/rateLimiter';
 import type {
@@ -44,10 +44,6 @@ interface GeneratedMealPlanItem {
 
 const EDGE_FUNCTION_TIMEOUT = 90000; // 90 seconds for AI operations (some sites are slow to fetch)
 
-// Supabase config from environment
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
-
 // Direct fetch for Edge Functions - more reliable than Supabase client for long-running operations
 // The Supabase client's internal fetch handling can have issues with timeouts and CORS in some browsers
 async function directEdgeFunctionFetch<T>(
@@ -55,7 +51,7 @@ async function directEdgeFunctionFetch<T>(
   body: Record<string, unknown>,
   timeoutMs: number = EDGE_FUNCTION_TIMEOUT
 ): Promise<{ data: T; error: null } | { data: null; error: Error }> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     return { data: null, error: new Error('Missing Supabase configuration') };
   }
 
@@ -71,12 +67,12 @@ async function directEdgeFunctionFetch<T>(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+    const response = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
-        'apikey': SUPABASE_ANON_KEY,
+        'apikey': supabaseAnonKey,
       },
       body: JSON.stringify(body),
       signal: controller.signal,

@@ -44,6 +44,80 @@ interface GeneratedMealPlanItem {
 
 const EDGE_FUNCTION_TIMEOUT = 90000; // 90 seconds for AI operations (some sites are slow to fetch)
 
+// Detect Safari for workarounds - Safari has stricter cross-origin handling
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+// Direct fetch for Edge Functions - bypasses Supabase client which has issues in Safari
+// Safari's ITP (Intelligent Tracking Prevention) can interfere with the Supabase client's
+// internal fetch handling. Using direct fetch with explicit credentials: 'omit' works around this.
+async function directEdgeFunctionFetch<T>(
+  functionName: string,
+  body: Record<string, unknown>,
+  timeoutMs: number = EDGE_FUNCTION_TIMEOUT
+): Promise<{ data: T; error: null } | { data: null; error: Error }> {
+  const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+  const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return { data: null, error: new Error('Missing Supabase configuration') };
+  }
+
+  // Get the current session for auth
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
+
+  if (!accessToken) {
+    return { data: null, error: new Error('Not authenticated') };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': supabaseAnonKey,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+      // Explicitly omit credentials to avoid Safari ITP issues
+      credentials: 'omit',
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `Edge function error: ${response.status}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.error || errorMessage;
+      } catch {
+        if (errorText) errorMessage = errorText;
+      }
+      return { data: null, error: new Error(errorMessage) };
+    }
+
+    const data = await response.json();
+
+    // Check if data contains an error
+    if (data && typeof data === 'object' && 'error' in data && !('name' in data)) {
+      return { data: null, error: new Error(data.error) };
+    }
+
+    return { data: data as T, error: null };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { data: null, error: new Error(`Request timeout after ${timeoutMs / 1000}s`) };
+    }
+    return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+  }
+}
+
 interface ValidationResult {
   valid: boolean;
   error?: string;
@@ -107,6 +181,17 @@ async function invokeWithTimeout<T>(
   body: Record<string, unknown>,
   timeoutMs: number = EDGE_FUNCTION_TIMEOUT
 ): Promise<{ data: T; error: null } | { data: null; error: EdgeFunctionError }> {
+  // Use direct fetch for Safari to avoid ITP issues with cross-origin requests
+  if (isSafari) {
+    console.log(`[API] Using direct fetch for Safari: ${functionName}`);
+    const result = await directEdgeFunctionFetch<T>(functionName, body, timeoutMs);
+    if (result.error) {
+      const edgeError: EdgeFunctionError = result.error;
+      return { data: null, error: edgeError };
+    }
+    return { data: result.data, error: null };
+  }
+
   try {
     const result = await Promise.race([
       supabase.functions.invoke(functionName, { body }),

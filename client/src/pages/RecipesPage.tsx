@@ -528,6 +528,7 @@ const RecipesPage: React.FC = () => {
 
   // Group meals by type, apply filters, and sort
   const mealsByType = {
+    all: sortMeals(filterMeals(meals || [])),
     breakfast: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'breakfast') || [])),
     lunch: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'lunch') || [])),
     dinner: sortMeals(filterMeals(meals?.filter(m => m.meal_type === 'dinner') || [])),
@@ -679,8 +680,13 @@ const RecipesPage: React.FC = () => {
       </Card>
 
       {/* Recipes by Type */}
-      <Tabs defaultValue="dinner" className="w-full">
+      <Tabs defaultValue="all" className="w-full">
         <TabsList className="w-full flex flex-wrap justify-start gap-1.5 h-auto p-1.5 bg-slate-100 rounded-xl">
+          <TabsTrigger value="all" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-teal-500 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
+            <Globe className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">All</span>
+            <span className="ml-1 text-xs opacity-75">({mealsByType.all.length})</span>
+          </TabsTrigger>
           <TabsTrigger value="breakfast" className="flex-1 min-w-[80px] sm:flex-initial sm:px-4 py-2 rounded-lg text-sm font-medium text-slate-600 data-[state=active]:bg-teal-500 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200">
             <Coffee className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Breakfast</span>
@@ -708,7 +714,7 @@ const RecipesPage: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        {(['breakfast', 'lunch', 'dinner', 'snack', 'favorites'] as const).map((type) => (
+        {(['all', 'breakfast', 'lunch', 'dinner', 'snack', 'favorites'] as const).map((type) => (
           <TabsContent key={type} value={type} className="space-y-4">
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">
@@ -718,6 +724,8 @@ const RecipesPage: React.FC = () => {
               <div className="text-center py-12 text-muted-foreground">
                 {type === 'favorites'
                   ? 'No favorite recipes yet. Click the heart icon on any recipe to add it to your favorites!'
+                  : type === 'all'
+                  ? 'No recipes yet. Add one to get started!'
                   : `No ${type} recipes yet. Add one to get started!`}
               </div>
             ) : (

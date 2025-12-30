@@ -51,23 +51,35 @@ async function directEdgeFunctionFetch<T>(
   body: Record<string, unknown>,
   timeoutMs: number = EDGE_FUNCTION_TIMEOUT
 ): Promise<{ data: T; error: null } | { data: null; error: Error }> {
+  console.log(`[directEdgeFunctionFetch] Starting call to ${functionName}`);
+
   if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('[directEdgeFunctionFetch] Missing Supabase configuration');
     return { data: null, error: new Error('Missing Supabase configuration') };
   }
 
   // Get the current session for auth
+  console.log('[directEdgeFunctionFetch] Getting session...');
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData?.session?.access_token;
 
   if (!accessToken) {
+    console.error('[directEdgeFunctionFetch] Not authenticated - no access token');
     return { data: null, error: new Error('Not authenticated') };
   }
+  console.log('[directEdgeFunctionFetch] Got access token, making fetch request...');
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => {
+    console.log(`[directEdgeFunctionFetch] Timeout triggered after ${timeoutMs}ms`);
+    controller.abort();
+  }, timeoutMs);
 
   try {
-    const response = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
+    const url = `${supabaseUrl}/functions/v1/${functionName}`;
+    console.log(`[directEdgeFunctionFetch] Fetching: ${url}`);
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,9 +93,11 @@ async function directEdgeFunctionFetch<T>(
     });
 
     clearTimeout(timeoutId);
+    console.log(`[directEdgeFunctionFetch] Response received: status=${response.status}, ok=${response.ok}`);
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`[directEdgeFunctionFetch] Error response: ${errorText}`);
       let errorMessage = `Edge function error: ${response.status}`;
       try {
         const errorJson = JSON.parse(errorText);
@@ -94,17 +108,23 @@ async function directEdgeFunctionFetch<T>(
       return { data: null, error: new Error(errorMessage) };
     }
 
+    console.log('[directEdgeFunctionFetch] Parsing JSON response...');
     const data = await response.json();
+    console.log('[directEdgeFunctionFetch] JSON parsed successfully:', typeof data, data ? Object.keys(data).slice(0, 5) : 'null');
 
     // Check if data contains an error
     if (data && typeof data === 'object' && 'error' in data && !('name' in data)) {
+      console.error('[directEdgeFunctionFetch] Data contains error:', data.error);
       return { data: null, error: new Error(data.error) };
     }
 
+    console.log('[directEdgeFunctionFetch] Returning successful response');
     return { data: data as T, error: null };
   } catch (error) {
     clearTimeout(timeoutId);
+    console.error('[directEdgeFunctionFetch] Caught error:', error);
     if (error instanceof Error && error.name === 'AbortError') {
+      console.error('[directEdgeFunctionFetch] Request was aborted (timeout)');
       return { data: null, error: new Error(`Request timeout after ${timeoutMs / 1000}s`) };
     }
     return { data: null, error: error instanceof Error ? error : new Error(String(error)) };

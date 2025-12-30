@@ -6,6 +6,8 @@ const ALLOWED_ORIGINS = [
   'https://meal-planning-virid.vercel.app',
   'https://meal-planning-adrianstiers-projects.vercel.app',
   'https://meal-planning-git-main-adrianstiers-projects.vercel.app',
+  // New client project domain
+  'https://client-six-inky.vercel.app',
 ];
 
 // Also allow origins from environment variable (comma-separated)
@@ -14,8 +16,8 @@ if (envOrigins) {
   ALLOWED_ORIGINS.push(...envOrigins.split(',').map(o => o.trim()));
 }
 
-// Pattern to match Vercel preview deployments
-const VERCEL_PREVIEW_PATTERN = /^https:\/\/meal-planning-[a-z0-9]+-adrianstiers-projects\.vercel\.app$/;
+// Pattern to match Vercel preview deployments for both meal-planning and client projects
+const VERCEL_PREVIEW_PATTERN = /^https:\/\/(meal-planning|client)-[a-z0-9]+-adrian-stiers-projects(-807dad27)?\.vercel\.app$/;
 
 export function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;

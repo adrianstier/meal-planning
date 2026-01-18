@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { format, startOfWeek, addDays, parseISO, isToday, isTomorrow, isYesterday } from 'date-fns';
 import {
   ChevronLeft,
@@ -24,28 +24,15 @@ import {
   Apple,
   Globe,
   StickyNote,
-  Star,
   Clock,
-  ExternalLink,
   Flame,
-  Leaf,
   Heart,
-  ListChecks,
-  MessageSquare
+  ListChecks
 } from 'lucide-react';
 import { scaleIngredients, calculateServingMultiplier } from '../utils/ingredientScaler';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Progress } from '../components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -63,8 +50,6 @@ import { useDragDrop } from '../contexts/DragDropContext';
 import AddMealDialog from '../components/features/plan/AddMealDialog';
 import MealCard from '../components/features/plan/MealCard';
 import SmartDropZone from '../components/features/plan/SmartDropZone';
-import PlanSkeleton from '../components/features/plan/PlanSkeleton';
-import WeeklyVarietySummary from '../components/features/plan/WeeklyVarietySummary';
 import RecipeBrowserSidebar from '../components/features/plan/RecipeBrowserSidebar';
 import CompactDayCard from '../components/features/plan/CompactDayCard';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
@@ -81,55 +66,6 @@ interface HistoryAction {
   previousState?: MealPlan;
   newState?: MealPlan;
 }
-
-// Meal type configurations with colors and icons for enhanced UX
-const mealTypeConfig = {
-  breakfast: {
-    label: 'Breakfast',
-    icon: Coffee,
-    color: 'from-orange-400 to-yellow-400',
-    bgColor: 'bg-gradient-to-br from-orange-50 to-yellow-50',
-    borderColor: 'border-orange-200',
-    textColor: 'text-orange-700',
-    time: '7:00 AM'
-  },
-  morning_snack: {
-    label: 'Morning Snack',
-    icon: Cookie,
-    color: 'from-green-400 to-emerald-400',
-    bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50',
-    borderColor: 'border-green-200',
-    textColor: 'text-green-700',
-    time: '10:00 AM'
-  },
-  lunch: {
-    label: 'Lunch',
-    icon: Pizza,
-    color: 'from-blue-400 to-cyan-400',
-    bgColor: 'bg-gradient-to-br from-blue-50 to-cyan-50',
-    borderColor: 'border-blue-200',
-    textColor: 'text-blue-700',
-    time: '12:00 PM'
-  },
-  afternoon_snack: {
-    label: 'Afternoon Snack',
-    icon: Cookie,
-    color: 'from-teal-400 to-green-400',
-    bgColor: 'bg-gradient-to-br from-teal-50 to-green-50',
-    borderColor: 'border-teal-200',
-    textColor: 'text-teal-700',
-    time: '3:00 PM'
-  },
-  dinner: {
-    label: 'Dinner',
-    icon: ChefHat,
-    color: 'from-purple-400 to-pink-400',
-    bgColor: 'bg-gradient-to-br from-purple-50 to-pink-50',
-    borderColor: 'border-purple-200',
-    textColor: 'text-purple-700',
-    time: '6:00 PM'
-  }
-};
 
 const PlanPageEnhanced: React.FC = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -153,10 +89,9 @@ const PlanPageEnhanced: React.FC = () => {
     mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner';
   } | null>(null);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
-  const [generateBentos, setGenerateBentos] = useState(false);
-  const [bentoChildName, setBentoChildName] = useState('');
+  const [generateBentos] = useState(false);
+  const [bentoChildName] = useState('');
   const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(true);
-  const [advancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
 
   // Confirmation dialog state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -169,6 +104,10 @@ const PlanPageEnhanced: React.FC = () => {
 
   // Enhanced UX states
   const [copiedMeal, setCopiedMeal] = useState<MealPlan | null>(null);
+
+  // Navigation debounce to prevent race conditions when clicking rapidly
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isNavigatingRef = useRef(false);
 
   const { data: weekPlan, isLoading, error } = useWeekPlan(currentWeekStart);
   const { data: meals } = useMeals();
@@ -207,11 +146,15 @@ const PlanPageEnhanced: React.FC = () => {
     }
 
     try {
-      // Map frontend meal types to backend types
-      let backendMealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' = mealType as any;
-      if (mealType === 'morning_snack' || mealType === 'afternoon_snack') {
-        backendMealType = 'snack'; // Backend still uses generic 'snack'
-      }
+      // Map frontend meal types to backend types (type-safe mapping)
+      const mealTypeMap: Record<typeof mealType, 'breakfast' | 'lunch' | 'dinner' | 'snack'> = {
+        'breakfast': 'breakfast',
+        'morning_snack': 'snack',
+        'lunch': 'lunch',
+        'afternoon_snack': 'snack',
+        'dinner': 'dinner'
+      };
+      const backendMealType = mealTypeMap[mealType];
 
       console.log('Adding to plan:', { meal_id: mealToAdd.id, plan_date: date, meal_type: backendMealType });
 
@@ -241,46 +184,6 @@ const PlanPageEnhanced: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('recipeBrowserOpen', recipeBrowserOpen.toString());
   }, [recipeBrowserOpen]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Ignore if typing in input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      // Arrow keys for navigation
-      if (e.key === 'ArrowLeft' && !e.shiftKey) {
-        goToPreviousWeek();
-      } else if (e.key === 'ArrowRight' && !e.shiftKey) {
-        goToNextWeek();
-      }
-      // G for generate
-      else if (e.key === 'g' || e.key === 'G') {
-        handleGenerateWeek();
-      }
-      // T for this week
-      else if (e.key === 't' || e.key === 'T') {
-        goToThisWeek();
-      }
-      // V for view mode toggle
-      else if (e.key === 'v' || e.key === 'V') {
-        setViewMode(prev => prev === 'week' ? 'list' : prev === 'list' ? 'compact' : 'week');
-      }
-      // Cmd/Ctrl + Z for undo
-      else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-      }
-      // Cmd/Ctrl + Shift + Z for redo
-      else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
-        e.preventDefault();
-        handleRedo();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [historyIndex, history, currentWeekStart]);
 
   // Generate 7 days starting from currentWeekStart with enhanced properties
   const weekDays = useMemo(() => {
@@ -337,14 +240,6 @@ const PlanPageEnhanced: React.FC = () => {
     return organized;
   }, [weekPlan]);
 
-  // Get unique cuisines from all meals
-  const uniqueCuisines = useMemo(() => {
-    if (!meals) return [];
-    return Array.from(
-      new Set(meals.map(m => m.cuisine).filter(Boolean))
-    ).sort();
-  }, [meals]);
-
   // Calculate weekly statistics for enhanced dashboard
   const weeklyStats = useMemo(() => {
     if (!weekPlan) return {
@@ -381,8 +276,8 @@ const PlanPageEnhanced: React.FC = () => {
     return stats;
   }, [weekPlan]);
 
-  // Days with meals for compact view
-  const daysWithMeals = useMemo(() => {
+  // Days with meals for compact view (reserved for future use)
+  const _daysWithMeals = useMemo(() => {
     return weekDays.filter(day =>
       mealsByDate[day.date] &&
       Object.values(mealsByDate[day.date]).some(meals => meals.length > 0)
@@ -399,22 +294,22 @@ const PlanPageEnhanced: React.FC = () => {
 
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
-      const action = history[historyIndex];
-      // Implement undo logic based on action type
+      const _action = history[historyIndex];
+      // TODO: Implement undo logic based on action type
       setHistoryIndex(historyIndex - 1);
     }
   }, [history, historyIndex]);
 
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      const action = history[historyIndex + 1];
-      // Implement redo logic based on action type
+      const _action = history[historyIndex + 1];
+      // TODO: Implement redo logic based on action type
       setHistoryIndex(historyIndex + 1);
     }
   }, [history, historyIndex]);
 
-  // Toggle cuisine selection
-  const toggleCuisine = useCallback((cuisine: string) => {
+  // Toggle cuisine selection (reserved for future AI plan generation filters)
+  const _toggleCuisine = useCallback((cuisine: string) => {
     setSelectedCuisines(prev =>
       prev.includes(cuisine)
         ? prev.filter(c => c !== cuisine)
@@ -422,19 +317,53 @@ const PlanPageEnhanced: React.FC = () => {
     );
   }, []);
 
+  // Debounced navigation to prevent race conditions when clicking rapidly
+  const navigateToWeek = useCallback((newWeekStart: string) => {
+    // Clear any pending navigation
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+    }
+
+    // If already navigating, queue this navigation
+    if (isNavigatingRef.current) {
+      navigationTimeoutRef.current = setTimeout(() => {
+        setCurrentWeekStart(newWeekStart);
+      }, 150);
+      return;
+    }
+
+    // Mark as navigating and set the new week
+    isNavigatingRef.current = true;
+    setCurrentWeekStart(newWeekStart);
+
+    // Reset navigation lock after a short delay
+    navigationTimeoutRef.current = setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 300);
+  }, []);
+
   const goToPreviousWeek = useCallback(() => {
     const prevWeek = addDays(parseISO(currentWeekStart), -7);
-    setCurrentWeekStart(format(prevWeek, 'yyyy-MM-dd'));
-  }, [currentWeekStart]);
+    navigateToWeek(format(prevWeek, 'yyyy-MM-dd'));
+  }, [currentWeekStart, navigateToWeek]);
 
   const goToNextWeek = useCallback(() => {
     const nextWeek = addDays(parseISO(currentWeekStart), 7);
-    setCurrentWeekStart(format(nextWeek, 'yyyy-MM-dd'));
-  }, [currentWeekStart]);
+    navigateToWeek(format(nextWeek, 'yyyy-MM-dd'));
+  }, [currentWeekStart, navigateToWeek]);
 
   const goToThisWeek = useCallback(() => {
     const today = new Date();
-    setCurrentWeekStart(format(startOfWeek(today, { weekStartsOn: 0 }), 'yyyy-MM-dd'));
+    navigateToWeek(format(startOfWeek(today, { weekStartsOn: 0 }), 'yyyy-MM-dd'));
+  }, [navigateToWeek]);
+
+  // Cleanup navigation timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
   }, []);
 
   const handleAddMeal = useCallback((date: string, mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner') => {
@@ -482,7 +411,8 @@ const PlanPageEnhanced: React.FC = () => {
     setTimeout(() => toast.remove(), 3000);
   }, []);
 
-  const handlePasteMeal = useCallback(async (date: string, mealType: string) => {
+  // Paste copied meal to a slot (used by click-to-paste flow)
+  const _handlePasteMeal = useCallback(async (date: string, mealType: string) => {
     if (!copiedMeal) return;
     try {
       await addPlanItem.mutateAsync({
@@ -518,8 +448,8 @@ const PlanPageEnhanced: React.FC = () => {
     }
   }, [addPlanItem]);
 
-  // Enhanced badge renderer with better colors and icons
-  const renderEnhancedBadges = (meal: MealPlan) => {
+  // Enhanced badge renderer with better colors and icons (reserved for future UI enhancement)
+  const _renderEnhancedBadges = (meal: MealPlan) => {
     const badges = [];
 
     if (meal.cook_time_minutes) {
@@ -572,7 +502,7 @@ const PlanPageEnhanced: React.FC = () => {
     return badges;
   };
 
-  const handleGenerateWeek = async () => {
+  const handleGenerateWeek = useCallback(async () => {
     try {
       const result = await generateWeekPlan.mutateAsync({
         startDate: currentWeekStart,
@@ -591,9 +521,50 @@ const PlanPageEnhanced: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to generate week plan:', error);
-      alert('Failed to generate meal plan. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate meal plan. Please try again.';
+      alert(errorMessage);
     }
-  };
+  }, [currentWeekStart, selectedCuisines, generateBentos, bentoChildName, generateWeekPlan]);
+
+  // Keyboard shortcuts (placed after all handlers are defined)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ignore if typing in input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // Arrow keys for navigation
+      if (e.key === 'ArrowLeft' && !e.shiftKey) {
+        goToPreviousWeek();
+      } else if (e.key === 'ArrowRight' && !e.shiftKey) {
+        goToNextWeek();
+      }
+      // G for generate
+      else if (e.key === 'g' || e.key === 'G') {
+        handleGenerateWeek();
+      }
+      // T for this week
+      else if (e.key === 't' || e.key === 'T') {
+        goToThisWeek();
+      }
+      // V for view mode toggle
+      else if (e.key === 'v' || e.key === 'V') {
+        setViewMode(prev => prev === 'week' ? 'list' : prev === 'list' ? 'compact' : 'week');
+      }
+      // Cmd/Ctrl + Z for undo
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      // Cmd/Ctrl + Shift + Z for redo
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [goToPreviousWeek, goToNextWeek, goToThisWeek, handleGenerateWeek, handleUndo, handleRedo]);
 
   const handleApplyPlan = async () => {
     try {
@@ -622,26 +593,40 @@ const PlanPageEnhanced: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <div className="container py-8">
-          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Loading Your Meal Plan...
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center h-64 gap-4">
-                <div className="relative">
-                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-200 border-t-purple-600"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Utensils className="h-6 w-6 text-purple-600 animate-pulse" />
+      <div className="flex h-full min-h-0">
+        <div className="flex-1 h-full overflow-y-auto bg-gradient-warm">
+          <div className="max-w-[2000px] mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+            {/* Skeleton Header */}
+            <div className="flex items-center justify-between">
+              <div className="skeleton-shimmer h-8 w-48 rounded-lg" />
+              <div className="flex gap-2">
+                <div className="skeleton-shimmer h-10 w-24 rounded-lg" />
+                <div className="skeleton-shimmer h-10 w-32 rounded-lg" />
+              </div>
+            </div>
+            {/* Skeleton Day Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[...Array(7)].map((_, i) => (
+                <div key={i} className="bg-card rounded-xl p-4 space-y-3 shadow-sm border border-border/50" style={{ animationDelay: `${i * 50}ms` }}>
+                  <div className="flex items-center gap-3">
+                    <div className="skeleton-shimmer h-11 w-11 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <div className="skeleton-shimmer h-5 w-20 rounded" />
+                      <div className="skeleton-shimmer h-3 w-12 rounded" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="skeleton-shimmer h-16 w-full rounded-lg" />
+                    <div className="skeleton-shimmer h-16 w-full rounded-lg" />
                   </div>
                 </div>
-                <p className="text-muted-foreground animate-pulse">Preparing your delicious week...</p>
-              </div>
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+            <p className="text-center text-muted-foreground animate-pulse">
+              <ChefHat className="inline-block h-5 w-5 mr-2 text-primary" />
+              Preparing your delicious week...
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -694,39 +679,39 @@ const PlanPageEnhanced: React.FC = () => {
       <div
         key={day.date}
         className={cn(
-          "group flex flex-col bg-white rounded-xl transition-all duration-200 overflow-hidden",
+          "group flex flex-col bg-card rounded-xl transition-all duration-200 overflow-hidden card-hover",
           isTodayCard
             ? "ring-2 ring-primary ring-offset-2 shadow-lg"
             : isPastDay
             ? "opacity-60 hover:opacity-90"
-            : "border border-slate-200 hover:border-slate-300 hover:shadow-md"
+            : "border border-border hover:border-primary/20"
         )}
       >
         {/* Day Header */}
         <div className={cn(
           "px-4 py-3",
           isTodayCard
-            ? "bg-gradient-to-r from-primary/10 to-primary/5"
-            : "bg-slate-50/80"
+            ? "bg-gradient-to-r from-primary/10 to-accent/5"
+            : "bg-secondary/50"
         )}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Date circle */}
               <div className={cn(
-                "w-11 h-11 rounded-full flex flex-col items-center justify-center",
+                "w-11 h-11 rounded-full flex flex-col items-center justify-center transition-all duration-200",
                 isTodayCard
-                  ? "bg-primary text-white"
-                  : "bg-white border border-slate-200"
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-card border border-border"
               )}>
                 <span className={cn(
                   "text-lg font-bold leading-none",
-                  isTodayCard ? "text-white" : "text-slate-900"
+                  isTodayCard ? "text-primary-foreground" : "text-foreground"
                 )}>
                   {day.dayNum}
                 </span>
                 <span className={cn(
                   "text-[10px] uppercase tracking-wide",
-                  isTodayCard ? "text-white/80" : "text-slate-400"
+                  isTodayCard ? "text-primary-foreground/80" : "text-muted-foreground"
                 )}>
                   {day.month}
                 </span>
@@ -734,12 +719,12 @@ const PlanPageEnhanced: React.FC = () => {
               <div>
                 <h3 className={cn(
                   "text-base font-semibold",
-                  isTodayCard ? "text-primary" : "text-slate-900"
+                  isTodayCard ? "text-primary" : "text-foreground"
                 )}>
                   {day.dayName}
                 </h3>
                 {isTodayCard && (
-                  <span className="text-xs font-medium text-primary/70">
+                  <span className="text-xs font-medium text-accent">
                     Today
                   </span>
                 )}
@@ -747,10 +732,10 @@ const PlanPageEnhanced: React.FC = () => {
             </div>
             {/* Meal count indicator */}
             {mealsPlanned > 0 && (
-              <div className="flex items-center gap-1 text-xs text-slate-500">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <div className={cn(
-                  "w-2 h-2 rounded-full",
-                  mealsPlanned >= 3 ? "bg-green-500" : mealsPlanned >= 1 ? "bg-amber-500" : "bg-slate-300"
+                  "w-2 h-2 rounded-full transition-colors",
+                  mealsPlanned >= 3 ? "bg-primary" : mealsPlanned >= 1 ? "bg-accent" : "bg-muted"
                 )} />
                 <span>{mealsPlanned} meal{mealsPlanned !== 1 ? 's' : ''}</span>
               </div>
@@ -1047,8 +1032,8 @@ const PlanPageEnhanced: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 h-full overflow-y-auto bg-slate-50">
-        <div className="max-w-[2000px] mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex-1 h-full overflow-y-auto bg-gradient-warm">
+        <div className="max-w-[2000px] mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 page-enter">
 
           {/* Header */}
           <div className="flex flex-col gap-3 sm:gap-4">
@@ -1056,17 +1041,17 @@ const PlanPageEnhanced: React.FC = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
               {/* Title & Date */}
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                   Weekly Meal Plan
                 </h1>
                 <div className="flex items-center gap-3 mt-1">
-                  <p className="text-xs sm:text-sm text-slate-600">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {format(parseISO(currentWeekStart), 'MMM d')} – {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
                   </p>
                   {/* Week completion indicator */}
                   {weeklyStats.totalMeals > 0 && (
                     <div className="hidden sm:flex items-center gap-2 text-xs">
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-100">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary/80 border border-border/50">
                         <div className="flex gap-0.5">
                           {[...Array(7)].map((_, i) => {
                             const dayDate = format(addDays(parseISO(currentWeekStart), i), 'yyyy-MM-dd');
@@ -1075,14 +1060,14 @@ const PlanPageEnhanced: React.FC = () => {
                               <div
                                 key={i}
                                 className={cn(
-                                  "w-1.5 h-1.5 rounded-full transition-colors",
-                                  dayHasMeals ? "bg-green-500" : "bg-slate-300"
+                                  "w-2 h-2 rounded-full transition-all duration-200",
+                                  dayHasMeals ? "bg-primary shadow-sm" : "bg-border"
                                 )}
                               />
                             );
                           })}
                         </div>
-                        <span className="text-slate-600 font-medium">
+                        <span className="text-foreground font-medium">
                           {weeklyStats.plannedDays}/7 days
                         </span>
                       </div>
@@ -1092,12 +1077,12 @@ const PlanPageEnhanced: React.FC = () => {
               </div>
 
               {/* Week Navigation */}
-              <div data-tour-id="week-navigation" className="flex items-center border border-slate-200 rounded-lg bg-white shadow-sm">
+              <div data-tour-id="week-navigation" className="flex items-center border border-border rounded-lg bg-card shadow-sm">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={goToPreviousWeek}
-                  className="h-9 w-9 hover:bg-slate-100"
+                  className="h-9 w-9 hover:bg-secondary btn-interactive"
                   aria-label="Go to previous week"
                 >
                   <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -1105,7 +1090,7 @@ const PlanPageEnhanced: React.FC = () => {
                 <Button
                   variant="ghost"
                   onClick={goToThisWeek}
-                  className="h-9 px-4 text-sm font-medium hover:bg-slate-100"
+                  className="h-9 px-4 text-sm font-medium hover:bg-secondary btn-interactive"
                 >
                   This Week
                 </Button>
@@ -1113,7 +1098,7 @@ const PlanPageEnhanced: React.FC = () => {
                   variant="ghost"
                   size="icon"
                   onClick={goToNextWeek}
-                  className="h-9 w-9 hover:bg-slate-100"
+                  className="h-9 w-9 hover:bg-secondary btn-interactive"
                   aria-label="Go to next week"
                 >
                   <ChevronRight className="h-4 w-4" aria-hidden="true" />

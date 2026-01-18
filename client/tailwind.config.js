@@ -139,6 +139,13 @@ module.exports = {
           DEFAULT: "hsl(var(--surface))",
           elevated: "hsl(var(--surface-elevated))",
         },
+        // Meal-time colors for visual personality
+        meal: {
+          breakfast: "hsl(var(--breakfast))",
+          lunch: "hsl(var(--lunch))",
+          dinner: "hsl(var(--dinner))",
+          snack: "hsl(var(--snack))",
+        },
       },
 
       // Border Radius Scale

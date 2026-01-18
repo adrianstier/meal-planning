@@ -4,84 +4,113 @@
 
 @layer base {
   :root {
-    /* Semantic Color Tokens */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 142 86% 28%;
+    /* Warm Food-Inspired Color System */
+    --background: 30 50% 98%;           /* Warm cream background */
+    --foreground: 25 30% 15%;           /* Rich warm brown text */
+    --card: 30 40% 99%;                 /* Slightly warm white cards */
+    --card-foreground: 25 30% 15%;
+    --popover: 30 40% 99%;
+    --popover-foreground: 25 30% 15%;
+
+    /* Primary: Warm sage green (culinary, fresh) */
+    --primary: 142 45% 36%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* Secondary: Warm cream tint */
+    --secondary: 30 30% 94%;
+    --secondary-foreground: 25 30% 20%;
+
+    /* Muted: Soft warm gray */
+    --muted: 30 20% 94%;
+    --muted-foreground: 25 15% 45%;
+
+    /* Accent: Warm terra cotta / orange */
+    --accent: 25 85% 55%;
+    --accent-foreground: 0 0% 100%;
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 142 86% 28%;
+    --border: 30 20% 88%;
+    --input: 30 20% 88%;
+    --ring: 142 45% 36%;
     --radius: 0.5rem;
 
     /* Extended Semantic Tokens */
-    --success: 142 71% 45%;
+    --success: 142 60% 42%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --info: 217 91% 60%;
+    --warning-foreground: 25 30% 15%;
+    --info: 200 80% 50%;
     --info-foreground: 0 0% 100%;
 
+    /* Meal-time specific colors */
+    --breakfast: 38 92% 55%;            /* Warm golden */
+    --lunch: 200 70% 50%;               /* Fresh blue */
+    --dinner: 142 50% 40%;              /* Rich sage */
+    --snack: 25 90% 60%;                /* Playful orange */
+
     /* Surface & Elevation Tokens */
-    --surface: 0 0% 100%;
-    --surface-elevated: 0 0% 98%;
+    --surface: 30 40% 99%;
+    --surface-elevated: 30 30% 97%;
 
     /* Text Hierarchy Tokens */
-    --text-primary: 222.2 84% 4.9%;
-    --text-secondary: 215.4 16.3% 46.9%;
-    --text-tertiary: 215.4 16.3% 56.9%;
+    --text-primary: 25 30% 15%;
+    --text-secondary: 25 15% 45%;
+    --text-tertiary: 25 10% 55%;
+
+    /* Warm gradient stops */
+    --gradient-warm-start: 30 60% 97%;
+    --gradient-warm-end: 25 40% 94%;
   }
 
   .dark {
-    /* Dark Mode: Reduced contrast, not inverted */
-    --background: 222.2 47% 11%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 47% 15%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 47% 15%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 142 71% 45%;
+    /* Dark Mode: Warm dark palette */
+    --background: 25 25% 10%;
+    --foreground: 30 20% 95%;
+    --card: 25 20% 14%;
+    --card-foreground: 30 20% 95%;
+    --popover: 25 20% 14%;
+    --popover-foreground: 30 20% 95%;
+    --primary: 142 55% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --secondary: 25 15% 20%;
+    --secondary-foreground: 30 20% 90%;
+    --muted: 25 15% 20%;
+    --muted-foreground: 30 15% 60%;
+    --accent: 25 70% 50%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 50%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 25%;
-    --input: 217.2 32.6% 25%;
-    --ring: 142 71% 45%;
+    --border: 25 15% 25%;
+    --input: 25 15% 25%;
+    --ring: 142 55% 50%;
 
     /* Extended Dark Mode Tokens */
-    --success: 142 71% 45%;
+    --success: 142 55% 50%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 38 85% 55%;
     --warning-foreground: 0 0% 100%;
-    --info: 217 91% 60%;
+    --info: 200 70% 55%;
     --info-foreground: 0 0% 100%;
 
+    /* Meal-time specific colors (brighter for dark mode) */
+    --breakfast: 38 85% 60%;
+    --lunch: 200 65% 55%;
+    --dinner: 142 45% 50%;
+    --snack: 25 80% 55%;
+
     /* Surface & Elevation (lighter surfaces in dark mode) */
-    --surface: 222.2 47% 15%;
-    --surface-elevated: 217.2 32.6% 20%;
+    --surface: 25 20% 14%;
+    --surface-elevated: 25 15% 18%;
 
     /* Text Hierarchy */
-    --text-primary: 210 40% 98%;
-    --text-secondary: 215 20.2% 65.1%;
-    --text-tertiary: 215 20.2% 55.1%;
+    --text-primary: 30 20% 95%;
+    --text-secondary: 30 15% 60%;
+    --text-tertiary: 30 10% 50%;
+
+    /* Warm gradient stops */
+    --gradient-warm-start: 25 20% 12%;
+    --gradient-warm-end: 25 15% 15%;
   }
 }
 
@@ -302,4 +331,167 @@
   .animate-scale-in {
     animation: scale-in 0.2s ease-out;
   }
+
+  /* Enhanced Micro-interactions */
+  @keyframes button-press {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.97); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes warm-glow {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--accent) / 0); }
+    50% { box-shadow: 0 0 20px 4px hsl(var(--accent) / 0.15); }
+  }
+
+  @keyframes meal-added {
+    0% { transform: scale(0.9) rotate(-2deg); opacity: 0; }
+    60% { transform: scale(1.02); }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+
+  @keyframes card-lift {
+    0% { transform: translateY(0); box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1); }
+    100% { transform: translateY(-4px); box-shadow: 0 12px 24px -4px rgb(0 0 0 / 0.15); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes pulse-warm {
+    0%, 100% { background-color: hsl(var(--muted)); }
+    50% { background-color: hsl(var(--secondary)); }
+  }
+
+  @keyframes celebrate {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.05) rotate(-1deg); }
+    50% { transform: scale(1.08) rotate(1deg); }
+    75% { transform: scale(1.05) rotate(-1deg); }
+    100% { transform: scale(1); }
+  }
+
+  .animate-button-press {
+    animation: button-press 0.15s ease-out;
+  }
+
+  .animate-warm-glow {
+    animation: warm-glow 2s ease-in-out infinite;
+  }
+
+  .animate-meal-added {
+    animation: meal-added 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .animate-card-lift {
+    animation: card-lift 0.2s ease-out forwards;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--secondary)) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .animate-celebrate {
+    animation: celebrate 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
+/* Enhanced Component Styles */
+@layer components {
+  /* Warm gradient backgrounds */
+  .bg-gradient-warm {
+    background: linear-gradient(135deg, hsl(var(--gradient-warm-start)) 0%, hsl(var(--gradient-warm-end)) 100%);
+  }
+
+  .bg-gradient-warm-radial {
+    background: radial-gradient(ellipse at top, hsl(var(--gradient-warm-start)) 0%, hsl(var(--gradient-warm-end)) 100%);
+  }
+
+  /* Meal type color indicators */
+  .meal-breakfast { background-color: hsl(var(--breakfast)); }
+  .meal-lunch { background-color: hsl(var(--lunch)); }
+  .meal-dinner { background-color: hsl(var(--dinner)); }
+  .meal-snack { background-color: hsl(var(--snack)); }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-200 ease-out;
+  }
+  .card-hover:hover {
+    @apply -translate-y-1;
+    box-shadow: 0 12px 24px -4px rgb(0 0 0 / 0.1), 0 4px 8px -2px rgb(0 0 0 / 0.05);
+  }
+
+  /* Interactive button styles */
+  .btn-interactive {
+    @apply transition-all duration-150 ease-out;
+  }
+  .btn-interactive:hover {
+    @apply -translate-y-0.5;
+  }
+  .btn-interactive:active {
+    @apply translate-y-0 scale-[0.98];
+  }
+
+  /* Warm accent button */
+  .btn-accent-warm {
+    @apply bg-gradient-to-r from-accent to-accent/80 text-accent-foreground;
+    @apply hover:from-accent/90 hover:to-accent/70;
+    @apply shadow-md hover:shadow-lg;
+    @apply transition-all duration-200;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply animate-pulse rounded bg-muted;
+  }
+
+  .skeleton-shimmer {
+    @apply rounded;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted) / 0.5) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Focus ring with warm accent */
+  .focus-ring-warm:focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
+  }
+
+  /* Drag and drop visual feedback */
+  .drop-zone-active {
+    @apply bg-primary/5 ring-2 ring-primary/30 ring-inset rounded-lg;
+    @apply transition-all duration-200;
+  }
+
+  /* Page transition wrapper */
+  .page-enter {
+    @apply animate-fade-in;
+  }
+
+  /* Staggered children animation */
+  .stagger-children > * {
+    @apply animate-fade-in;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+  .stagger-children > *:nth-child(7) { animation-delay: 300ms; }
 }

@@ -28,10 +28,12 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { RecipeParsingProgress } from '../components/features/recipes/RecipeParsingProgress';
-import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage, useBulkDeleteMeals, useParseRecipeFromUrl, useParseRecipeFromUrlAI } from '../hooks/useMeals';
+import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage, useBulkDeleteMeals, useParseRecipeFromUrlAI } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
 import StarRating from '../components/StarRating';
 import { useDragDrop } from '../contexts/DragDropContext';
+import { useUndoToast } from '../components/ui/undo-toast';
+import { cn } from '../lib/utils';
 
 const RecipesPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -83,12 +85,10 @@ const RecipesPage: React.FC = () => {
   const bulkDeleteMeals = useBulkDeleteMeals();
   const parseRecipe = useParseRecipe();
   const parseRecipeFromImage = useParseRecipeFromImage();
-  const parseRecipeFromUrl = useParseRecipeFromUrl();
   const parseRecipeFromUrlAI = useParseRecipeFromUrlAI();
   const { setDraggedRecipe } = useDragDrop();
+  const { showUndoToast } = useUndoToast();
 
-  // Track if we should suggest AI parsing after fast parse fails
-  const [showAISuggestion, setShowAISuggestion] = useState(false);
 
   // Multi-select handlers
   const toggleSelectMode = () => {
@@ -228,50 +228,12 @@ const RecipesPage: React.FC = () => {
     });
   };
 
-  // Quick import - uses fast JSON-LD parsing only
-  const handleParseFromUrl = async () => {
-    if (!recipeUrl.trim()) {
-      alert('Please enter a recipe URL');
-      return;
-    }
-
-    setShowAISuggestion(false);
-
-    try {
-      const result = await parseRecipeFromUrl.mutateAsync(recipeUrl);
-      const parsedData = result.data;
-
-      setParsedRecipe(parsedData);
-      setUrlDialogOpen(false);
-      processParseResult(parsedData);
-      setAddDialogOpen(true);
-      setRecipeUrl('');
-      setShowAISuggestion(false);
-    } catch (error: any) {
-      console.error('Failed to parse recipe from URL:', error);
-      // Check if the error suggests using AI parsing
-      const needsAI = error?.responseBody?.needsAI ||
-        error?.context?.needsAI ||
-        error?.needsAI ||
-        (error?.message && (error.message.includes('AI Enhanced') || error.message.includes('No structured')));
-
-      if (needsAI) {
-        setShowAISuggestion(true);
-      } else {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        alert(`Failed to parse recipe from URL: ${errorMessage}`);
-      }
-    }
-  };
-
   // AI-enhanced import - uses Claude to parse the page
   const handleParseFromUrlAI = async () => {
     if (!recipeUrl.trim()) {
       alert('Please enter a recipe URL');
       return;
     }
-
-    setShowAISuggestion(false);
 
     try {
       const result = await parseRecipeFromUrlAI.mutateAsync(recipeUrl);
@@ -282,11 +244,10 @@ const RecipesPage: React.FC = () => {
       processParseResult(parsedData);
       setAddDialogOpen(true);
       setRecipeUrl('');
-      setShowAISuggestion(false);
     } catch (error) {
       console.error('Failed to parse recipe from URL with AI:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`AI parsing failed: ${errorMessage}`);
+      alert(`Failed to import recipe: ${errorMessage}`);
     }
   };
 
@@ -415,9 +376,32 @@ const RecipesPage: React.FC = () => {
 
   const handleDeleteMeal = async () => {
     if (selectedMeal) {
-      await deleteMeal.mutateAsync(selectedMeal.id);
+      const mealToDelete = selectedMeal;
+
+      await deleteMeal.mutateAsync(mealToDelete.id);
       setDeleteDialogOpen(false);
       setSelectedMeal(null);
+
+      // Show undo toast with ability to restore
+      showUndoToast({
+        message: `"${mealToDelete.name}" deleted`,
+        duration: 8000,
+        undoFn: async () => {
+          // Restore the meal by creating it again
+          await createMeal.mutateAsync({
+            name: mealToDelete.name,
+            meal_type: mealToDelete.meal_type,
+            cook_time_minutes: mealToDelete.cook_time_minutes,
+            servings: mealToDelete.servings,
+            difficulty: mealToDelete.difficulty,
+            tags: mealToDelete.tags,
+            ingredients: mealToDelete.ingredients,
+            instructions: mealToDelete.instructions,
+            image_url: mealToDelete.image_url,
+            is_favorite: mealToDelete.is_favorite,
+          });
+        },
+      });
     }
   };
 
@@ -537,22 +521,22 @@ const RecipesPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-4 sm:p-6 space-y-6 max-w-[1800px] mx-auto">
+    <div className="min-h-screen bg-gradient-warm p-4 sm:p-6 space-y-6 max-w-[1800px] mx-auto page-enter">
       {/* Header */}
-      <Card className="shadow-sm border-slate-200 bg-white rounded-xl">
+      <Card className="shadow-sm border-border/50 bg-card rounded-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div className="space-y-1">
-              <CardTitle className="text-2xl sm:text-3xl font-bold text-slate-900">
+              <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
                 Recipe Collection
               </CardTitle>
-              <CardDescription className="text-slate-500">{meals?.length || 0} recipes in your collection</CardDescription>
+              <CardDescription className="text-muted-foreground">{meals?.length || 0} recipes in your collection</CardDescription>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
               <Button
                 variant={selectMode ? "default" : "outline"}
                 onClick={toggleSelectMode}
-                className={selectMode ? "bg-teal-500 hover:bg-teal-600" : ""}
+                className={cn("btn-interactive", selectMode && "bg-primary hover:bg-primary/90")}
               >
                 {selectMode ? (
                   <>
@@ -568,7 +552,7 @@ const RecipesPage: React.FC = () => {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-lg shadow-teal-200 hover:shadow-xl transition-all duration-200 flex-1 sm:flex-initial">
+                  <Button className="btn-accent-warm flex-1 sm:flex-initial">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Recipe
                     <ChevronDown className="ml-2 h-4 w-4" />
@@ -722,11 +706,19 @@ const RecipesPage: React.FC = () => {
               </div>
             ) : mealsByType[type].length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                {type === 'favorites'
-                  ? 'No favorite recipes yet. Click the heart icon on any recipe to add it to your favorites!'
-                  : type === 'all'
-                  ? 'No recipes yet. Add one to get started!'
-                  : `No ${type} recipes yet. Add one to get started!`}
+                {/* Check if filters are active */}
+                {searchTerm || prepTimeFilter !== 'all' || difficultyFilter !== 'all' || tagFilter !== 'all' || cuisineFilter !== 'all' ? (
+                  <>
+                    <p className="text-lg font-medium mb-2">No recipes match your filters</p>
+                    <p className="text-sm">Try adjusting your search or filter criteria</p>
+                  </>
+                ) : type === 'favorites' ? (
+                  'No favorite recipes yet. Click the heart icon on any recipe to add it to your favorites!'
+                ) : type === 'all' ? (
+                  'No recipes yet. Add one to get started!'
+                ) : (
+                  `No ${type} recipes yet. Add one to get started!`
+                )}
               </div>
             ) : (
               <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -1067,7 +1059,6 @@ const RecipesPage: React.FC = () => {
       <Dialog open={urlDialogOpen} onOpenChange={(open) => {
         setUrlDialogOpen(open);
         if (!open) {
-          setShowAISuggestion(false);
           setRecipeUrl('');
         }
       }}>
@@ -1079,16 +1070,14 @@ const RecipesPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {(parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending) ? (
+            {parseRecipeFromUrlAI.isPending ? (
               <div className="py-8">
                 <RecipeParsingProgress
-                  isVisible={parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
+                  isVisible={parseRecipeFromUrlAI.isPending}
                 />
-                {parseRecipeFromUrlAI.isPending && (
-                  <p className="text-center text-sm text-muted-foreground mt-4">
-                    AI is analyzing the page... this may take a moment
-                  </p>
-                )}
+                <p className="text-center text-sm text-muted-foreground mt-4">
+                  AI is analyzing the page... this may take a moment
+                </p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1099,57 +1088,21 @@ const RecipesPage: React.FC = () => {
                     type="url"
                     placeholder="https://example.com/recipe"
                     value={recipeUrl}
-                    onChange={(e) => {
-                      setRecipeUrl(e.target.value);
-                      setShowAISuggestion(false);
-                    }}
+                    onChange={(e) => setRecipeUrl(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && recipeUrl.trim()) {
-                        handleParseFromUrl();
+                        handleParseFromUrlAI();
                       }
                     }}
                   />
                 </div>
 
-                {/* AI Suggestion Banner */}
-                {showAISuggestion && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0">
-                        <Brain className="h-5 w-5 text-amber-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-sm font-medium text-amber-800">
-                          No structured recipe data found
-                        </h4>
-                        <p className="text-sm text-amber-700 mt-1">
-                          This page doesn't have standard recipe markup. Try AI-enhanced parsing to extract the recipe.
-                        </p>
-                        <Button
-                          size="sm"
-                          className="mt-3 bg-amber-600 hover:bg-amber-700"
-                          onClick={handleParseFromUrlAI}
-                        >
-                          <Brain className="h-4 w-4 mr-2" />
-                          Try AI Enhanced
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {!showAISuggestion && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground">
-                      <Lightbulb className="h-3 w-3 inline mr-1 text-amber-500" />
-                      <strong>Quick Import</strong> works with most recipe sites (AllRecipes, FoodNetwork, BonAppetit, etc.)
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      <Brain className="h-3 w-3 inline mr-1 text-purple-500" />
-                      <strong>AI Enhanced</strong> can extract recipes from any page but takes longer
-                    </p>
-                  </div>
-                )}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">
+                    <Brain className="h-3 w-3 inline mr-1 text-purple-500" />
+                    Our AI will extract recipe details from any page (AllRecipes, FoodNetwork, blogs, etc.)
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -1158,50 +1111,29 @@ const RecipesPage: React.FC = () => {
               variant="outline"
               onClick={() => {
                 setUrlDialogOpen(false);
-                setShowAISuggestion(false);
                 setRecipeUrl('');
               }}
-              disabled={parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
+              disabled={parseRecipeFromUrlAI.isPending}
             >
               Cancel
             </Button>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleParseFromUrlAI}
-                disabled={!recipeUrl || parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
-                className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
-              >
-                {parseRecipeFromUrlAI.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="h-4 w-4 mr-2" />
-                    AI Enhanced
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={handleParseFromUrl}
-                disabled={!recipeUrl || parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
-                className="bg-teal-500 hover:bg-teal-600"
-              >
-                {parseRecipeFromUrl.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="h-4 w-4 mr-2" />
-                    Quick Import
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={handleParseFromUrlAI}
+              disabled={!recipeUrl || parseRecipeFromUrlAI.isPending}
+              className="bg-teal-500 hover:bg-teal-600"
+            >
+              {parseRecipeFromUrlAI.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Brain className="h-4 w-4 mr-2" />
+                  Import Recipe
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1373,13 +1305,18 @@ const RecipesPage: React.FC = () => {
                   type="number"
                   inputMode="numeric"
                   pattern="[0-9]*"
+                  min={1}
+                  max={50}
                   value={formData.servings || ''}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    // Clamp value between 1 and 50
+                    const clampedValue = value ? Math.min(Math.max(value, 1), 50) : undefined;
                     setFormData({
                       ...formData,
-                      servings: e.target.value ? parseInt(e.target.value) : undefined,
-                    })
-                  }
+                      servings: clampedValue,
+                    });
+                  }}
                 />
               </div>
             </div>

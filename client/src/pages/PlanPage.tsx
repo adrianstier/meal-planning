@@ -122,7 +122,7 @@ const PlanPage: React.FC = () => {
   };
 
   // Helper to render meal badges
-  const renderMealBadges = (meal: any) => {
+  const renderMealBadges = (meal: MealPlan) => {
     const badges = [];
 
     if (meal.cook_time_minutes && meal.cook_time_minutes <= 30) {
@@ -176,8 +176,10 @@ const PlanPage: React.FC = () => {
       setGenerateDialogOpen(true);
 
       // Show success message if bentos were also generated
-      if (generateBentos && (result.data as any).bentoMessage) {
-        alert((result.data as any).bentoMessage);
+      // Type guard for optional bentoMessage property that may be present in the response
+      const resultData = result.data as { bentoMessage?: string } | undefined;
+      if (generateBentos && resultData && 'bentoMessage' in resultData && resultData.bentoMessage) {
+        alert(resultData.bentoMessage);
       }
     } catch (error) {
       console.error('Failed to generate week plan:', error);

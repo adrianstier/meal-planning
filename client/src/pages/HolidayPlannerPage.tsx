@@ -330,17 +330,14 @@ const HolidayPlannerPage: React.FC = () => {
       // Map meal_type to holiday category
       let dishCategory = category;
       if (category === 'drop-zone') {
-        // Default category based on meal type
-        switch (recipeData.meal_type) {
-          case 'breakfast':
-          case 'snack':
-            dishCategory = 'appetizer';
-            break;
-          case 'dinner':
-          case 'lunch':
-          default:
-            dishCategory = 'main';
-        }
+        // Map from meal type to holiday dish category
+        const mealTypeToCategory: Record<string, string> = {
+          breakfast: 'appetizer',
+          snack: 'appetizer',
+          lunch: 'main',
+          dinner: 'main',
+        };
+        dishCategory = mealTypeToCategory[recipeData.meal_type] ?? 'main';
       }
 
       // Add the recipe as a dish to the holiday event

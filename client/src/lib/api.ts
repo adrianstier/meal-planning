@@ -38,6 +38,16 @@ interface GeneratedMealPlanItem {
   date: string;
   meal_type: string;
   meal_name?: string;
+  cuisine?: string;
+}
+
+/**
+ * Result from planApi.generateWeek function.
+ * Contains the generated meal plan items and optionally a bento message.
+ */
+export interface GenerateWeekResult {
+  data: GeneratedMealPlanItem[];
+  bentoMessage?: string;
 }
 
 // ============================================================================

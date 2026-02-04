@@ -1414,7 +1414,13 @@ const PlanPageEnhanced: React.FC = () => {
           })()}
 
       {/* View Meal Dialog */}
-      <Dialog open={dialogState.viewMealOpen} onOpenChange={(open) => dispatchDialog({ type: open ? 'OPEN_VIEW_MEAL' : 'CLOSE_VIEW_MEAL' })}>
+      <Dialog open={dialogState.viewMealOpen} onOpenChange={(open) => {
+        dispatchDialog({ type: open ? 'OPEN_VIEW_MEAL' : 'CLOSE_VIEW_MEAL' });
+        if (!open) {
+          // Clean up selected meal state when dialog closes
+          dispatchMealSelection({ type: 'CLEAR_SELECTED_MEAL' });
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl">{mealSelection.selectedMeal?.meal_name}</DialogTitle>
@@ -1592,14 +1598,26 @@ const PlanPageEnhanced: React.FC = () => {
       {mealSelection.selectedSlot && (
         <AddMealDialog
           open={dialogState.addMealOpen}
-          onOpenChange={(open) => dispatchDialog({ type: open ? 'OPEN_ADD_MEAL' : 'CLOSE_ADD_MEAL' })}
+          onOpenChange={(open) => {
+            dispatchDialog({ type: open ? 'OPEN_ADD_MEAL' : 'CLOSE_ADD_MEAL' });
+            if (!open) {
+              // Clean up selected slot state when dialog closes
+              dispatchMealSelection({ type: 'CLEAR_SELECTED_SLOT' });
+            }
+          }}
           date={mealSelection.selectedSlot.date}
           mealType={mealSelection.selectedSlot.mealType}
         />
       )}
 
       {/* Generated Plan Dialog */}
-      <Dialog open={dialogState.generatePlanOpen} onOpenChange={(open) => dispatchDialog({ type: open ? 'OPEN_GENERATE_PLAN' : 'CLOSE_GENERATE_PLAN' })}>
+      <Dialog open={dialogState.generatePlanOpen} onOpenChange={(open) => {
+        dispatchDialog({ type: open ? 'OPEN_GENERATE_PLAN' : 'CLOSE_GENERATE_PLAN' });
+        if (!open) {
+          // Clean up generated plan state when dialog closes without applying
+          setGeneratedPlan([]);
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Generated Meal Plan</DialogTitle>
@@ -1650,7 +1668,13 @@ const PlanPageEnhanced: React.FC = () => {
       {/* Delete Meal Confirmation Dialog */}
       <ConfirmDialog
         open={dialogState.deleteConfirmOpen}
-        onOpenChange={(open) => dispatchDialog({ type: open ? 'OPEN_DELETE_CONFIRM' : 'CLOSE_DELETE_CONFIRM' })}
+        onOpenChange={(open) => {
+          dispatchDialog({ type: open ? 'OPEN_DELETE_CONFIRM' : 'CLOSE_DELETE_CONFIRM' });
+          if (!open) {
+            // Clean up pending delete state when dialog closes
+            dispatchMealSelection({ type: 'CLEAR_PENDING_DELETE' });
+          }
+        }}
         onConfirm={confirmDeleteMeal}
         title="Remove Meal"
         description="Are you sure you want to remove this meal from your plan?"

@@ -190,17 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     let mounted = true;
-
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log('[Auth] Auth state change:', event);
-        if (mounted) {
-          await handleSession(newSession);
-          setLoading(false);
-        }
-      }
-    );
+    let subscription: { unsubscribe: () => void } | null = null;
 
     // Set up cross-tab logout listener
     let logoutChannel: BroadcastChannel | null = null;
@@ -218,9 +208,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // BroadcastChannel not supported in this browser
     }
 
-    // Then get initial session
+    // Initialize auth: get initial session FIRST, then set up listener for future changes
+    // This order prevents double-processing of the initial session
     const initializeAuth = async () => {
       try {
+        // 1. Get the initial session first
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         console.log('[Auth] Initial session:', !!initialSession?.user);
 
@@ -228,6 +220,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await handleSession(initialSession);
           setLoading(false);
         }
+
+        // 2. Set up auth state listener AFTER initial session is handled
+        // This ensures future auth changes (login, logout, token refresh) are captured
+        const { data } = supabase.auth.onAuthStateChange(
+          async (event, newSession) => {
+            console.log('[Auth] Auth state change:', event);
+            if (mounted) {
+              await handleSession(newSession);
+              setLoading(false);
+            }
+          }
+        );
+        subscription = data.subscription;
       } catch (error) {
         console.error('[Auth] Init failed:', error);
         if (mounted) {
@@ -252,7 +257,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       mounted = false;
       clearTimeout(safetyTimeout);
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
       logoutChannel?.close();
     };
   }, [handleSession, queryClient]);

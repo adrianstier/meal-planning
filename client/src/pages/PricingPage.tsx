@@ -79,7 +79,9 @@ const pricingTiers = [
 
 const PricingPage: React.FC = () => {
   const handleSubscribe = (tierName: string) => {
-    // TODO: Integrate with Stripe checkout
+    // Stripe integration is planned but not yet implemented.
+    // When ready, this will redirect to Stripe Checkout with the selected tier.
+    // See: https://stripe.com/docs/payments/checkout
     console.log(`Subscribing to ${tierName}`);
     alert(`Stripe integration coming soon! You selected: ${tierName}`);
   };

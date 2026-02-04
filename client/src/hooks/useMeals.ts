@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { mealsApi } from '../lib/api';
+import { errorLogger } from '../utils/errorLogger';
 import type { Meal } from '../types/api';
 
 // Debounce hook for search
@@ -57,6 +58,9 @@ export const useCreateMeal = () => {
     mutationFn: (meal: Partial<Meal>) => mealsApi.create(meal),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meals'] });
+    },
+    onError: (error) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), '/meals', 'POST');
     },
   });
 };

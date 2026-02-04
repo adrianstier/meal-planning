@@ -373,9 +373,11 @@ function sanitizeErrorMessage(error: unknown, fallbackMessage: string = 'An unex
 
   // Filter out technical details like stack traces, SQL details, etc.
   // If message looks technical (contains code patterns), return generic message
+  // Use specific SQL pattern to avoid false positives like "SELECT Best Ingredients"
+  const sqlStatementPattern = /\b(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE)\s+\w+\s+(FROM|INTO|SET|TABLE)/i;
   if (
     (rawMessage.includes('at ') && rawMessage.includes('(')) || // Stack trace pattern
-    rawMessage.includes('SELECT ') || rawMessage.includes('INSERT ') || // SQL
+    sqlStatementPattern.test(rawMessage) || // Actual SQL statements
     rawMessage.includes('supabase') || // Internal service names
     rawMessage.includes('postgres') ||
     rawMessage.includes('PGRST') || // PostgREST error codes

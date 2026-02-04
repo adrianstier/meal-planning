@@ -33,22 +33,37 @@ export function BroadcastSyncProvider({ children }: { children: React.ReactNode 
       return;
     }
 
-    // Create broadcast channel
-    channelRef.current = new BroadcastChannel(CHANNEL_NAME);
+    let channel: BroadcastChannel | null = null;
 
-    // Listen for messages from other tabs
-    channelRef.current.onmessage = (event: MessageEvent<SyncMessage>) => {
-      const { type, queryKeys } = event.data;
+    try {
+      // Create broadcast channel
+      channel = new BroadcastChannel(CHANNEL_NAME);
+      channelRef.current = channel;
 
-      if (type === 'invalidate' && queryKeys?.length > 0) {
-        console.log('[BroadcastSync] Received invalidation for:', queryKeys);
+      // Listen for messages from other tabs
+      channel.onmessage = (event: MessageEvent<SyncMessage>) => {
+        try {
+          const { type, queryKeys } = event.data;
 
-        // Invalidate each query key
-        queryKeys.forEach((key) => {
-          queryClient.invalidateQueries({ queryKey: key });
-        });
-      }
-    };
+          if (type === 'invalidate' && queryKeys?.length > 0) {
+            console.log('[BroadcastSync] Received invalidation for:', queryKeys);
+
+            // Invalidate each query key
+            queryKeys.forEach((key) => {
+              queryClient.invalidateQueries({ queryKey: key });
+            });
+          }
+        } catch (err) {
+          console.error('[BroadcastSync] Error processing message:', err);
+        }
+      };
+
+      // Note: BroadcastChannel doesn't have an onerror event in the standard API
+      // Errors are typically thrown synchronously during postMessage
+    } catch (err) {
+      console.error('[BroadcastSync] Failed to create channel:', err);
+      return;
+    }
 
     // Handle visibility change to refetch stale queries when tab becomes visible
     const handleVisibilityChange = () => {
@@ -65,8 +80,12 @@ export function BroadcastSyncProvider({ children }: { children: React.ReactNode 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      channelRef.current?.close();
-      channelRef.current = null;
+      try {
+        channel?.close();
+        channelRef.current = null;
+      } catch (err) {
+        console.error('[BroadcastSync] Cleanup error:', err);
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [queryClient]);

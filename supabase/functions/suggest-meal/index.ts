@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
   getCorsHeaders,
   handleCorsPrelight,
+  requireCsrfHeader,
   validateJWT,
   checkRateLimitSync,
   rateLimitExceededResponse,
@@ -73,6 +74,14 @@ Deno.serve(async (req: Request) => {
   // CORS preflight
   const preflight = handleCorsPrelight(req);
   if (preflight) return preflight;
+
+  // CSRF protection
+  if (!requireCsrfHeader(req)) {
+    return new Response(
+      JSON.stringify({ error: 'Missing security header' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
   // Auth
   const auth = await validateJWT(req);

@@ -39,7 +39,8 @@ export const useToggleShoppingItem = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => shoppingApi.togglePurchased(id),
+    mutationFn: ({ id, currentValue }: { id: number; currentValue: boolean }) =>
+      shoppingApi.togglePurchased(id, currentValue),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping'] });
     },

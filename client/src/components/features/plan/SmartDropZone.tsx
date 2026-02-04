@@ -36,12 +36,12 @@ const SmartDropZone: React.FC<SmartDropZoneProps> = ({
   const smartSuggestions = useMemo(() => {
     if (!availableMeals || availableMeals.length === 0) return [];
 
-    // Filter meals by type
-    let typeMeals = availableMeals.filter(m => m.meal_type === mealType.replace('_snack', '') as any);
-
-    // Handle snacks
+    // Filter meals by type - normalize snack types to base meal_type
+    let typeMeals: Meal[];
     if (mealType.includes('snack')) {
       typeMeals = availableMeals.filter(m => m.meal_type === 'snack');
+    } else {
+      typeMeals = availableMeals.filter(m => m.meal_type === mealType);
     }
 
     // Get meals already planned this week

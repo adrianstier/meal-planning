@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
   getCorsHeaders,
   handleCorsPrelight,
+  requireCsrfHeader,
   validateJWT,
   checkRateLimitSync,
   rateLimitExceededResponse,
@@ -11,6 +12,7 @@ import {
   logError,
   MAX_URL_LENGTH,
   isValidUrl,
+  isPublicUrl,
 } from "../_shared/cors.ts";
 
 // Use Sonnet for vision capabilities (Haiku doesn't support images well)
@@ -193,6 +195,14 @@ Deno.serve(async (req: Request) => {
   const preflight = handleCorsPrelight(req);
   if (preflight) return preflight;
 
+  // CSRF protection
+  if (!requireCsrfHeader(req)) {
+    return new Response(
+      JSON.stringify({ error: 'Missing security header' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Auth
   const auth = await validateJWT(req);
   if (!auth.authenticated) {
@@ -258,6 +268,11 @@ If dates aren't specified, use the current week starting from Monday. Extract as
       // Handle URL input
       if (!isValidUrl(url) || url.length > MAX_URL_LENGTH) {
         return errorResponse("Valid URL is required", corsHeaders, 400);
+      }
+
+      // SSRF protection - block private/internal URLs
+      if (!isPublicUrl(url)) {
+        return errorResponse("URL must point to a public website", corsHeaders, 400);
       }
 
       let contentToProcess: string;

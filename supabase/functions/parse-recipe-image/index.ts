@@ -3,6 +3,7 @@ import {
   getCorsHeaders,
   handleCorsPrelight,
   MAX_IMAGE_SIZE_BYTES,
+  requireCsrfHeader,
   validateJWT,
   checkRateLimitSync,
   rateLimitExceededResponse,
@@ -43,6 +44,14 @@ Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   const preflightResponse = handleCorsPrelight(req);
   if (preflightResponse) return preflightResponse;
+
+  // CSRF protection
+  if (!requireCsrfHeader(req)) {
+    return new Response(
+      JSON.stringify({ error: 'Missing security header' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
   // Validate JWT authentication
   const authResult = await validateJWT(req);

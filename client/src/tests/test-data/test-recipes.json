@@ -1,0 +1,38 @@
+{
+  "urls": [
+    {
+      "name": "AllRecipes - Grilled Cheese",
+      "url": "https://www.allrecipes.com/recipe/23891/grilled-cheese-sandwich/"
+    },
+    {
+      "name": "Serious Eats - Pan Seared Steak",
+      "url": "https://www.seriouseats.com/perfect-pan-seared-steaks-recipe"
+    },
+    {
+      "name": "Simply Recipes - Homemade Pizza",
+      "url": "https://www.simplyrecipes.com/recipes/homemade_pizza/"
+    },
+    {
+      "name": "Food Network - Chicken Parmesan",
+      "url": "https://www.foodnetwork.com/recipes/food-network-kitchen/chicken-parmesan-recipe2-1927352"
+    },
+    {
+      "name": "Bon Appetit - Spaghetti Carbonara",
+      "url": "https://www.bonappetit.com/recipe/simple-carbonara"
+    }
+  ],
+  "text_recipes": [
+    {
+      "name": "Classic Beef Tacos",
+      "text": "Classic Beef Tacos\n\nIngredients:\n- 1 lb ground beef\n- 1 packet taco seasoning\n- 8 taco shells\n- 1 cup shredded lettuce\n- 1 cup shredded cheddar cheese\n- 1/2 cup diced tomatoes\n- 1/4 cup sour cream\n- Salsa to taste\n\nInstructions:\n1. Brown the ground beef in a skillet over medium-high heat, breaking it up as it cooks.\n2. Drain excess fat and add taco seasoning with 1/2 cup water.\n3. Simmer for 5 minutes until sauce thickens.\n4. Warm taco shells according to package directions.\n5. Fill shells with beef and top with lettuce, cheese, tomatoes, sour cream, and salsa.\n\nServes: 4\nPrep time: 10 minutes\nCook time: 15 minutes"
+    },
+    {
+      "name": "Honey Garlic Salmon",
+      "text": "Honey Garlic Glazed Salmon\n\nIngredients:\n4 salmon fillets (6 oz each)\n1/4 cup honey\n3 tablespoons soy sauce\n4 cloves garlic, minced\n1 tablespoon olive oil\n1 tablespoon lemon juice\nSalt and pepper to taste\nFresh parsley for garnish\n\nDirections:\n1. Preheat oven to 400°F (200°C).\n2. Mix honey, soy sauce, garlic, and lemon juice in a small bowl.\n3. Season salmon with salt and pepper.\n4. Heat olive oil in an oven-safe skillet over medium-high heat.\n5. Sear salmon skin-side up for 3 minutes.\n6. Flip salmon and pour honey garlic mixture over top.\n7. Transfer to oven and bake 10-12 minutes until salmon flakes easily.\n8. Garnish with parsley and serve.\n\nNutrition per serving: 350 calories, 35g protein, 18g carbs, 12g fat\nDifficulty: Easy\nTime: 25 minutes"
+    },
+    {
+      "name": "Vegetable Stir Fry",
+      "text": "Quick Vegetable Stir Fry\n\nIngredients:\n2 cups broccoli florets\n1 red bell pepper, sliced\n1 cup snap peas\n2 carrots, julienned\n3 cloves garlic, minced\n1 inch ginger, grated\n3 tbsp soy sauce\n1 tbsp sesame oil\n1 tbsp rice vinegar\n1 tsp cornstarch\n2 tbsp vegetable oil\nCooked rice for serving\n\nMethod:\n1. Mix soy sauce, sesame oil, rice vinegar, and cornstarch. Set aside.\n2. Heat vegetable oil in a wok over high heat.\n3. Add garlic and ginger, stir 30 seconds.\n4. Add carrots, cook 2 minutes.\n5. Add broccoli, bell pepper, and snap peas.\n6. Stir fry 4-5 minutes until crisp-tender.\n7. Pour sauce over vegetables, toss to coat.\n8. Serve immediately over rice.\n\nServes 4 | Prep: 15 min | Cook: 10 min | Vegetarian | Kid-friendly: 7/10"
+    }
+  ]
+}

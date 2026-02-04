@@ -20,6 +20,9 @@ interface State {
   retryCount: number;
 }
 
+/** Maximum number of retry attempts before requiring a full page reload */
+const MAX_RETRIES = 3;
+
 /**
  * Error Boundary component that catches React errors and displays fallback UI
  * Also logs errors to our centralized error logger
@@ -79,8 +82,14 @@ class ErrorBoundary extends Component<Props, State> {
   /**
    * Attempt to recover just the failed component without a full page reload.
    * This preserves scroll position and other page context.
+   * Limited to MAX_RETRIES attempts to prevent infinite retry loops.
    */
   handleRetry = () => {
+    if (this.state.retryCount >= MAX_RETRIES) {
+      // Max retries reached, don't allow more retries
+      return;
+    }
+
     this.setState((prevState) => ({
       hasError: false,
       error: null,
@@ -182,26 +191,28 @@ Environment:
               )}
 
               <div className="space-y-3">
-                {/* Primary action: Try to recover without full reload */}
-                {(this.props.allowPartialRecovery !== false) && (
+                {/* Primary action: Try to recover without full reload (with retry limit) */}
+                {(this.props.allowPartialRecovery !== false) && this.state.retryCount < MAX_RETRIES && (
                   <Button
                     onClick={this.handleRetry}
                     className="w-full"
                     size="lg"
                   >
-                    Try Again
-                    {this.state.retryCount > 0 && (
-                      <span className="ml-2 text-xs opacity-70">
-                        (attempt {this.state.retryCount + 1})
-                      </span>
-                    )}
+                    Try Again ({MAX_RETRIES - this.state.retryCount} attempt{MAX_RETRIES - this.state.retryCount !== 1 ? 's' : ''} left)
                   </Button>
+                )}
+
+                {/* Show reload as primary when retries exhausted */}
+                {this.state.retryCount >= MAX_RETRIES && (
+                  <p className="text-sm text-amber-600 mb-2">
+                    Multiple recovery attempts failed. Please reload the page.
+                  </p>
                 )}
 
                 {/* Secondary action: Full page reload if retry doesn't work */}
                 <Button
                   onClick={this.handleFullReload}
-                  variant={this.props.allowPartialRecovery !== false ? "outline" : "default"}
+                  variant={(this.props.allowPartialRecovery !== false && this.state.retryCount < MAX_RETRIES) ? "outline" : "default"}
                   className="w-full"
                   size="lg"
                 >

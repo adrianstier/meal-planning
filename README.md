@@ -15,6 +15,7 @@ A modern, AI-powered meal planning application built with React and Supabase, de
 - **🤖 Recipe Parser** - Paste any recipe and let Claude AI extract ingredients and details
 - **📸 School Menu Vision** - Upload photos of school menus and AI extracts all menu items
 - **🧠 Smart Suggestions** - AI recommends meals based on your meal history and preferences
+- **💬 AI Agent Chat** - Interactive chat with specialized meal planning AI agent
 
 ### Family Features
 - **👶 Kid-Friendly Ratings** - Track which meals your kids actually eat
@@ -26,8 +27,12 @@ A modern, AI-powered meal planning application built with React and Supabase, de
 - **📱 Responsive Design** - Works beautifully on desktop, tablet, and mobile
 - **⚡ Real-time Updates** - React Query for optimistic UI updates and caching
 - **🎨 Modern UI** - Built with Tailwind CSS and shadcn/ui components
-- **🔒 Type-Safe** - Full TypeScript support
-- **🔐 Secure** - Supabase Auth with Row Level Security
+- **🔒 Type-Safe** - Full TypeScript with discriminated unions and strict mode
+- **🔐 Secure** - Supabase Auth with Row Level Security, CSRF protection, XSS prevention
+- **🔄 Multi-tab Sync** - BroadcastChannel API keeps tabs in sync
+- **🛡️ Error Recovery** - Graceful error boundaries with partial recovery
+- **⚙️ Rate Limiting** - Database-backed rate limiting with atomic operations
+- **🧪 E2E Tested** - Playwright tests for critical user flows
 
 ## Quick Start
 
@@ -73,18 +78,29 @@ meal-planning/
 ├── client/                    # React TypeScript frontend
 │   ├── src/
 │   │   ├── components/       # Reusable UI components
+│   │   │   ├── ui/           # shadcn/ui primitives
+│   │   │   └── features/     # Feature-specific components
 │   │   ├── pages/            # Page components
 │   │   ├── hooks/            # React Query hooks
-│   │   ├── contexts/         # React contexts (Auth)
-│   │   ├── lib/              # Supabase client & API
+│   │   ├── contexts/         # React contexts (Auth, DragDrop, BroadcastSync)
+│   │   ├── lib/              # Supabase client & API layer
+│   │   ├── utils/            # Utility functions (errorLogger, etc.)
 │   │   └── types/            # TypeScript types
 │   ├── public/               # Static assets
 │   └── .env.local            # Environment variables
 │
 ├── supabase/
+│   ├── functions/            # Edge Functions (AI features)
+│   │   ├── agent/            # AI agent endpoint
+│   │   ├── parse-recipe/     # Recipe text parser
+│   │   ├── parse-recipe-url/ # Recipe URL importer
+│   │   ├── suggest-meal/     # AI meal suggestions
+│   │   └── _shared/          # Shared utilities (CORS, etc.)
+│   ├── migrations/           # Database migrations
 │   ├── schema.sql            # Database schema
 │   └── rls_policies.sql      # Row Level Security policies
 │
+├── CLAUDE.md                  # AI assistant guidelines
 └── vercel.json               # Vercel deployment config
 ```
 
@@ -98,6 +114,7 @@ meal-planning/
 - Radix UI primitives for accessible components
 - shadcn/ui component patterns
 - date-fns for date handling
+- react-markdown with remark-gfm for safe markdown rendering
 
 **Backend:**
 - Supabase (PostgreSQL database)
@@ -113,14 +130,28 @@ meal-planning/
 
 The application uses Supabase PostgreSQL with Row Level Security:
 
+**Core Tables:**
 - `profiles` - User profiles (auto-created on signup)
 - `meals` - Recipe storage with ingredients, instructions, and metadata
 - `scheduled_meals` - Weekly meal planning
+- `meal_plans` - Grouping of scheduled meals by week
+
+**Family Features:**
 - `leftovers_inventory` - Leftover tracking with expiration
 - `school_menu_items` - School lunch menus
-- `menu_feedback` - Kid feedback on school meals
+- `school_menu_feedback` - Kid feedback on school meals
+- `bento_items` / `bento_plans` - Bento box planning
+
+**Utilities:**
 - `shopping_items` - Shopping list management
 - `meal_history` - Historical meal tracking
+- `restaurants` - Local restaurant tracking
+- `rate_limits` - Database-backed rate limiting for API endpoints
+
+**Subscription:**
+- `subscriptions` - User subscription tiers
+- `plan_features` - Feature limits per tier
+- `feature_usage` - Usage tracking
 
 All user data is protected by RLS policies ensuring users can only access their own data.
 
@@ -155,10 +186,16 @@ supabase link --project-ref your-project-ref
 
 # Deploy edge functions
 supabase functions deploy parse-recipe
+supabase functions deploy parse-recipe-url
+supabase functions deploy parse-recipe-url-ai
 supabase functions deploy parse-school-menu
+supabase functions deploy suggest-meal
+supabase functions deploy agent
 ```
 
 Set the `ANTHROPIC_API_KEY` secret in your Supabase dashboard.
+
+**Rate Limiting:** AI endpoints are rate-limited to 30 requests per minute per user, using database-backed tracking that persists across worker restarts.
 
 ## Features in Detail
 
@@ -187,6 +224,62 @@ When planning meals, the AI considers:
 - Available leftovers
 - Recent meals (avoids repetition)
 - Kid-friendly ratings
+
+## Architecture Patterns
+
+### State Management
+- **AuthContext** uses a `useReducer` state machine with discriminated unions to prevent race conditions
+- **PlanPageEnhanced** groups related state into reducers (dialog state, meal selection state)
+- **React Query** handles server state with 5-minute stale time
+
+### Error Handling
+- **ErrorBoundary** supports partial recovery without full page reload
+- **API errors** are sanitized to hide internal details from users
+- **errorLogger** has fallback buffer for localStorage failures
+
+### Performance
+- Event handlers wrapped with `useCallback` to prevent unnecessary re-renders
+- Pagination built into all list APIs (default: 50 items)
+- Multi-tab sync via BroadcastChannel API
+
+### Type Safety
+- Discriminated unions for auth state: `'initializing' | 'loading' | 'authenticated' | 'unauthenticated' | 'error'`
+- No `any` types - proper interfaces throughout
+- Strict TypeScript mode enabled
+
+### Security
+- **CSRF Protection** - X-Requested-With header validation on API requests
+- **XSS Prevention** - react-markdown for safe AI response rendering
+- **SQL Injection** - PostgREST operator escaping for search queries
+- **Rate Limiting** - Atomic operations (INSERT ON CONFLICT) prevent race conditions
+- **RLS Policies** - Rate limit records are read-only to users; only SECURITY DEFINER functions can modify
+
+## Testing
+
+### E2E Tests (Playwright)
+
+The application includes end-to-end tests using Playwright:
+
+```bash
+cd client
+
+# Run all tests
+npx playwright test
+
+# Run with UI mode
+npx playwright test --ui
+
+# Run specific test file
+npx playwright test tests/e2e/meals.spec.ts
+```
+
+Tests cover critical flows including authentication, meal CRUD operations, drag-and-drop planning, and AI features.
+
+### Test Configuration
+
+- Tests run against localhost with test credentials
+- Configured in `client/playwright.config.ts`
+- Test files located in `client/src/tests/`
 
 ## Contributing
 

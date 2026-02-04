@@ -1,6 +1,7 @@
 import { supabase, supabaseUrl, supabaseAnonKey } from './supabase';
 import { errorLogger } from '../utils/errorLogger';
 import { rateLimiters, checkRateLimit } from '../utils/rateLimiter';
+import { differenceInDays, parseISO, addDays, format as formatDate } from 'date-fns';
 import type {
   Meal,
   MealPlan,
@@ -75,6 +76,36 @@ const isDev = typeof process !== 'undefined' && process.env?.NODE_ENV === 'devel
 const devLog = (...args: unknown[]) => { if (isDev) console.log(...args); };
 const devError = (...args: unknown[]) => { if (isDev) console.error(...args); };
 
+/**
+ * Get a valid access token, refreshing if necessary.
+ * Proactively refreshes tokens that will expire within 2 minutes.
+ */
+async function getValidAccessToken(): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      return null;
+    }
+
+    // Check if token is expired or expiring within 2 minutes
+    const expiresAt = session.expires_at || 0;
+    const now = Math.floor(Date.now() / 1000);
+    const expiresIn = expiresAt - now;
+
+    if (expiresIn < 120) {
+      // Token expiring soon, force refresh
+      devLog('[API] Token expiring soon, refreshing...');
+      const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+      return refreshed?.access_token || null;
+    }
+
+    return session.access_token;
+  } catch (error) {
+    devError('[API] Error getting access token:', error);
+    return null;
+  }
+}
+
 async function directEdgeFunctionFetch<T>(
   functionName: string,
   body: Record<string, unknown>,
@@ -87,28 +118,9 @@ async function directEdgeFunctionFetch<T>(
     return { data: null, error: new Error('Missing Supabase configuration') };
   }
 
-  // Get the current session for auth - try multiple methods for browser compatibility
-  devLog('[directEdgeFunctionFetch] Getting session...');
-  let accessToken: string | undefined;
-
-  try {
-    // First try getSession (fastest, cached)
-    const { data: sessionData } = await supabase.auth.getSession();
-    accessToken = sessionData?.session?.access_token;
-
-    // If no token from getSession, try getUser which forces a refresh
-    if (!accessToken) {
-      devLog('[directEdgeFunctionFetch] No token from getSession, trying getUser...');
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData?.user) {
-        // If user exists, try to get session again
-        const { data: refreshedSession } = await supabase.auth.getSession();
-        accessToken = refreshedSession?.session?.access_token;
-      }
-    }
-  } catch (authError) {
-    devError('[directEdgeFunctionFetch] Auth error:', authError);
-  }
+  // Get a valid access token, refreshing if needed
+  devLog('[directEdgeFunctionFetch] Getting valid access token...');
+  const accessToken = await getValidAccessToken();
 
   if (!accessToken) {
     devError('[directEdgeFunctionFetch] Not authenticated - no access token');
@@ -236,6 +248,23 @@ interface EdgeFunctionError extends Error {
   responseBody?: Record<string, unknown>;
 }
 
+/**
+ * Type-safe extraction of error messages from EdgeFunctionError.
+ * Returns the error/message from responseBody if it's a string, otherwise falls back.
+ */
+function getEdgeErrorMessage(
+  error: EdgeFunctionError,
+  fallback: string
+): string {
+  const body = error.responseBody;
+  if (body) {
+    if (typeof body.error === 'string' && body.error) return body.error;
+    if (typeof body.message === 'string' && body.message) return body.message;
+  }
+  if (error.message) return error.message;
+  return fallback;
+}
+
 async function invokeWithTimeout<T>(
   functionName: string,
   body: Record<string, unknown>,
@@ -316,7 +345,11 @@ function sanitizeErrorMessage(error: unknown, fallbackMessage: string = 'An unex
     rawMessage = error;
   } else if (typeof error === 'object' && error !== null) {
     const errorObj = error as Record<string, unknown>;
-    rawMessage = (errorObj.message as string) || (errorObj.error as string) || '';
+    if (typeof errorObj.message === 'string') {
+      rawMessage = errorObj.message;
+    } else if (typeof errorObj.error === 'string') {
+      rawMessage = errorObj.error;
+    }
   }
 
   const lowerMessage = rawMessage.toLowerCase();
@@ -425,16 +458,14 @@ function transformLeftoverInventory(item: {
   return {
     id: item.id,
     meal_id: item.meal_id,
-    meal_name: item.meal?.name || item.meal_name,
+    meal_name: item.meal?.name || item.meal_name || 'Unknown',
     cooked_date: item.cooked_date,
     servings_remaining: item.servings_remaining,
     expires_date: item.expires_date,
-    days_until_expiry: Math.ceil(
-      (new Date(item.expires_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-    ),
+    days_until_expiry: differenceInDays(parseISO(item.expires_date), new Date()),
     notes: item.notes,
-    created_at: item.created_at,
-  } as Leftover;
+    created_at: item.created_at || new Date().toISOString(),
+  };
 }
 
 /**
@@ -447,15 +478,16 @@ function transformMealHistory(item: {
   rating?: number;
   notes?: string;
   meal?: { name?: string } | null;
+  meal_name?: string;
 }): MealHistory {
   return {
     id: item.id,
     meal_id: item.meal_id,
-    meal_name: item.meal?.name,
+    meal_name: item.meal?.name || item.meal_name || 'Unknown',
     cooked_date: item.cooked_date,
     rating: item.rating,
     notes: item.notes,
-  } as MealHistory;
+  };
 }
 
 /**
@@ -635,7 +667,7 @@ export const mealsApi = {
 
       // Extract error message from response body if available
       const edgeError = error as EdgeFunctionError;
-      const errorMessage = edgeError.responseBody?.error as string || error.message || 'Failed to parse recipe. Please try again.';
+      const errorMessage = getEdgeErrorMessage(edgeError, 'Failed to parse recipe. Please try again.');
       throw new Error(errorMessage);
     }
     return wrapResponse(data as Meal);
@@ -698,7 +730,7 @@ export const mealsApi = {
 
       // Extract error message from response body if available
       const edgeError = error as EdgeFunctionError;
-      const errorMessage = edgeError.responseBody?.error as string || error.message || 'Failed to parse recipe from image. Please try again.';
+      const errorMessage = getEdgeErrorMessage(edgeError, 'Failed to parse recipe from image. Please try again.');
       throw new Error(errorMessage);
     }
     return wrapResponse(data as Meal);
@@ -729,18 +761,16 @@ export const mealsApi = {
 
       if (edgeError.responseBody?.needsAI) {
         // Create an error that preserves the needsAI flag for the UI to detect
-        const aiError: EdgeFunctionError = new Error(
-          edgeError.responseBody?.message as string ||
-          'No structured recipe data found. Try AI Enhanced parsing.'
-        );
+        const aiErrorMessage = typeof edgeError.responseBody?.message === 'string'
+          ? edgeError.responseBody.message
+          : 'No structured recipe data found. Try AI Enhanced parsing.';
+        const aiError: EdgeFunctionError = new Error(aiErrorMessage);
         aiError.responseBody = edgeError.responseBody;
         throw aiError;
       }
 
       // For other errors, use the message from the response if available
-      const errorMessage = edgeError.responseBody?.error as string ||
-        error.message ||
-        'Failed to parse recipe from URL. Please check the URL and try again.';
+      const errorMessage = getEdgeErrorMessage(edgeError, 'Failed to parse recipe from URL. Please check the URL and try again.');
       throw new Error(errorMessage);
     }
     return wrapResponse(data as Meal);
@@ -763,7 +793,7 @@ export const mealsApi = {
 
       // Extract error message from response body if available
       const edgeError = error as EdgeFunctionError;
-      const errorMessage = edgeError.responseBody?.error as string || error.message || 'Failed to parse recipe from URL. Please check the URL and try again.';
+      const errorMessage = getEdgeErrorMessage(edgeError, 'Failed to parse recipe from URL. Please check the URL and try again.');
       throw new Error(errorMessage);
     }
     return wrapResponse(data as Meal);
@@ -799,9 +829,12 @@ export const mealsApi = {
       .replace(/\*/g, '\\*')   // Escape asterisks (wildcards)
       .replace(/\|/g, '\\|');  // Escape pipes (OR operator in .or())
 
+    const userId = await getCurrentUserId();
+
     const { data, error } = await supabase
       .from('meals')
       .select('*')
+      .eq('user_id', userId)
       .or(`name.ilike.%${sanitizedQuery}%,ingredients.ilike.%${sanitizedQuery}%,tags.ilike.%${sanitizedQuery}%`)
       .order('name');
 
@@ -1135,8 +1168,7 @@ export const leftoversApi = {
 
     const cookedDate = leftover.cooked_date || getTodayString();
     const daysGood = leftover.days_good || meal?.leftover_days || 3;
-    const expiresDate = new Date(cookedDate);
-    expiresDate.setDate(expiresDate.getDate() + daysGood);
+    const expiresDate = addDays(parseISO(cookedDate), daysGood);
 
     const { data, error } = await supabase
       .from('leftovers_inventory')
@@ -1146,7 +1178,7 @@ export const leftoversApi = {
         meal_name: meal?.name || 'Unknown',
         servings_remaining: leftover.servings || 4,
         cooked_date: cookedDate,
-        expires_date: toLocalDateString(expiresDate),
+        expires_date: formatDate(expiresDate, 'yyyy-MM-dd'),
         notes: leftover.notes,
       })
       .select()
@@ -1159,9 +1191,7 @@ export const leftoversApi = {
 
     return wrapResponse({
       ...data,
-      days_until_expiry: Math.ceil(
-        (new Date(data.expires_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      ),
+      days_until_expiry: differenceInDays(parseISO(data.expires_date), new Date()),
     } as Leftover);
   },
 
@@ -1597,25 +1627,14 @@ export const shoppingApi = {
     return wrapResponse({ success: true });
   },
 
-  togglePurchased: async (id: number) => {
+  togglePurchased: async (id: number, currentValue: boolean) => {
     const userId = await getCurrentUserId();
 
-    // First get current state
-    const { data: current, error: fetchError } = await supabase
-      .from('shopping_items')
-      .select('is_purchased')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single();
-
-    if (fetchError) {
-      errorLogger.logApiError(fetchError, `/shopping/${id}/toggle`, 'GET');
-      throw fetchError;
-    }
-
+    // Atomic update: pass the expected current value and toggle it
+    // This avoids race conditions from read-then-write pattern
     const { data, error } = await supabase
       .from('shopping_items')
-      .update({ is_purchased: !current?.is_purchased })
+      .update({ is_purchased: !currentValue })
       .eq('id', id)
       .eq('user_id', userId)
       .select()

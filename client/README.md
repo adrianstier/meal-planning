@@ -1,46 +1,147 @@
-# Getting Started with Create React App
+# Meal Planning App - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern meal planning application with AI-powered recipe import and intelligent meal scheduling.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **AI Recipe Import** - Import recipes from URLs, photos, or text using Claude AI
+- **Weekly Meal Planning** - Drag-and-drop meal scheduling with multi-week view
+- **Recipe Management** - Full CRUD with favorites, tags, and ratings
+- **Smart Shopping Lists** - Auto-generated from meal plans
+- **Seasonal Cooking** - CSA box tracking and seasonal produce suggestions
+- **Restaurant Database** - Save and track favorite restaurants
+- **Holiday Planning** - Special event meal planning with timelines
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- React 19 with TypeScript
+- TanStack React Query for data fetching
+- Tailwind CSS + Radix UI components
+- React Router v7
+- Supabase (Auth + Database)
+- Playwright for E2E testing
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Getting Started
 
-### `npm test`
+### Prerequisites
+- Node.js 18+
+- npm or yarn
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Installation
+```bash
+npm install
+```
 
-### `npm run build`
+### Environment Setup
+Create a `.env.local` file:
+```
+REACT_APP_SUPABASE_URL=your-supabase-url
+REACT_APP_SUPABASE_ANON_KEY=your-anon-key
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Development
+```bash
+# Start dev server (port 3001 recommended to avoid conflicts)
+PORT=3001 npm start
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Or default port
+npm start
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Build
+```bash
+npm run build
+```
 
-### `npm run eject`
+### Testing
+```bash
+# Run Playwright E2E tests
+npx playwright test
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+# Run with UI
+npx playwright test --ui
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Run specific test
+npx playwright test --grep "recipe"
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Project Structure
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```
+src/
+├── components/           # Reusable UI components
+│   ├── ui/              # Base components (Button, Card, Dialog, etc.)
+│   └── features/        # Feature-specific components
+├── contexts/            # React contexts
+│   ├── AuthContext.tsx  # Authentication state
+│   └── DragDropContext.tsx
+├── hooks/               # Custom React hooks
+│   ├── useMeals.ts      # Recipe/meal operations
+│   ├── usePlan.ts       # Meal planning operations
+│   └── useRestaurants.ts
+├── lib/
+│   ├── api.ts           # API client (all endpoints)
+│   ├── supabase.ts      # Supabase client
+│   └── utils.ts         # Utility functions
+├── pages/               # Page components
+│   ├── RecipesPage.tsx  # Recipe management
+│   ├── PlanPageEnhanced.tsx  # Meal planning
+│   └── ...
+└── tests/               # Test files
+    └── user-simulations/  # Playwright tests
+```
 
-## Learn More
+## AI Features
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+The app uses Anthropic Claude for intelligent recipe parsing:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+| Feature | Endpoint | Description |
+|---------|----------|-------------|
+| URL Import | `parse-recipe-url-ai` | Extracts recipe from any URL |
+| Photo Import | `parse-recipe-image` | Extracts recipe from photos |
+| Text Parsing | `parse-recipe` | Parses plain text recipes |
+
+All AI features extract:
+- Recipe name, ingredients, instructions
+- Prep/cook times, servings, difficulty
+- Cuisine type, tags, nutrition info
+- Kid-friendly rating
+
+## Test Credentials
+
+For development/testing:
+- Email: `claudetest@mealplanner.dev`
+- Password: `ClaudeTest2024`
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm start` | Start development server |
+| `npm run build` | Production build |
+| `npm test` | Run Jest tests |
+| `npx playwright test` | Run E2E tests |
+
+## Configuration
+
+### Playwright
+Configuration in `playwright.config.ts`:
+- Base URL: `http://localhost:3001`
+- Browser: Chromium
+- Screenshots on failure
+- Video on retry
+
+### TypeScript
+Strict mode enabled with comprehensive type checking.
+
+## Deployment
+
+The app is deployed on Vercel:
+- Production: Connected to `main` branch
+- Preview: Auto-deploy on PRs
+
+## Related Documentation
+
+- [CLAUDE.md](../CLAUDE.md) - Full project context for Claude Code
+- [BUG_REPORT.md](../BUG_REPORT.md) - Bug tracking and fixes
+- [.claude/system.md](../.claude/system.md) - Development priorities

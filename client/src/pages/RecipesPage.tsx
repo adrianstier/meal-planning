@@ -50,6 +50,22 @@ interface ParsedRecipeData {
   cuisine?: string;
 }
 
+// Helper function to safely parse top_comments JSON with validation
+function safeParseComments(data: string | null | undefined): Array<{text: string; upvotes: number}> {
+  if (!data) return [];
+  try {
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((c): c is {text: string; upvotes: number} =>
+      typeof c === 'object' && c !== null &&
+      typeof c.text === 'string' &&
+      typeof c.upvotes === 'number'
+    );
+  } catch {
+    return [];
+  }
+}
+
 const RecipesPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [parseDialogOpen, setParseDialogOpen] = useState(false);
@@ -380,14 +396,24 @@ const RecipesPage: React.FC = () => {
   };
 
   const handleToggleFavorite = async (meal: Meal) => {
-    await toggleFavorite.mutateAsync({ id: meal.id, isFavorite: meal.is_favorite || false });
+    try {
+      await toggleFavorite.mutateAsync({ id: meal.id, isFavorite: meal.is_favorite || false });
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      // The mutation hook likely already handles error state, but we log it for debugging
+    }
   };
 
   const handleRatingChange = async (meal: Meal, rating: number) => {
-    await updateMeal.mutateAsync({
-      id: meal.id,
-      meal: { kid_rating: rating }
-    });
+    try {
+      await updateMeal.mutateAsync({
+        id: meal.id,
+        meal: { kid_rating: rating }
+      });
+    } catch (error) {
+      console.error('Failed to update rating:', error);
+      // The mutation hook likely already handles error state, but we log it for debugging
+    }
   };
 
   const handleDeleteMeal = async () => {
@@ -791,7 +817,11 @@ const RecipesPage: React.FC = () => {
 
                       document.body.appendChild(dragPreview);
                       e.dataTransfer.setDragImage(dragPreview, 100, 50);
-                      setTimeout(() => document.body.removeChild(dragPreview), 0);
+                      setTimeout(() => {
+                        if (dragPreview.parentNode === document.body) {
+                          document.body.removeChild(dragPreview);
+                        }
+                      }, 0);
                     }}
                     onDragEnd={() => {
                       setDraggedRecipe(null);
@@ -1443,31 +1473,27 @@ const RecipesPage: React.FC = () => {
             )}
 
             {/* Top Comments */}
-            {selectedMeal?.top_comments && (() => {
-              try {
-                const comments = JSON.parse(selectedMeal.top_comments);
-                if (comments && comments.length > 0) {
-                  return (
-                    <div>
-                      <h3 className="font-semibold mb-3 text-lg">Top Comments from Original Recipe</h3>
-                      <div className="space-y-3">
-                        {comments.map((comment: { text: string; upvotes: number }, index: number) => (
-                          <div key={index} className="bg-muted/50 p-4 rounded-lg border border-muted">
-                            <p className="text-sm text-foreground leading-relaxed">{comment.text}</p>
-                            {comment.upvotes > 0 && (
-                              <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <ThumbsUp className="w-3.5 h-3.5" />
-                                <span className="font-medium">{comment.upvotes} people found this helpful</span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+            {(() => {
+              const comments = safeParseComments(selectedMeal?.top_comments);
+              if (comments.length > 0) {
+                return (
+                  <div>
+                    <h3 className="font-semibold mb-3 text-lg">Top Comments from Original Recipe</h3>
+                    <div className="space-y-3">
+                      {comments.map((comment, index) => (
+                        <div key={index} className="bg-muted/50 p-4 rounded-lg border border-muted">
+                          <p className="text-sm text-foreground leading-relaxed">{comment.text}</p>
+                          {comment.upvotes > 0 && (
+                            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <ThumbsUp className="w-3.5 h-3.5" />
+                              <span className="font-medium">{comment.upvotes} people found this helpful</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  );
-                }
-              } catch (e) {
-                return null;
+                  </div>
+                );
               }
               return null;
             })()}

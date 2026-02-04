@@ -273,23 +273,47 @@ class ErrorLogger {
 
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sanitizedLogs));
     } catch (error) {
-      // Fallback: Log to console and store in memory buffer
-      console.warn('[ErrorLogger] Failed to save logs to localStorage:', error);
-
-      // Keep the most recent log in an in-memory fallback buffer
-      const lastLog = this.logs[this.logs.length - 1];
-      if (lastLog) {
-        this.fallbackBuffer.push(lastLog);
-        // Keep fallback buffer size limited
-        if (this.fallbackBuffer.length > this.maxFallbackBuffer) {
-          this.fallbackBuffer = this.fallbackBuffer.slice(-this.maxFallbackBuffer);
+      // Check if this is a quota exceeded error
+      if (error instanceof DOMException && (error.code === 22 || error.name === 'QuotaExceededError')) {
+        console.warn('[ErrorLogger] localStorage quota exceeded, trimming logs...');
+        try {
+          // Keep only the 5 most recent logs to free up space
+          const recentLogs = this.logs.slice(-5).map(log => ({
+            timestamp: log.timestamp,
+            type: log.type,
+            message: log.message,
+            env: log.env,
+          }));
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(recentLogs));
+          return;
+        } catch {
+          // Even minimal logs don't fit, fall through to memory buffer
         }
       }
 
-      // Log to console to ensure error is never lost
-      if (process.env.NODE_ENV === 'production') {
-        console.error('[ErrorLogger] Error not persisted:', lastLog?.message);
+      // Fallback: Log to console and store in memory buffer
+      console.warn('[ErrorLogger] Failed to save logs to localStorage:', error);
+      this.storeInFallback();
+    }
+  }
+
+  /**
+   * Store the most recent log in the fallback memory buffer
+   * Used when localStorage is unavailable or quota exceeded
+   */
+  private storeInFallback(): void {
+    const lastLog = this.logs[this.logs.length - 1];
+    if (lastLog) {
+      this.fallbackBuffer.push(lastLog);
+      // Keep fallback buffer size limited
+      if (this.fallbackBuffer.length > this.maxFallbackBuffer) {
+        this.fallbackBuffer = this.fallbackBuffer.slice(-this.maxFallbackBuffer);
       }
+    }
+
+    // Log to console to ensure error is never lost
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[ErrorLogger] Error not persisted:', lastLog?.message);
     }
   }
 

@@ -12,12 +12,8 @@ import {
   Minus,
   Users,
   Trash2,
-  Baby,
-  Package,
-  Utensils,
   ChefHat,
   AlertCircle,
-  Timer,
   Apple,
   Globe,
   StickyNote,
@@ -51,7 +47,14 @@ import RecipeBrowserSidebar from '../components/features/plan/RecipeBrowserSideb
 import CompactDayCard from '../components/features/plan/CompactDayCard';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { OnboardingTour } from '../components/OnboardingTour';
-import type { MealPlan } from '../types/api';
+import type { MealPlan, Meal } from '../types/api';
+
+// Type guard to validate meal data from drag-and-drop
+function validateMealFromDrag(data: unknown): data is Meal {
+  if (typeof data !== 'object' || data === null) return false;
+  const obj = data as Record<string, unknown>;
+  return typeof obj.id === 'number' && typeof obj.name === 'string';
+}
 
 type ViewMode = 'week' | 'list' | 'compact';
 type MealDisplayMode = 'dinners' | '3-meals' | 'all';
@@ -264,13 +267,16 @@ const PlanPageEnhanced: React.FC = () => {
     console.log('Drop event triggered:', { date, mealType, draggedRecipe });
 
     // Try to get meal from dataTransfer if draggedRecipe is null
-    let mealToAdd = draggedRecipe?.meal;
+    let mealToAdd: Meal | undefined = draggedRecipe?.meal;
     if (!mealToAdd) {
       try {
         const data = e.dataTransfer.getData('application/json');
         if (data) {
-          mealToAdd = JSON.parse(data);
-          console.log('Got meal from dataTransfer:', mealToAdd);
+          const parsed: unknown = JSON.parse(data);
+          if (validateMealFromDrag(parsed)) {
+            mealToAdd = parsed;
+            console.log('Got meal from dataTransfer:', mealToAdd);
+          }
         }
       } catch (err) {
         console.error('Failed to parse drag data:', err);
@@ -413,14 +419,8 @@ const PlanPageEnhanced: React.FC = () => {
     return stats;
   }, [weekPlan]);
 
-  // Days with meals for compact view (reserved for future use)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _daysWithMeals = useMemo(() => {
-    return weekDays.filter(day =>
-      mealsByDate[day.date] &&
-      Object.values(mealsByDate[day.date]).some(meals => meals.length > 0)
-    );
-  }, [weekDays, mealsByDate]);
+  // NOTE: _daysWithMeals was removed as it was computed but never used.
+  // If compact view filtering is needed in the future, re-add this computation.
 
   // Refs to track current history state for callbacks without stale closures
   const historyRef = useRef(history);
@@ -459,9 +459,10 @@ const PlanPageEnhanced: React.FC = () => {
     }
   }, []);
 
-  // Toggle cuisine selection (reserved for future AI plan generation filters)
+  // Toggle cuisine selection for AI plan generation filters
+  // TODO: Wire up to cuisine filter UI in generate plan dialog - GitHub issue #TBD
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _toggleCuisine = useCallback((cuisine: string) => {
+  const toggleCuisine = useCallback((cuisine: string) => {
     setSelectedCuisines(prev =>
       prev.includes(cuisine)
         ? prev.filter(c => c !== cuisine)
@@ -517,6 +518,11 @@ const PlanPageEnhanced: React.FC = () => {
       }
       if (toastTimeoutRef.current) {
         clearTimeout(toastTimeoutRef.current);
+      }
+      // Also clean up any leftover toast DOM element
+      const existingToast = document.querySelector('[data-toast-copy-meal]');
+      if (existingToast) {
+        existingToast.remove();
       }
     };
   }, []);
@@ -584,8 +590,9 @@ const PlanPageEnhanced: React.FC = () => {
   }, []);
 
   // Paste copied meal to a slot (used by click-to-paste flow)
+  // TODO: Wire up to empty slot click handler to enable paste - GitHub issue #TBD
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _handlePasteMeal = useCallback(async (date: string, mealType: string) => {
+  const handlePasteMeal = useCallback(async (date: string, mealType: string) => {
     if (!mealSelection.copiedMeal) return;
     try {
       await addPlanItem.mutateAsync({
@@ -599,14 +606,18 @@ const PlanPageEnhanced: React.FC = () => {
     }
   }, [mealSelection.copiedMeal, addPlanItem]);
 
+  // TODO: Implement move meal dialog - GitHub issue #TBD
+  // This would allow users to drag or select a target slot to move the meal to
   const handleMoveMeal = useCallback((_meal: MealPlan) => {
-    // TODO: Show dialog to select target slot
-    alert('Move meal feature - select a slot to move to');
+    console.log('Move meal feature not yet implemented');
+    // Future implementation: Open a dialog to select target date/slot
   }, []);
 
+  // TODO: Implement swap meal dialog - GitHub issue #TBD
+  // This would allow users to select another meal to swap positions with
   const handleSwapMeal = useCallback((_meal: MealPlan) => {
-    // TODO: Show dialog to select meal to swap with
-    alert('Swap meal feature - select another meal to swap with');
+    console.log('Swap meal feature not yet implemented');
+    // Future implementation: Open a dialog to select another meal to swap with
   }, []);
 
   // Handler for viewing a meal's details
@@ -645,61 +656,6 @@ const PlanPageEnhanced: React.FC = () => {
   const handleDragLeaveSnack = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.currentTarget.classList.remove('bg-primary/10');
   }, []);
-
-  // Enhanced badge renderer with better colors and icons (reserved for future UI enhancement)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _renderEnhancedBadges = (meal: MealPlan) => {
-    const badges = [];
-
-    if (meal.cook_time_minutes) {
-      const timeColor = meal.cook_time_minutes <= 20 ? 'bg-green-100 text-green-700' :
-                       meal.cook_time_minutes <= 30 ? 'bg-yellow-100 text-yellow-700' :
-                       'bg-orange-100 text-orange-700';
-      badges.push(
-        <Badge key="time" className={cn("gap-1", timeColor)}>
-          <Timer className="h-3 w-3" />
-          {meal.cook_time_minutes}m
-        </Badge>
-      );
-    }
-
-    if (meal.meal_tags?.includes('kid-friendly')) {
-      badges.push(
-        <Badge key="kid" className="bg-blue-100 text-blue-700 gap-1">
-          <Baby className="h-3 w-3" />
-          Kid
-        </Badge>
-      );
-    }
-
-    if (meal.meal_tags?.includes('bento')) {
-      badges.push(
-        <Badge key="bento" className="bg-purple-100 text-purple-700 gap-1">
-          <Package className="h-3 w-3" />
-          Bento
-        </Badge>
-      );
-    }
-
-    if (meal.meal_tags?.includes('leftovers')) {
-      badges.push(
-        <Badge key="leftovers" className="bg-indigo-100 text-indigo-700 gap-1">
-          <Utensils className="h-3 w-3" />
-          Leftover
-        </Badge>
-      );
-    }
-
-    if (meal.difficulty === 'easy') {
-      badges.push(
-        <Badge key="easy" className="bg-green-100 text-green-700">
-          Easy
-        </Badge>
-      );
-    }
-
-    return badges;
-  };
 
   const handleGenerateWeek = useCallback(async () => {
     try {

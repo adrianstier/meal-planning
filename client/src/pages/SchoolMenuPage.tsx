@@ -3,7 +3,7 @@ import { Camera, Sparkles, Trash2, ThumbsDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { useSchoolMenu, useDeleteSchoolMenuItem, useParseMenuPhoto, useAddMenuFeedback } from '../hooks/useSchoolMenu';
-import { format } from 'date-fns';
+import { format, parseISO, isPast, startOfDay } from 'date-fns';
 
 const SchoolMenuPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -32,6 +32,12 @@ const SchoolMenuPage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Safe extraction of image MIME type from data URI with fallback
+  const extractImageType = (dataUri: string): string => {
+    const match = dataUri.match(/^data:([^;]+)/);
+    return match?.[1] || 'image/jpeg';
+  };
+
   const handleParsePhoto = async () => {
     if (!selectedImage) return;
 
@@ -40,7 +46,7 @@ const SchoolMenuPage: React.FC = () => {
     setParseSuccess(null);
 
     try {
-      const imageType = selectedImage.split(';')[0].split(':')[1];
+      const imageType = extractImageType(selectedImage);
       const result = await parsePhoto.mutateAsync({
         imageData: selectedImage,
         imageType,
@@ -203,15 +209,15 @@ const SchoolMenuPage: React.FC = () => {
         <div className="space-y-4">
           {sortedDates.map((date) => {
             const items = menuByDate[date];
-            const dateObj = new Date(date + 'T00:00:00');
-            const isPast = dateObj < new Date(new Date().setHours(0, 0, 0, 0));
+            const dateObj = parseISO(date);
+            const isPastDate = isPast(startOfDay(dateObj));
 
             return (
-              <Card key={date} className={isPast ? 'opacity-60' : ''}>
+              <Card key={date} className={isPastDate ? 'opacity-60' : ''}>
                 <CardHeader>
                   <CardTitle className="text-lg">
                     {format(dateObj, 'EEEE, MMMM d, yyyy')}
-                    {isPast && <span className="ml-2 text-sm text-muted-foreground">(Past)</span>}
+                    {isPastDate && <span className="ml-2 text-sm text-muted-foreground">(Past)</span>}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

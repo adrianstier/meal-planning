@@ -4,6 +4,8 @@ import {
   handleCorsPrelight,
   MAX_URL_LENGTH,
   isValidUrl,
+  isPublicUrl,
+  requireCsrfHeader,
   validateJWT,
   checkRateLimitSync,
   rateLimitExceededResponse,
@@ -223,6 +225,14 @@ Deno.serve(async (req: Request) => {
   const preflight = handleCorsPrelight(req);
   if (preflight) return preflight;
 
+  // CSRF protection
+  if (!requireCsrfHeader(req)) {
+    return new Response(
+      JSON.stringify({ error: 'Missing security header' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Auth
   const auth = await validateJWT(req);
   if (!auth.authenticated) {
@@ -241,6 +251,11 @@ Deno.serve(async (req: Request) => {
 
     if (!url || !isValidUrl(url) || url.length > MAX_URL_LENGTH) {
       return errorResponse("Valid URL is required", corsHeaders, 400);
+    }
+
+    // SSRF protection - block private/internal URLs
+    if (!isPublicUrl(url)) {
+      return errorResponse("URL must point to a public website", corsHeaders, 400);
     }
 
     log({ requestId, event: "ai_parse_start", url: url.substring(0, 80) });

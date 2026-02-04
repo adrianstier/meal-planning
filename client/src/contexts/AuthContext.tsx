@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User as SupabaseUser, Session, Provider } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase, isMissingCredentials } from '../lib/supabase';
 
 // Supported OAuth providers
@@ -59,6 +60,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -183,6 +185,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     );
 
+    // Set up cross-tab logout listener
+    let logoutChannel: BroadcastChannel | null = null;
+    try {
+      logoutChannel = new BroadcastChannel('meal-planner-auth');
+      logoutChannel.onmessage = (event) => {
+        if (event.data?.type === 'logout' && mounted) {
+          setUser(null);
+          setSupabaseUser(null);
+          setSession(null);
+          queryClient.clear();
+        }
+      };
+    } catch (e) {
+      // BroadcastChannel not supported in this browser
+    }
+
     // Then get initial session
     const initializeAuth = async () => {
       try {
@@ -218,8 +236,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       mounted = false;
       clearTimeout(safetyTimeout);
       subscription.unsubscribe();
+      logoutChannel?.close();
     };
-  }, [handleSession]);
+  }, [handleSession, queryClient]);
 
   const checkAuth = useCallback(async () => {
     if (isMissingCredentials) {
@@ -359,6 +378,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setSupabaseUser(null);
     setSession(null);
     setEmailConfirmationPending(false);
+
+    // Clear ALL cached queries
+    queryClient.clear();
+
+    // Notify other tabs about logout
+    try {
+      const logoutChannel = new BroadcastChannel('meal-planner-auth');
+      logoutChannel.postMessage({ type: 'logout' });
+      logoutChannel.close();
+    } catch (e) {
+      // BroadcastChannel not supported, ignore
+    }
 
     try {
       await supabase.auth.signOut({ scope: 'local' });

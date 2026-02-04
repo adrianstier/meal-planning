@@ -45,6 +45,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [validSteps, setValidSteps] = useState<number[]>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Find all valid steps (those with existing target elements)
   const findValidSteps = useCallback(() => {
@@ -204,20 +205,24 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       }
     };
 
-    // Debounce resize handler
-    let resizeTimeout: NodeJS.Timeout;
+    // Debounce resize handler using ref to prevent memory leaks
     const debouncedResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(handleResize, 100);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      resizeTimeoutRef.current = setTimeout(handleResize, 100);
     };
 
     window.addEventListener('resize', debouncedResize);
     window.addEventListener('scroll', handleResize);
 
     return () => {
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+        resizeTimeoutRef.current = null;
+      }
       window.removeEventListener('resize', debouncedResize);
       window.removeEventListener('scroll', handleResize);
-      clearTimeout(resizeTimeout);
     };
   }, [isActive, targetElement, currentStep, steps, calculateTooltipPosition]);
 

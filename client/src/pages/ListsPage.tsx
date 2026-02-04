@@ -193,7 +193,7 @@ const ListsPage: React.FC = () => {
                           className="flex items-center gap-3 p-4 rounded-md border bg-card hover:bg-accent/50 transition-colors min-h-[60px]"
                         >
                           <button
-                            onClick={() => toggleItem.mutateAsync(item.id)}
+                            onClick={() => toggleItem.mutateAsync({ id: item.id, currentValue: item.is_purchased })}
                             className="flex-shrink-0 h-8 w-8 rounded border-2 border-primary hover:bg-primary/10 transition-colors active:scale-95"
                             aria-label="Toggle purchased"
                           />
@@ -247,7 +247,7 @@ const ListsPage: React.FC = () => {
                       className="flex items-center gap-3 p-4 rounded-md border bg-card min-h-[60px]"
                     >
                       <button
-                        onClick={() => toggleItem.mutateAsync(item.id)}
+                        onClick={() => toggleItem.mutateAsync({ id: item.id, currentValue: item.is_purchased })}
                         className="flex-shrink-0 h-8 w-8 rounded border-2 border-primary bg-primary flex items-center justify-center active:scale-95 transition-transform"
                         aria-label="Uncheck item"
                       >

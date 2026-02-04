@@ -121,6 +121,10 @@ interface RateLimitEntry {
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
+// Cleanup tracking to prevent memory leaks
+let lastCleanup = Date.now();
+const CLEANUP_INTERVAL = 60000; // Clean every minute
+
 export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
@@ -129,6 +133,18 @@ export interface RateLimitResult {
 
 export function checkRateLimitSync(userId: string, maxRequests = 20, windowMs = 60000): RateLimitResult {
   const now = Date.now();
+
+  // Periodic cleanup of expired entries to prevent memory leaks
+  if (now - lastCleanup > CLEANUP_INTERVAL) {
+    lastCleanup = now;
+    for (const [key, entry] of rateLimitStore.entries()) {
+      // Remove entries that are older than 2x the window (definitely expired)
+      if (now - entry.windowStart > windowMs * 2) {
+        rateLimitStore.delete(key);
+      }
+    }
+  }
+
   const key = `ratelimit:${userId}`;
 
   let entry = rateLimitStore.get(key);
@@ -179,6 +195,33 @@ export function errorResponse(message: string, corsHeaders: Record<string, strin
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+// SSRF protection - validate that URLs point to public internet resources
+export function isPublicUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    // Block private IP ranges and internal hostnames
+    const blockedPatterns = [
+      /^127\./, /^10\./, /^172\.(1[6-9]|2[0-9]|3[01])\./, /^192\.168\./,
+      /^169\.254\./, // AWS metadata
+      /^0\./, /^localhost$/i, /\.local$/i, /\.internal$/i,
+      /^fc00:/, /^fe80:/, /^::1$/,  // IPv6 private
+    ];
+    return !blockedPatterns.some(pattern => pattern.test(hostname));
+  } catch {
+    return false;
+  }
+}
+
+// CSRF protection - require XMLHttpRequest header
+export function requireCsrfHeader(req: Request): boolean {
+  return req.headers.get('X-Requested-With') === 'XMLHttpRequest';
 }
 
 // Anthropic API error handling

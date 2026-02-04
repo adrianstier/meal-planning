@@ -75,6 +75,9 @@ export const useDeletePlanItem = () => {
       // Could be optimized by passing the date as context
       queryClient.invalidateQueries({ queryKey: ['plan'] });
     },
+    onError: (error, id) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), `/plan/${id}`, 'DELETE');
+    },
   });
 };
 
@@ -82,6 +85,9 @@ export const useSuggestMeal = () => {
   return useMutation({
     mutationFn: ({ date, mealType, constraints }: { date: string; mealType: string; constraints?: PlanConstraints }) =>
       planApi.suggest(date, mealType, constraints),
+    onError: (error) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), '/plan/suggest', 'POST');
+    },
   });
 };
 

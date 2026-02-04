@@ -136,5 +136,8 @@ export const useClearWeekPlan = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plan'] });
     },
+    onError: (error) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), '/plan/clear-week', 'POST');
+    },
   });
 };

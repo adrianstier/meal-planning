@@ -249,6 +249,16 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    // Check Content-Length before parsing to prevent memory exhaustion
+    const contentLength = parseInt(req.headers.get('content-length') || '0', 10)
+    const MAX_BODY_SIZE = 100000 // 100KB limit
+    if (contentLength > MAX_BODY_SIZE) {
+      return new Response(
+        JSON.stringify({ error: 'Request body too large' }),
+        { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Parse request body
     const body = await req.json()
     const { message, metadata, conversationId: requestedConversationId } = body

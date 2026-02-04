@@ -692,25 +692,49 @@ const PlanPageEnhanced: React.FC = () => {
     }
   }, [currentWeekStart, selectedCuisines, generateBentos, bentoChildName, generateWeekPlan]);
 
-  // Keyboard shortcuts (placed after all handlers are defined)
+  // Ref to hold keyboard shortcut handlers to avoid stale closures
+  const keyboardHandlersRef = useRef({
+    goToPreviousWeek,
+    goToNextWeek,
+    goToThisWeek,
+    handleGenerateWeek,
+    handleUndo,
+    handleRedo,
+  });
+
+  // Update the ref whenever handlers change
+  useEffect(() => {
+    keyboardHandlersRef.current = {
+      goToPreviousWeek,
+      goToNextWeek,
+      goToThisWeek,
+      handleGenerateWeek,
+      handleUndo,
+      handleRedo,
+    };
+  }, [goToPreviousWeek, goToNextWeek, goToThisWeek, handleGenerateWeek, handleUndo, handleRedo]);
+
+  // Keyboard shortcuts - uses ref to avoid stale closures and unnecessary re-subscriptions
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       // Ignore if typing in input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
+      const handlers = keyboardHandlersRef.current;
+
       // Arrow keys for navigation
       if (e.key === 'ArrowLeft' && !e.shiftKey) {
-        goToPreviousWeek();
+        handlers.goToPreviousWeek();
       } else if (e.key === 'ArrowRight' && !e.shiftKey) {
-        goToNextWeek();
+        handlers.goToNextWeek();
       }
       // G for generate
       else if (e.key === 'g' || e.key === 'G') {
-        handleGenerateWeek();
+        handlers.handleGenerateWeek();
       }
       // T for this week
       else if (e.key === 't' || e.key === 'T') {
-        goToThisWeek();
+        handlers.goToThisWeek();
       }
       // V for view mode toggle
       else if (e.key === 'v' || e.key === 'V') {
@@ -719,18 +743,18 @@ const PlanPageEnhanced: React.FC = () => {
       // Cmd/Ctrl + Z for undo
       else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        handleUndo();
+        handlers.handleUndo();
       }
       // Cmd/Ctrl + Shift + Z for redo
       else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
         e.preventDefault();
-        handleRedo();
+        handlers.handleRedo();
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [goToPreviousWeek, goToNextWeek, goToThisWeek, handleGenerateWeek, handleUndo, handleRedo]);
+  }, []); // Empty deps - uses ref to get current handlers
 
   const handleApplyPlan = useCallback(async () => {
     try {

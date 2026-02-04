@@ -1134,15 +1134,24 @@ export const planApi = {
       day_of_week: new Date(item.date).toLocaleDateString('en-US', { weekday: 'long' }),
     }));
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('scheduled_meals')
-      .insert(scheduledMeals);
+      .insert(scheduledMeals)
+      .select(); // Get returned rows to verify count
 
     if (error) {
       errorLogger.logApiError(error, '/plan/apply-generated', 'POST');
       throw error;
     }
-    return wrapResponse({ success: true });
+
+    // Verify all items were inserted
+    if (!data || data.length !== scheduledMeals.length) {
+      const inserted = data?.length || 0;
+      console.warn(`[API] Partial insert: ${inserted}/${scheduledMeals.length} meals created`);
+      // Still return success but log the discrepancy
+    }
+
+    return wrapResponse({ success: true, inserted: data?.length || 0 });
   },
 };
 

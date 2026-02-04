@@ -75,6 +75,9 @@ export const useUpdateMeal = () => {
       queryClient.invalidateQueries({ queryKey: ['meals'] });
       queryClient.invalidateQueries({ queryKey: ['meal', variables.id] });
     },
+    onError: (error, variables) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), `/meals/${variables.id}`, 'PUT');
+    },
   });
 };
 
@@ -85,6 +88,9 @@ export const useDeleteMeal = () => {
     mutationFn: (id: number) => mealsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meals'] });
+    },
+    onError: (error, id) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), `/meals/${id}`, 'DELETE');
     },
   });
 };
@@ -157,6 +163,9 @@ export const useToggleFavorite = () => {
       queryClient.invalidateQueries({ queryKey: ['meals'] });
       queryClient.invalidateQueries({ queryKey: ['meal', variables.id] });
     },
+    onError: (error, variables) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), `/meals/${variables.id}/favorite`, 'POST');
+    },
   });
 };
 
@@ -167,6 +176,9 @@ export const useBulkDeleteMeals = () => {
     mutationFn: (mealIds: number[]) => mealsApi.bulkDelete(mealIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meals'] });
+    },
+    onError: (error) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), '/meals/bulk-delete', 'POST');
     },
   });
 };

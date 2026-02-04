@@ -37,16 +37,29 @@ async function fetchPage(url: string): Promise<string> {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (compatible; MealPlannerBot/1.0)",
         "Accept": "text/html,application/xhtml+xml",
       },
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      // Categorize HTTP errors
+      if (response.status === 404) {
+        throw new Error('Recipe page not found (404)');
+      } else if (response.status === 403) {
+        throw new Error('Access denied to recipe page (403)');
+      } else if (response.status >= 500) {
+        throw new Error(`Recipe site is temporarily unavailable (${response.status})`);
+      }
+      throw new Error(`HTTP error ${response.status}`);
     }
 
     return await response.text();
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timed out - the recipe site took too long to respond');
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

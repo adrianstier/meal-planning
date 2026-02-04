@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { planApi } from '../lib/api';
+import { errorLogger } from '../utils/errorLogger';
 import type { MealPlan, PlanConstraints } from '../types/api';
 
 // Helper to get the Monday of the week for a given date
@@ -36,6 +37,9 @@ export const useAddPlanItem = () => {
         queryClient.invalidateQueries({ queryKey: ['plan'] });
       }
     },
+    onError: (error) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), '/plan', 'POST');
+    },
   });
 };
 
@@ -54,6 +58,9 @@ export const useUpdatePlanItem = () => {
         // Fallback to invalidating all plan queries
         queryClient.invalidateQueries({ queryKey: ['plan'] });
       }
+    },
+    onError: (error, variables) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), `/plan/${variables.id}`, 'PUT');
     },
   });
 };

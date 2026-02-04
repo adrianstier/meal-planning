@@ -89,6 +89,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  // Poll for profile with exponential backoff (handles database trigger delays)
+  const waitForProfile = useCallback(async (userId: string, maxWaitMs = 3000): Promise<User | null> => {
+    const startTime = Date.now();
+    const pollIntervals = [100, 200, 400, 800]; // Exponential backoff
+    let attempt = 0;
+
+    while (Date.now() - startTime < maxWaitMs) {
+      const profile = await fetchProfile(userId);
+      if (profile) return profile;
+
+      const delay = pollIntervals[Math.min(attempt, pollIntervals.length - 1)];
+      await new Promise(r => setTimeout(r, delay));
+      attempt++;
+    }
+
+    console.warn('[Auth] Profile not created after', maxWaitMs, 'ms');
+    return null;
+  }, [fetchProfile]);
+
   // Create profile for user if it doesn't exist (for OAuth users)
   const createProfileIfNeeded = useCallback(async (authUser: SupabaseUser): Promise<User | null> => {
     // First try to fetch existing profile
@@ -117,11 +136,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .single();
 
       if (error) {
-        // Profile might have been created by trigger, try fetching again
-        console.log('[Auth] Insert failed, trying fetch again');
-        // Small delay to allow trigger to complete
-        await new Promise(r => setTimeout(r, 500));
-        return await fetchProfile(authUser.id);
+        // Profile might have been created by trigger, poll for it with exponential backoff
+        console.log('[Auth] Insert failed, polling for profile...');
+        return await waitForProfile(authUser.id, 3000);
       }
 
       return data as User;
@@ -129,7 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('[Auth] Failed to create profile');
       return null;
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, waitForProfile]);
 
   // Handle session updates
   const handleSession = useCallback(async (newSession: Session | null) => {

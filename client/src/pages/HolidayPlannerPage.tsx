@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  Plus, Calendar, Users, Clock, ChefHat, Trash2,
-  CalendarDays, Sparkles, ShoppingCart, CheckCircle,
+  Plus, Users, Clock, ChefHat, Trash2,
+  CalendarDays, Sparkles, CheckCircle,
   PartyPopper, Gift, Egg, GripVertical, Copy
 } from 'lucide-react';
 import { useDragDrop } from '../contexts/DragDropContext';
@@ -95,7 +95,7 @@ const HolidayPlannerPage: React.FC = () => {
     make_ahead_items: TimelineItem[];
     day_of_schedule: TimelineItem[];
   } | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({ show: false, type: 'info', message: '' });
 

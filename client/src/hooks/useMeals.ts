@@ -1,6 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { mealsApi } from '../lib/api';
 import type { Meal } from '../types/api';
+
+// Debounce hook for search
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+// Search debounce delay
+const SEARCH_DEBOUNCE_MS = 300;
+
+// Cache configuration constants
+const STALE_TIME = 5 * 60 * 1000; // 5 minutes - data considered fresh
+const CACHE_TIME = 30 * 60 * 1000; // 30 minutes - keep in cache
 
 export const useMeals = () => {
   return useQuery({
@@ -9,6 +34,8 @@ export const useMeals = () => {
       const response = await mealsApi.getAll();
       return response.data;
     },
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME, // gcTime replaces cacheTime in TanStack Query v5
   });
 };
 
@@ -98,15 +125,23 @@ export const useParseRecipeFromImage = () => {
 };
 
 export const useSearchMeals = (query: string) => {
+  // Debounce the search query to prevent excessive API calls
+  const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
+
   return useQuery({
-    queryKey: ['meals', 'search', query],
+    queryKey: ['meals', 'search', debouncedQuery],
     queryFn: async () => {
-      const response = await mealsApi.search(query);
+      const response = await mealsApi.search(debouncedQuery);
       return response.data;
     },
-    enabled: query.length > 0,
+    enabled: debouncedQuery.length > 0,
+    staleTime: STALE_TIME,
+    gcTime: CACHE_TIME,
   });
 };
+
+// Export the debounce hook for use elsewhere
+export { useDebounce };
 
 export const useToggleFavorite = () => {
   const queryClient = useQueryClient();

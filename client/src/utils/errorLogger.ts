@@ -3,12 +3,23 @@
  * Provides detailed error information for debugging in development and production
  */
 
+// Types for error context and responses
+type ErrorContext = Record<string, unknown>;
+
+interface ApiErrorResponse {
+  response?: {
+    status?: number;
+    statusText?: string;
+    data?: unknown;
+  };
+}
+
 export interface ErrorLog {
   timestamp: string;
   type: 'api' | 'parse' | 'auth' | 'network' | 'validation' | 'unknown';
   message: string;
   stack?: string;
-  context?: Record<string, any>;
+  context?: ErrorContext;
   userAgent?: string;
   url?: string;
   env: 'development' | 'production';
@@ -18,6 +29,9 @@ class ErrorLogger {
   private logs: ErrorLog[] = [];
   private maxLogs = 20; // Reduced from 100 for privacy
   private readonly STORAGE_KEY = 'meal_planner_error_logs';
+  // In-memory buffer for errors that couldn't be saved to localStorage
+  private fallbackBuffer: ErrorLog[] = [];
+  private readonly maxFallbackBuffer = 10;
 
   constructor() {
     // Load existing logs from localStorage
@@ -30,7 +44,7 @@ class ErrorLogger {
   log(
     error: Error | string,
     type: ErrorLog['type'] = 'unknown',
-    context?: Record<string, any>
+    context?: ErrorContext
   ): void {
     const errorMessage = error instanceof Error ? error.message : error;
     const errorStack = error instanceof Error ? error.stack : undefined;
@@ -89,29 +103,30 @@ class ErrorLogger {
    * Log API-specific errors with detailed context
    */
   logApiError(
-    error: any,
+    error: Error | ApiErrorResponse | string,
     endpoint: string,
     method: string = 'GET',
-    requestData?: any
+    requestData?: unknown
   ): void {
-    const context = {
+    const apiError = error as ApiErrorResponse;
+    const context: ErrorContext = {
       endpoint,
       method,
       requestData,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      responseData: error.response?.data,
+      status: apiError.response?.status,
+      statusText: apiError.response?.statusText,
+      responseData: apiError.response?.data,
       apiBaseUrl: process.env.REACT_APP_API_URL || 'not set',
     };
 
-    this.log(error, 'api', context);
+    this.log(error instanceof Error ? error : String(error), 'api', context);
   }
 
   /**
    * Log parsing errors (recipe, school menu, etc.)
    */
   logParseError(
-    error: any,
+    error: Error | string,
     parseType: 'recipe' | 'school-menu' | 'url',
     input: string
   ): void {
@@ -128,7 +143,7 @@ class ErrorLogger {
   /**
    * Log authentication errors
    */
-  logAuthError(error: any, action: 'login' | 'logout' | 'session'): void {
+  logAuthError(error: Error | string, action: 'login' | 'logout' | 'session'): void {
     const context = {
       action,
       withCredentials: true, // We use withCredentials for session cookies
@@ -140,11 +155,19 @@ class ErrorLogger {
   /**
    * Log network errors
    */
-  logNetworkError(error: any, context?: Record<string, any>): void {
+  logNetworkError(error: Error | string, context?: ErrorContext): void {
+    // Network Information API types
+    interface NetworkInformation {
+      effectiveType?: string;
+    }
+    interface NavigatorWithConnection extends Navigator {
+      connection?: NetworkInformation;
+    }
+
     this.log(error, 'network', {
       ...context,
       online: navigator.onLine,
-      connectionType: (navigator as any).connection?.effectiveType,
+      connectionType: (navigator as NavigatorWithConnection).connection?.effectiveType,
     });
   }
 
@@ -153,7 +176,7 @@ class ErrorLogger {
    */
   logValidationError(
     field: string,
-    value: any,
+    value: unknown,
     constraint: string,
     message?: string
   ): void {
@@ -250,8 +273,38 @@ class ErrorLogger {
 
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sanitizedLogs));
     } catch (error) {
-      // Silently fail - don't let storage errors break the app
+      // Fallback: Log to console and store in memory buffer
+      console.warn('[ErrorLogger] Failed to save logs to localStorage:', error);
+
+      // Keep the most recent log in an in-memory fallback buffer
+      const lastLog = this.logs[this.logs.length - 1];
+      if (lastLog) {
+        this.fallbackBuffer.push(lastLog);
+        // Keep fallback buffer size limited
+        if (this.fallbackBuffer.length > this.maxFallbackBuffer) {
+          this.fallbackBuffer = this.fallbackBuffer.slice(-this.maxFallbackBuffer);
+        }
+      }
+
+      // Log to console to ensure error is never lost
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[ErrorLogger] Error not persisted:', lastLog?.message);
+      }
     }
+  }
+
+  /**
+   * Get errors from fallback buffer (errors that couldn't be saved to localStorage)
+   */
+  getFallbackBuffer(): ErrorLog[] {
+    return [...this.fallbackBuffer];
+  }
+
+  /**
+   * Check if there are unsaved errors in the fallback buffer
+   */
+  hasUnsavedErrors(): boolean {
+    return this.fallbackBuffer.length > 0;
   }
 
   /**
@@ -272,7 +325,7 @@ class ErrorLogger {
   /**
    * Create a formatted error message for user display
    */
-  formatUserMessage(error: any, friendlyMessage?: string): string {
+  formatUserMessage(error: Error | string | unknown, friendlyMessage?: string): string {
     const isDev = process.env.NODE_ENV !== 'production';
     const errorMsg = error instanceof Error ? error.message : String(error);
 
@@ -311,7 +364,7 @@ export const errorLogger = new ErrorLogger();
 export const logError = (
   error: Error | string,
   type?: ErrorLog['type'],
-  context?: Record<string, any>
+  context?: ErrorContext
 ) => errorLogger.log(error, type, context);
 
 export default errorLogger;

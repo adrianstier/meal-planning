@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, MapPin, Phone, Globe, Star, Trash2, Pencil, Sparkles, Filter, X, Utensils, Navigation, Clock, Map, List, Link2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Plus, MapPin, Phone, Globe, Star, Trash2, Pencil, Sparkles, Filter, X, Utensils, Navigation, Clock, Map, List } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -219,6 +219,7 @@ const RestaurantsPage: React.FC = () => {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleScrapeFromUrl = async () => {
     if (!scrapeUrl) {
       alert('Please enter a URL first');

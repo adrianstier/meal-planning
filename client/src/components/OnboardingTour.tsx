@@ -187,6 +187,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
         }
       }
     }
+  // Note: completeTour is stable (useCallback with [tourKey, onComplete]) so this is safe
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive, currentStep, steps, validSteps, calculateTooltipPosition]);
 
   // Handle window resize - recalculate position
@@ -233,6 +235,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     } else {
       completeTour();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, validSteps]);
 
   const handlePrevious = useCallback(() => {
@@ -252,6 +255,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   const handleSkip = useCallback(() => {
     setTooltipVisible(false);
     setTimeout(() => completeTour(), 200);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const completeTour = useCallback(() => {

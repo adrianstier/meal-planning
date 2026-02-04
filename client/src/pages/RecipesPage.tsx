@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X, Coffee, Salad, UtensilsCrossed, Apple, Globe, Star, Lightbulb, Check, Brain, Loader2 } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X, Coffee, Salad, UtensilsCrossed, Apple, Globe, Brain, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -34,6 +34,21 @@ import StarRating from '../components/StarRating';
 import { useDragDrop } from '../contexts/DragDropContext';
 import { useUndoToast } from '../components/ui/undo-toast';
 import { cn } from '../lib/utils';
+
+// Interface for parsed recipe data from AI/URL parsing
+interface ParsedRecipeData {
+  name?: string;
+  meal_type?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  cook_time_minutes?: number;
+  servings?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  tags?: string;
+  ingredients?: string | Array<{ quantity?: string; name: string }>;
+  instructions?: string | string[];
+  image_url?: string;
+  source_url?: string;
+  cuisine?: string;
+}
 
 const RecipesPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -108,11 +123,12 @@ const RecipesPage: React.FC = () => {
     setSelectedMealIds(newSelected);
   };
 
-  const selectAllInCurrentTab = (mealList: Meal[]) => {
-    const newSelected = new Set(selectedMealIds);
-    mealList.forEach(meal => newSelected.add(meal.id));
-    setSelectedMealIds(newSelected);
-  };
+  // selectAllInCurrentTab can be re-enabled when bulk selection UI is added
+  // const selectAllInCurrentTab = (mealList: Meal[]) => {
+  //   const newSelected = new Set(selectedMealIds);
+  //   mealList.forEach(meal => newSelected.add(meal.id));
+  //   setSelectedMealIds(newSelected);
+  // };
 
   const deselectAll = () => {
     setSelectedMealIds(new Set());
@@ -189,7 +205,7 @@ const RecipesPage: React.FC = () => {
   };
 
   // Helper to process parsed recipe data into form data
-  const processParseResult = (parsedData: any) => {
+  const processParseResult = (parsedData: ParsedRecipeData) => {
     // Pre-fill form with parsed data
     let ingredientsText = '';
     if (parsedData.ingredients && Array.isArray(parsedData.ingredients)) {

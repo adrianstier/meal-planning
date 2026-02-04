@@ -6,7 +6,6 @@ import {
   BookOpen,
   UtensilsCrossed,
   GraduationCap,
-  ListChecks,
   Package,
   LogOut,
   User,

@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DragDropProvider } from './contexts/DragDropContext';
+import { BroadcastSyncProvider } from './contexts/BroadcastSyncContext';
+import { UndoToastProvider } from './components/ui/undo-toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorLogViewer from './components/ErrorLogViewer';
 import Layout from './components/Layout';
@@ -34,8 +36,9 @@ const queryClient = new QueryClient({
 
 // Protected route wrapper component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, supabaseUser, loading } = useAuth();
 
+  // Wait for initial auth check to complete before deciding on redirect
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -47,7 +50,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  // Check supabaseUser first (set immediately), then user (profile, loaded async)
+  if (!supabaseUser && !user) {
     return <Navigate to="/login" replace />;
   }
 
@@ -194,12 +198,16 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <DragDropProvider>
-            <AppContent />
-            <ErrorLogViewer />
-          </DragDropProvider>
-        </AuthProvider>
+        <BroadcastSyncProvider>
+          <AuthProvider>
+            <DragDropProvider>
+              <UndoToastProvider>
+                <AppContent />
+                <ErrorLogViewer />
+              </UndoToastProvider>
+            </DragDropProvider>
+          </AuthProvider>
+        </BroadcastSyncProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

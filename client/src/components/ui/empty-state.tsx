@@ -76,12 +76,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     >
       {/* Icon */}
       <div className="mb-4 text-muted-foreground opacity-60">
-        {React.isValidElement(icon)
+        {React.isValidElement<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>(icon)
           ? React.cloneElement(icon, {
-              // @ts-ignore - Safe to add className to icon elements
               className: 'w-12 h-12 sm:w-16 sm:h-16',
-              'aria-hidden': 'true',
-            } as any)
+              'aria-hidden': 'true' as const,
+            })
           : icon}
       </div>
 

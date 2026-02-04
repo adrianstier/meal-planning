@@ -58,8 +58,6 @@ export const useDeleteRestaurant = () => {
 };
 
 export const useSuggestRestaurants = () => {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (filters?: RestaurantFilters) => restaurantsApi.suggest(filters),
   });

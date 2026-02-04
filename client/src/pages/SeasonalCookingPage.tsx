@@ -2,10 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Calendar, Package, TrendingUp, CheckCircle, XCircle, Trash2,
-  Sparkles, Leaf, ShoppingCart, Clock, AlertTriangle, ChevronDown,
-  ChevronUp, Store, Box, Info, CalendarPlus, ChevronRight, Search,
-  X, Camera, FileText, Wand2, Upload, Edit3, Loader2
+  Plus, Package, CheckCircle, Trash2,
+  Sparkles, Leaf, Clock, AlertTriangle, ChevronDown,
+  ChevronUp, Box, Info, CalendarPlus, Search,
+  X, Camera, FileText, Wand2, Upload, Loader2
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -15,7 +15,6 @@ import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { cn } from '../lib/utils';
 import {
-  getCurrentSeasonalProduce,
   getSeasonalProduceByMonth,
   getShelfLife,
   getStorageTip,
@@ -116,6 +115,7 @@ const getUrgencyLevel = (daysLeft: number): 'critical' | 'warning' | 'ok' => {
 };
 
 const SeasonalCookingPage: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const navigate = useNavigate();
 
   // Seasonal data
@@ -206,6 +206,7 @@ const SeasonalCookingPage: React.FC = () => {
   useEffect(() => {
     loadBoxes();
     loadAllProduce(); // Load unified produce list
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Reload produce when box selection changes
@@ -227,6 +228,7 @@ const SeasonalCookingPage: React.FC = () => {
       }, 500);
       return () => clearTimeout(timer);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unusedItems.length, selectedSeasonalItems.size]);
 
   const loadBoxes = async () => {

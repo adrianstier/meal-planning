@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format, parseISO, isToday } from 'date-fns';
+import { parseISO, isToday } from 'date-fns';
 import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';

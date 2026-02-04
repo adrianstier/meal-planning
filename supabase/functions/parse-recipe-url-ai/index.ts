@@ -247,6 +247,7 @@ Deno.serve(async (req: Request) => {
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) {
+      logError({ requestId, event: "missing_api_key", error: "ANTHROPIC_API_KEY not configured" });
       return errorResponse("AI service not configured", corsHeaders, 500);
     }
 

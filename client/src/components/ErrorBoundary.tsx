@@ -7,12 +7,17 @@ interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  /** If true, allows retry without full page reload */
+  allowPartialRecovery?: boolean;
+  /** Optional recovery key - changing this key will reset the error state */
+  recoveryKey?: string | number;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  retryCount: number;
 }
 
 /**
@@ -26,7 +31,23 @@ class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       errorInfo: null,
+      retryCount: 0,
     };
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    // Reset error state if recoveryKey changes (allows parent to trigger recovery)
+    if (
+      this.state.hasError &&
+      this.props.recoveryKey !== undefined &&
+      prevProps.recoveryKey !== this.props.recoveryKey
+    ) {
+      this.setState({
+        hasError: false,
+        error: null,
+        errorInfo: null,
+      });
+    }
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
@@ -55,12 +76,32 @@ class ErrorBoundary extends Component<Props, State> {
     }
   }
 
-  handleReset = () => {
-    this.setState({
+  /**
+   * Attempt to recover just the failed component without a full page reload.
+   * This preserves scroll position and other page context.
+   */
+  handleRetry = () => {
+    this.setState((prevState) => ({
       hasError: false,
       error: null,
       errorInfo: null,
-    });
+      retryCount: prevState.retryCount + 1,
+    }));
+  };
+
+  /**
+   * Full page reload - use as last resort when partial recovery fails.
+   */
+  handleFullReload = () => {
+    // Save current scroll position to sessionStorage for potential restoration
+    try {
+      sessionStorage.setItem(
+        'errorBoundary_scrollPosition',
+        JSON.stringify({ x: window.scrollX, y: window.scrollY })
+      );
+    } catch {
+      // Ignore storage errors
+    }
     window.location.reload();
   };
 
@@ -141,8 +182,26 @@ Environment:
               )}
 
               <div className="space-y-3">
+                {/* Primary action: Try to recover without full reload */}
+                {(this.props.allowPartialRecovery !== false) && (
+                  <Button
+                    onClick={this.handleRetry}
+                    className="w-full"
+                    size="lg"
+                  >
+                    Try Again
+                    {this.state.retryCount > 0 && (
+                      <span className="ml-2 text-xs opacity-70">
+                        (attempt {this.state.retryCount + 1})
+                      </span>
+                    )}
+                  </Button>
+                )}
+
+                {/* Secondary action: Full page reload if retry doesn't work */}
                 <Button
-                  onClick={this.handleReset}
+                  onClick={this.handleFullReload}
+                  variant={this.props.allowPartialRecovery !== false ? "outline" : "default"}
                   className="w-full"
                   size="lg"
                 >

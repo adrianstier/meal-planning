@@ -2,6 +2,7 @@
 
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:5173',
   'https://meal-planning-virid.vercel.app',
   'https://meal-planning-adrianstiers-projects.vercel.app',
@@ -47,6 +48,7 @@ export function handleCorsPrelight(req: Request): Response | null {
 // Input validation
 export const MAX_RECIPE_TEXT_LENGTH = 100000;
 export const MAX_URL_LENGTH = 2048;
+export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 export function isValidUrl(url: string): boolean {
   if (!url || url.length > MAX_URL_LENGTH) return false;
@@ -177,4 +179,52 @@ export function errorResponse(message: string, corsHeaders: Record<string, strin
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+// Anthropic API error handling
+export interface AnthropicErrorResult {
+  userMessage: string;
+  statusCode: number;
+}
+
+export function handleAnthropicError(response: Response, errorData: { error?: { type?: string; message?: string } }): AnthropicErrorResult {
+  const errorType = errorData?.error?.type;
+  const errorMessage = errorData?.error?.message || 'Unknown error';
+
+  switch (response.status) {
+    case 400:
+      return {
+        userMessage: 'Invalid request to AI service. Please try again.',
+        statusCode: 400,
+      };
+    case 401:
+      return {
+        userMessage: 'AI service authentication failed. Please contact support.',
+        statusCode: 500,
+      };
+    case 403:
+      return {
+        userMessage: 'AI service access denied. Please contact support.',
+        statusCode: 500,
+      };
+    case 429:
+      return {
+        userMessage: 'AI service is busy. Please try again in a few moments.',
+        statusCode: 429,
+      };
+    case 500:
+    case 502:
+    case 503:
+      return {
+        userMessage: 'AI service is temporarily unavailable. Please try again.',
+        statusCode: 503,
+      };
+    default:
+      // Log the actual error for debugging
+      console.error('Anthropic API error:', { status: response.status, type: errorType, message: errorMessage });
+      return {
+        userMessage: 'Failed to process with AI. Please try again.',
+        statusCode: response.status >= 500 ? 503 : 400,
+      };
+  }
 }

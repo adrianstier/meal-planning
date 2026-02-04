@@ -7,6 +7,8 @@ import {
   checkRateLimitSync,
   rateLimitExceededResponse,
   handleAnthropicError,
+  jsonResponse,
+  errorResponse,
   log,
   logError,
 } from "../_shared/cors.ts";
@@ -46,10 +48,7 @@ Deno.serve(async (req: Request) => {
   const authResult = await validateJWT(req);
   if (!authResult.authenticated) {
     log({ requestId, event: 'auth_failed', error: authResult.error });
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized', details: authResult.error }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse(authResult.error || 'Unauthorized', corsHeaders, 401);
   }
 
   // Check rate limit
@@ -63,29 +62,21 @@ Deno.serve(async (req: Request) => {
     const { image_data, image_type } = await req.json();
 
     if (!image_data) {
-      return new Response(
-        JSON.stringify({ error: 'Image data is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Image data is required', corsHeaders, 400);
     }
 
     // Validate image size (base64 is ~4/3 the size of binary)
     const estimatedBytes = (image_data.length * 3) / 4;
     if (estimatedBytes > MAX_IMAGE_SIZE_BYTES) {
-      return new Response(
-        JSON.stringify({ error: 'Image too large. Maximum size is 10MB.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Image too large. Maximum size is 10MB.', corsHeaders, 400);
     }
 
     log({ requestId, event: 'parse_image_started', imageSize: estimatedBytes });
 
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
     if (!ANTHROPIC_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: 'AI service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      logError({ requestId, event: 'missing_api_key', error: 'ANTHROPIC_API_KEY not configured' });
+      return errorResponse('AI service not configured', corsHeaders, 500);
     }
 
     // Extract base64 data (remove data URL prefix if present)
@@ -157,10 +148,7 @@ Estimate nutrition from ingredients if not shown.`;
         userId: authResult.userId
       });
 
-      return new Response(
-        JSON.stringify({ error: userMessage }),
-        { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse(userMessage, corsHeaders, statusCode);
     }
 
     const aiResponse = await response.json();
@@ -177,10 +165,8 @@ Estimate nutrition from ingredients if not shown.`;
     });
 
     if (!content) {
-      return new Response(
-        JSON.stringify({ error: 'No response from AI' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      logError({ requestId, event: 'empty_ai_response', userId: authResult.userId });
+      return errorResponse('No response from AI', corsHeaders, 500);
     }
 
     let parsedRecipe: ParsedRecipe;
@@ -188,11 +174,8 @@ Estimate nutrition from ingredients if not shown.`;
       const cleanJson = content.replace(/```json\n?|\n?```/g, '').trim();
       parsedRecipe = JSON.parse(cleanJson);
     } catch (parseError) {
-      console.error('JSON parse error:', parseError, 'Content:', content);
-      return new Response(
-        JSON.stringify({ error: 'Failed to parse AI response', raw: content }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      logError({ requestId, event: 'json_parse_error', error: parseError, content: content.substring(0, 500), userId: authResult.userId });
+      return errorResponse('Failed to parse AI response. Please try again.', corsHeaders, 500);
     }
 
     // Validate and set defaults
@@ -224,16 +207,11 @@ Estimate nutrition from ingredients if not shown.`;
 
     log({ requestId, event: 'parse_image_success', recipeName: recipe.name });
 
-    return new Response(
-      JSON.stringify(recipe),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return jsonResponse(recipe, corsHeaders);
 
   } catch (error) {
     logError({ requestId, event: 'parse_image_error', error });
-    return new Response(
-      JSON.stringify({ error: 'Failed to parse recipe from image. Please try again.' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return errorResponse(`Failed to parse recipe from image: ${message}`, corsHeaders, 500);
   }
 });

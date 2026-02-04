@@ -102,6 +102,9 @@ export const useGenerateWeekPlan = () => {
       generateBentos?: boolean;
       bentoChildName?: string;
     }) => planApi.generateWeek(startDate, numDays, mealTypes, avoidSchoolDuplicates, cuisines, generateBentos, bentoChildName),
+    onError: (error) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), '/plan/generate-week', 'POST');
+    },
   });
 };
 
@@ -118,6 +121,9 @@ export const useApplyGeneratedPlan = () => {
     mutationFn: (plan: GeneratedMealPlanItem[]) => planApi.applyGenerated(plan),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plan'] });
+    },
+    onError: (error) => {
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), '/plan/apply-generated', 'POST');
     },
   });
 };

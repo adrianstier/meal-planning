@@ -49,4 +49,9 @@ playwright/.cache/
 *_backup/
 *.bak
 .env*.local
+
+# Test credentials (do not commit!)
+TEST_CREDENTIALS.md
+test-credentials.md
+
 # Trigger rebuild

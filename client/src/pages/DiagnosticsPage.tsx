@@ -20,7 +20,7 @@ interface ErrorLog {
   url?: string;
   user_id?: string;
   user_agent?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   resolved: boolean;
   resolved_at?: string;
 }
@@ -88,9 +88,10 @@ const DiagnosticsPage: React.FC = () => {
       if (deleteError) throw deleteError;
 
       setCleanupResult(`Success! Deleted ${idsToDelete.length} duplicate meals.`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Cleanup error:', error);
-      setCleanupResult(`Failed: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      setCleanupResult(`Failed: ${message}`);
     }
   };
 
@@ -123,9 +124,9 @@ const DiagnosticsPage: React.FC = () => {
 
       setErrors(data || []);
       console.log(`[Diagnostics] Refreshed: Loaded ${data?.length || 0} errors`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch errors:', error);
-      errorLogger.logApiError(error, '/error_logs', 'GET');
+      errorLogger.logApiError(error instanceof Error ? error : new Error(String(error)), '/error_logs', 'GET');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -170,7 +171,7 @@ const DiagnosticsPage: React.FC = () => {
         recent_24h: recent_24h || 0,
         by_type: Object.entries(typeCounts).map(([error_type, count]) => ({ error_type, count })),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch error stats:', error);
     }
   };
@@ -255,9 +256,10 @@ const DiagnosticsPage: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to export errors:', error);
-      alert(`Error: ${error.message || 'Failed to export errors'}`);
+      const message = error instanceof Error ? error.message : 'Failed to export errors';
+      alert(`Error: ${message}`);
     }
   };
 

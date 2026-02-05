@@ -118,11 +118,15 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
             Add {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
           </DialogTitle>
           <DialogDescription>
-            Select a meal for {new Date(date).toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric'
-            })}
+            Select a meal for {(() => {
+              // Parse date string as local timezone to avoid UTC midnight shift
+              const [year, month, day] = date.split('-').map(Number);
+              return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+              });
+            })()}
           </DialogDescription>
         </DialogHeader>
 

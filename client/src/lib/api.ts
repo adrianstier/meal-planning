@@ -154,6 +154,7 @@ async function directEdgeFunctionFetch<T>(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
         'apikey': supabaseAnonKey,
+        'X-Requested-With': 'XMLHttpRequest', // CSRF protection header
       },
       body: JSON.stringify(body),
       signal: controller.signal,
@@ -1080,11 +1081,12 @@ export const planApi = {
       throw error;
     }
 
+    // Check for empty meals after filtering by criteria
     if (!meals || meals.length === 0) {
       const cuisineFilter = cuisines && cuisines !== 'all' && Array.isArray(cuisines) && cuisines.length > 0
         ? ` with cuisine "${cuisines.join(', ')}"`
         : '';
-      throw new Error(`No ${mealTypes.join('/')} recipes found${cuisineFilter}. Add some recipes first!`);
+      throw new Error(`No meals match your criteria. No ${mealTypes.join('/')} recipes found${cuisineFilter}. Try removing some filters or adding more recipes.`);
     }
 
     if (meals.length < numDays) {
@@ -1094,8 +1096,13 @@ export const planApi = {
       );
     }
 
-    // Shuffle meals randomly
+    // Shuffle meals randomly - use a copy to avoid mutating the original
     const shuffled = [...meals].sort(() => Math.random() - 0.5);
+
+    // Safety check: ensure we have meals to work with before proceeding
+    if (shuffled.length === 0) {
+      throw new Error('No meals available after processing. Try removing some filters or adding more recipes.');
+    }
 
     // Generate plan for each day
     const generatedPlan: GeneratedMealPlanItem[] = [];
@@ -1739,7 +1746,7 @@ export const shoppingApi = {
         // Supports: digits, common Unicode fractions (½¼¾⅓⅔⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚), spaces, slashes, dots
         // Also handles mixed fractions like "1 1/2" or "1½"
         // The 'u' flag enables full Unicode support for ingredient names
-        const match = trimmed.match(/^([\d½¼¾⅓⅔⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚\s\/\.]+)?\s*(.+)$/u);
+        const match = trimmed.match(/^([\d½¼¾⅓⅔⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚\s/.]+)?\s*(.+)$/u);
         const quantity = match?.[1]?.trim() || '';
         const name = match?.[2]?.trim().toLowerCase() || trimmed.toLowerCase();
 
@@ -2236,7 +2243,7 @@ export const bentoApi = {
 };
 
 // Default export for backwards compatibility
-export default {
+const api = {
   meals: mealsApi,
   plan: planApi,
   leftovers: leftoversApi,
@@ -2246,3 +2253,5 @@ export default {
   restaurants: restaurantsApi,
   bento: bentoApi,
 };
+
+export default api;

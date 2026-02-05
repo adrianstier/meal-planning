@@ -410,10 +410,10 @@ const RestaurantsPage: React.FC = () => {
                     )}
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(restaurant)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(restaurant)} aria-label="Edit restaurant">
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(restaurant)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(restaurant)} aria-label="Delete restaurant">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

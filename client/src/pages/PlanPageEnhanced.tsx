@@ -242,10 +242,6 @@ const PlanPageEnhanced: React.FC = () => {
   const [history, setHistory] = useState<HistoryAction[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
-  // Navigation debounce to prevent race conditions when clicking rapidly
-  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isNavigatingRef = useRef(false);
-
   // Toast timeout ref to prevent memory leaks
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -470,40 +466,9 @@ const PlanPageEnhanced: React.FC = () => {
     );
   }, []);
 
-  // Track the target week for navigation to handle race conditions
-  const pendingNavigationRef = useRef<string | null>(null);
-
-  // Debounced navigation to prevent race conditions when clicking rapidly
+  // Simple navigation - React's state batching handles rapid updates
   const navigateToWeek = useCallback((newWeekStart: string) => {
-    // Clear any pending navigation timeout
-    if (navigationTimeoutRef.current) {
-      clearTimeout(navigationTimeoutRef.current);
-      navigationTimeoutRef.current = null;
-    }
-
-    // If already navigating, store the new target and let the current navigation complete
-    // The pending navigation will be picked up after the current one finishes
-    if (isNavigatingRef.current) {
-      pendingNavigationRef.current = newWeekStart;
-      return;
-    }
-
-    // Mark as navigating and set the new week
-    isNavigatingRef.current = true;
-    pendingNavigationRef.current = null;
     setCurrentWeekStart(newWeekStart);
-
-    // Reset navigation lock after a short delay, then check for pending navigation
-    navigationTimeoutRef.current = setTimeout(() => {
-      isNavigatingRef.current = false;
-
-      // If there's a pending navigation, execute it
-      if (pendingNavigationRef.current !== null) {
-        const pendingWeek = pendingNavigationRef.current;
-        pendingNavigationRef.current = null;
-        navigateToWeek(pendingWeek);
-      }
-    }, 300);
   }, []);
 
   const goToPreviousWeek = useCallback(() => {
@@ -521,12 +486,9 @@ const PlanPageEnhanced: React.FC = () => {
     navigateToWeek(format(startOfWeek(today, { weekStartsOn: 0 }), 'yyyy-MM-dd'));
   }, [navigateToWeek]);
 
-  // Cleanup navigation and toast timeouts on unmount
+  // Cleanup toast timeout on unmount
   useEffect(() => {
     return () => {
-      if (navigationTimeoutRef.current) {
-        clearTimeout(navigationTimeoutRef.current);
-      }
       if (toastTimeoutRef.current) {
         clearTimeout(toastTimeoutRef.current);
       }

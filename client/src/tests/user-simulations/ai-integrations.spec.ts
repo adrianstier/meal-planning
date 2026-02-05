@@ -6,9 +6,15 @@
 
 import { test, expect, Page } from '@playwright/test';
 
-const TEST_EMAIL = 'claudetest@mealplanner.dev';
-const TEST_PASSWORD = 'ClaudeTest2024';
-const BASE_URL = 'http://localhost:3001';
+// Test credentials - loaded from environment variables
+// Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD in your environment
+const TEST_EMAIL = process.env.PLAYWRIGHT_TEST_EMAIL || '';
+const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD || '';
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
+
+if (!TEST_EMAIL || !TEST_PASSWORD) {
+  console.warn('[WARNING] Test credentials not set. Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD environment variables.');
+}
 
 // Helper to login
 async function login(page: Page): Promise<boolean> {
@@ -117,20 +123,14 @@ test.describe('AI Recipe Import Tests', () => {
         await urlOption.click();
         await page.waitForTimeout(500);
 
-        // Try to submit without entering URL
+        // Verify Import button is disabled when URL is empty (correct validation behavior)
         const importButton = page.locator('button:has-text("Import")').first();
 
         if (await importButton.isVisible()) {
-          // Set up dialog listener for alert
-          page.on('dialog', async dialog => {
-            expect(dialog.message()).toContain('URL');
-            await dialog.accept();
-          });
-
-          await importButton.click();
-          await page.waitForTimeout(1000);
-
-          console.log('Empty URL validation working');
+          // The button should be disabled when URL field is empty
+          const isDisabled = await importButton.isDisabled();
+          expect(isDisabled).toBe(true);
+          console.log('Empty URL validation working - Import button correctly disabled');
         }
       }
     }

@@ -326,9 +326,9 @@ Deno.serve(async (req: Request) => {
     // Load active leftovers
     const { data: leftovers } = await supabase
       .from('leftovers_inventory')
-      .select('meals(name), servings_remaining, expiry_date')
+      .select('meals:meal_id(name), servings_remaining, expires_date')
       .eq('user_id', user.id)
-      .gt('expiry_date', new Date().toISOString())
+      .gt('expires_date', new Date().toISOString().split('T')[0])
       .gt('servings_remaining', 0)
 
     const leftoverContext = leftovers?.length

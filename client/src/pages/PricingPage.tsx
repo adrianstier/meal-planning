@@ -135,7 +135,7 @@ const PricingPage: React.FC = () => {
               </CardHeader>
 
               <CardContent className="flex-1 space-y-4">
-                <ul className="space-y-3" role="list">
+                <ul className="space-y-3">
                   {tier.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-start gap-3">
                       <Check

@@ -5,6 +5,16 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 
 /**
+ * Stats interface matching the return type of errorLogger.getStats()
+ */
+interface ErrorLogStats {
+  total: number;
+  byType: Record<string, number>;
+  last24h: number;
+  lastHour: number;
+}
+
+/**
  * Error Log Viewer Component
  * Displays collected error logs for debugging
  * Access via keyboard shortcut: Ctrl+Shift+E (or Cmd+Shift+E on Mac)
@@ -13,7 +23,7 @@ const ErrorLogViewer: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [logs, setLogs] = useState<ErrorLog[]>([]);
   const [filter, setFilter] = useState<string>('all');
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<ErrorLogStats | null>(null);
 
   // Load logs when dialog opens
   useEffect(() => {

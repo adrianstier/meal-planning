@@ -256,7 +256,7 @@ const PlanPage: React.FC = () => {
           {/* Week Navigation Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
+              <Button variant="outline" size="icon" onClick={goToPreviousWeek} aria-label="Go to previous week">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="min-w-[280px] text-center">
@@ -265,7 +265,7 @@ const PlanPage: React.FC = () => {
                   {format(addDays(parseISO(currentWeekStart), 6), 'MMM d, yyyy')}
                 </CardTitle>
               </div>
-              <Button variant="outline" size="icon" onClick={goToNextWeek}>
+              <Button variant="outline" size="icon" onClick={goToNextWeek} aria-label="Go to next week">
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <Button data-tour-id="this-week" variant="outline" size="sm" onClick={goToThisWeek}>
@@ -546,8 +546,8 @@ const PlanPage: React.FC = () => {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedMeal?.meal_name}</DialogTitle>
-            <DialogDescription>
-              <div className="flex gap-3 text-sm mt-2">
+            <DialogDescription asChild>
+              <div className="flex gap-3 text-sm mt-2 text-muted-foreground">
                 {selectedMeal?.cook_time_minutes && (
                   <span>{selectedMeal.cook_time_minutes} min</span>
                 )}

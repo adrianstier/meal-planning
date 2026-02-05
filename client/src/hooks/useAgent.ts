@@ -73,6 +73,7 @@ async function callAgent(
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`,
+        'X-Requested-With': 'XMLHttpRequest', // CSRF protection header
       },
       body: JSON.stringify({
         message,

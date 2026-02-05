@@ -420,30 +420,35 @@ const RecipesPage: React.FC = () => {
     if (selectedMeal) {
       const mealToDelete = selectedMeal;
 
-      await deleteMeal.mutateAsync(mealToDelete.id);
-      setDeleteDialogOpen(false);
-      setSelectedMeal(null);
+      try {
+        await deleteMeal.mutateAsync(mealToDelete.id);
+        setDeleteDialogOpen(false);
+        setSelectedMeal(null);
 
-      // Show undo toast with ability to restore
-      showUndoToast({
-        message: `"${mealToDelete.name}" deleted`,
-        duration: 8000,
-        undoFn: async () => {
-          // Restore the meal by creating it again
-          await createMeal.mutateAsync({
-            name: mealToDelete.name,
-            meal_type: mealToDelete.meal_type,
-            cook_time_minutes: mealToDelete.cook_time_minutes,
-            servings: mealToDelete.servings,
-            difficulty: mealToDelete.difficulty,
-            tags: mealToDelete.tags,
-            ingredients: mealToDelete.ingredients,
-            instructions: mealToDelete.instructions,
-            image_url: mealToDelete.image_url,
-            is_favorite: mealToDelete.is_favorite,
-          });
-        },
-      });
+        // Show undo toast with ability to restore only after successful deletion
+        showUndoToast({
+          message: `"${mealToDelete.name}" deleted`,
+          duration: 8000,
+          undoFn: async () => {
+            // Restore the meal by creating it again
+            await createMeal.mutateAsync({
+              name: mealToDelete.name,
+              meal_type: mealToDelete.meal_type,
+              cook_time_minutes: mealToDelete.cook_time_minutes,
+              servings: mealToDelete.servings,
+              difficulty: mealToDelete.difficulty,
+              tags: mealToDelete.tags,
+              ingredients: mealToDelete.ingredients,
+              instructions: mealToDelete.instructions,
+              image_url: mealToDelete.image_url,
+              is_favorite: mealToDelete.is_favorite,
+            });
+          },
+        });
+      } catch (error) {
+        console.error('Failed to delete meal:', error);
+        // Keep dialog open on error so user can retry or cancel
+      }
     }
   };
 
@@ -1433,8 +1438,8 @@ const RecipesPage: React.FC = () => {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedMeal?.name}</DialogTitle>
-            <DialogDescription>
-              <div className="flex gap-3 text-sm mt-2">
+            <DialogDescription asChild>
+              <div className="flex gap-3 text-sm mt-2 text-muted-foreground">
                 {selectedMeal?.cook_time_minutes && (
                   <span>{selectedMeal.cook_time_minutes} min</span>
                 )}

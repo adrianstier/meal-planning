@@ -541,8 +541,20 @@ const SeasonalCookingPage: React.FC = () => {
       } else {
         setAIParseError('Failed to parse text');
       }
-    } catch (error: any) {
-      setAIParseError(error.response?.data?.error || 'Failed to parse text');
+    } catch (error: unknown) {
+      // Extract error message from various error formats
+      let message = 'Failed to parse text';
+      if (error instanceof Error) {
+        message = error.message;
+      } else if (error && typeof error === 'object') {
+        const errObj = error as Record<string, unknown>;
+        const responseData = errObj.response as Record<string, unknown> | undefined;
+        if (responseData?.data && typeof responseData.data === 'object') {
+          const data = responseData.data as Record<string, unknown>;
+          if (typeof data.error === 'string') message = data.error;
+        }
+      }
+      setAIParseError(message);
     } finally {
       setAIParsing(false);
     }
@@ -590,8 +602,20 @@ const SeasonalCookingPage: React.FC = () => {
         } else {
           setAIParseError('Failed to parse image');
         }
-      } catch (error: any) {
-        setAIParseError(error.response?.data?.error || 'Failed to parse image');
+      } catch (error: unknown) {
+        // Extract error message from various error formats
+        let message = 'Failed to parse image';
+        if (error instanceof Error) {
+          message = error.message;
+        } else if (error && typeof error === 'object') {
+          const errObj = error as Record<string, unknown>;
+          const responseData = errObj.response as Record<string, unknown> | undefined;
+          if (responseData?.data && typeof responseData.data === 'object') {
+            const data = responseData.data as Record<string, unknown>;
+            if (typeof data.error === 'string') message = data.error;
+          }
+        }
+        setAIParseError(message);
       } finally {
         setAIParsing(false);
       }
@@ -605,7 +629,7 @@ const SeasonalCookingPage: React.FC = () => {
     ));
   };
 
-  const updateParsedItem = (index: number, field: keyof ParsedProduceItem, value: any) => {
+  const updateParsedItem = (index: number, field: keyof ParsedProduceItem, value: ParsedProduceItem[keyof ParsedProduceItem]) => {
     setParsedItems(prev => prev.map((item, i) =>
       i === index ? { ...item, [field]: value } : item
     ));
@@ -642,8 +666,20 @@ const SeasonalCookingPage: React.FC = () => {
       } else {
         setAIParseError('Failed to add items');
       }
-    } catch (error: any) {
-      setAIParseError(error.response?.data?.error || 'Failed to add items');
+    } catch (error: unknown) {
+      // Extract error message from various error formats
+      let message = 'Failed to add items';
+      if (error instanceof Error) {
+        message = error.message;
+      } else if (error && typeof error === 'object') {
+        const errObj = error as Record<string, unknown>;
+        const responseData = errObj.response as Record<string, unknown> | undefined;
+        if (responseData?.data && typeof responseData.data === 'object') {
+          const data = responseData.data as Record<string, unknown>;
+          if (typeof data.error === 'string') message = data.error;
+        }
+      }
+      setAIParseError(message);
     } finally {
       setAIParsing(false);
     }

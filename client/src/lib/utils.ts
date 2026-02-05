@@ -48,7 +48,7 @@ export function truncate(text: string, maxLength: number): string {
  * @param fn - Function to debounce
  * @param delay - Delay in milliseconds
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {

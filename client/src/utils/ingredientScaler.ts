@@ -70,7 +70,7 @@ const decimalToFraction = (decimal: number): string => {
  */
 export const scaleIngredient = (ingredientLine: string, multiplier: number): string => {
   // Try to find numbers at the start of the line (with optional fractions)
-  const numberPattern = /^(\d+\s*)?([¼½¾⅓⅔⅛⅜⅝⅞]|[\d\/]+)?\s*/;
+  const numberPattern = /^(\d+\s*)?([¼½¾⅓⅔⅛⅜⅝⅞]|[\d/]+)?\s*/;
   const match = ingredientLine.match(numberPattern);
 
   if (!match) {
@@ -121,6 +121,7 @@ export const calculateServingMultiplier = (
   originalServings: number,
   desiredServings: number
 ): number => {
-  if (originalServings <= 0) return 1;
+  // Guard against invalid inputs that could cause division by zero or negative multipliers
+  if (originalServings <= 0 || desiredServings <= 0) return 1;
   return desiredServings / originalServings;
 };

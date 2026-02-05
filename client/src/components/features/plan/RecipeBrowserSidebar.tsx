@@ -83,6 +83,7 @@ const RecipeBrowserSidebar: React.FC<RecipeBrowserSidebarProps> = ({ meals, isOp
             size="icon"
             onClick={onClose}
             className="h-8 w-8 rounded-full hover:bg-slate-200"
+            aria-label="Close recipe browser"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -108,6 +109,8 @@ const RecipeBrowserSidebar: React.FC<RecipeBrowserSidebarProps> = ({ meals, isOp
             <button
               onClick={() => setSearchQuery('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              aria-label="Clear search"
+              type="button"
             >
               <X className="h-4 w-4" />
             </button>

@@ -95,6 +95,7 @@ const MealCard: React.FC<MealCardProps> = ({
             onDelete();
           }}
           title="Remove from plan"
+          aria-label="Remove meal from plan"
           type="button"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -110,6 +111,7 @@ const MealCard: React.FC<MealCardProps> = ({
               size="icon"
               className="absolute top-1 right-1 h-6 w-6 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/95 shadow-sm hover:bg-slate-50"
               onClick={(e) => e.stopPropagation()}
+              aria-label="More actions"
             >
               <MoreVertical className="h-3 w-3" />
             </Button>

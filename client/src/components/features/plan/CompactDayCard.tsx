@@ -60,7 +60,7 @@ const CompactDayCard: React.FC<CompactDayCardProps> = ({
 
   const totalMeals = Object.entries(meals)
     .filter(([mealType]) => shouldShowMeal(mealType))
-    .flatMap(([_, mealList]) => mealList).length;
+    .flatMap(([, mealList]) => mealList).length;
 
   return (
     <Card className={`${isTodayCard ? 'border-slate-300' : 'border-slate-200'}`}>
@@ -82,6 +82,8 @@ const CompactDayCard: React.FC<CompactDayCardProps> = ({
               size="sm"
               className="h-6"
               onClick={() => setExpanded(!expanded)}
+              aria-label={expanded ? 'Collapse day details' : 'Expand day details'}
+              aria-expanded={expanded}
             >
               {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </Button>

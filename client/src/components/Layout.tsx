@@ -73,7 +73,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [mobileMenuOpen]);
 
   const handleLogout = async () => {
-    await logout();
+    try {
+      await logout();
+    } catch (error) {
+      // Logout already handles errors internally, but we catch here to prevent unhandled rejection
+      console.error('[Layout] Logout error:', error);
+    }
   };
 
   const isPlanPage = location.pathname === '/plan';

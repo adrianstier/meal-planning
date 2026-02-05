@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
   getCorsHeaders,
   handleCorsPrelight,
+  requireCsrfHeader,
   validateJWT,
   checkRateLimitSync,
   rateLimitExceededResponse,
@@ -83,6 +84,14 @@ Deno.serve(async (req: Request) => {
   const preflight = handleCorsPrelight(req);
   if (preflight) return preflight;
 
+  // CSRF protection
+  if (!requireCsrfHeader(req)) {
+    return new Response(
+      JSON.stringify({ error: 'Missing security header' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Auth
   const auth = await validateJWT(req);
   if (!auth.authenticated) {
@@ -125,22 +134,22 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Fetch meal plan items for the date range
+    // Fetch scheduled meal items for the date range (using scheduled_meals table)
     const { data: planItems, error: planError } = await supabase
-      .from("meal_plans")
+      .from("scheduled_meals")
       .select(`
-        date,
+        meal_date,
         meal_type,
         servings,
-        meals (
+        meals:meal_id (
           name,
           ingredients,
           servings
         )
       `)
       .eq("user_id", auth.userId)
-      .gte("date", startDate)
-      .lte("date", endDate);
+      .gte("meal_date", startDate)
+      .lte("meal_date", endDate);
 
     if (planError) {
       logError({ requestId, event: "fetch_plan_error", error: planError });
@@ -159,7 +168,7 @@ Deno.serve(async (req: Request) => {
       if (meal?.ingredients) {
         const servingMultiplier = (item.servings || 1) / (meal.servings || 1);
         mealIngredients.push(
-          `${meal.name} (${item.date}, ${item.meal_type}, ${item.servings} servings, multiplier: ${servingMultiplier.toFixed(1)}x):\n${meal.ingredients}`
+          `${meal.name} (${item.meal_date}, ${item.meal_type}, ${item.servings} servings, multiplier: ${servingMultiplier.toFixed(1)}x):\n${meal.ingredients}`
         );
       }
     }

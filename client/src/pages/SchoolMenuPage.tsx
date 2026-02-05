@@ -208,7 +208,7 @@ const SchoolMenuPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {sortedDates.map((date) => {
-            const items = menuByDate[date];
+            const items = menuByDate[date] ?? [];
             const dateObj = parseISO(date);
             const isPastDate = isPast(startOfDay(dateObj));
 

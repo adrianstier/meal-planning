@@ -88,11 +88,15 @@ const BentoPage: React.FC = () => {
   useEffect(() => {
     fetchItems();
     fetchPlans();
-    // Set default week start to next Monday
+    // Set default week start to next Monday (using local timezone)
     const today = new Date();
     const nextMonday = new Date(today);
     nextMonday.setDate(today.getDate() + ((8 - today.getDay()) % 7));
-    setWeekStart(nextMonday.toISOString().split('T')[0]);
+    // Format as YYYY-MM-DD in local timezone to avoid UTC midnight shift
+    const year = nextMonday.getFullYear();
+    const month = String(nextMonday.getMonth() + 1).padStart(2, '0');
+    const day = String(nextMonday.getDate()).padStart(2, '0');
+    setWeekStart(`${year}-${month}-${day}`);
   }, []);
 
   const fetchItems = async () => {

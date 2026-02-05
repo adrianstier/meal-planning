@@ -119,7 +119,19 @@ class ErrorLogger {
       apiBaseUrl: process.env.REACT_APP_API_URL || 'not set',
     };
 
-    this.log(error instanceof Error ? error : String(error), 'api', context);
+    // Properly serialize error objects to avoid [object Object]
+    let errorToLog: Error | string;
+    if (error instanceof Error) {
+      errorToLog = error;
+    } else if (typeof error === 'object' && error !== null) {
+      // Extract meaningful message from error objects (e.g., Supabase errors)
+      const errObj = error as Record<string, unknown>;
+      const message = errObj.message || errObj.error || errObj.details || JSON.stringify(error);
+      errorToLog = String(message);
+    } else {
+      errorToLog = String(error);
+    }
+    this.log(errorToLog, 'api', context);
   }
 
   /**

@@ -8,7 +8,7 @@ import { User, Mail, Calendar, CheckCircle2, Loader2, Info } from 'lucide-react'
 import { formatDate } from '../lib/utils';
 
 export default function ProfilePage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [displayName, setDisplayName] = useState(user?.display_name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [error, setError] = useState('');
@@ -39,33 +39,16 @@ export default function ProfilePage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          display_name: displayName,
-          email: email,
-        }),
+      // Use AuthContext updateProfile to update via Supabase directly
+      await updateProfile({
+        display_name: displayName,
+        email: email,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Unable to update your profile. Please try again.');
-      }
-
-      // Update the user context with new data
-      if (updateUser && data.user) {
-        updateUser(data.user);
-      }
 
       setSuccess('Your profile has been updated successfully.');
     } catch (err) {
-      const error = err as Error;
-      setError(error.message || 'An unexpected error occurred. Please try again.');
+      const error = err instanceof Error ? err : new Error('An unexpected error occurred');
+      setError(error.message || 'Unable to update your profile. Please try again.');
     } finally {
       setLoading(false);
     }

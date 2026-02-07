@@ -533,7 +533,7 @@ If you don't know something, say so rather than making things up.`
         .from('leftovers_inventory')
         .select('*, meals(name)')
         .eq('user_id', userId)
-        .gt('expiry_date', new Date().toISOString())
+        .gt('expires_date', new Date().toISOString())
         .gt('servings_remaining', 0)
 
       if (leftovers) {
@@ -543,7 +543,7 @@ If you don't know something, say so rather than making things up.`
           meal_name: l.meals?.name || 'Unknown',
           servings_remaining: l.servings_remaining,
           created_date: l.created_date,
-          expiry_date: l.expiry_date,
+          expiry_date: l.expires_date,
         }))
       }
 

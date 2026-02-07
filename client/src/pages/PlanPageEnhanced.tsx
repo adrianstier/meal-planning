@@ -260,8 +260,6 @@ const PlanPageEnhanced: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('Drop event triggered:', { date, mealType, draggedRecipe });
-
     // Try to get meal from dataTransfer if draggedRecipe is null
     let mealToAdd: Meal | undefined = draggedRecipe?.meal;
     if (!mealToAdd) {
@@ -271,7 +269,6 @@ const PlanPageEnhanced: React.FC = () => {
           const parsed: unknown = JSON.parse(data);
           if (validateMealFromDrag(parsed)) {
             mealToAdd = parsed;
-            console.log('Got meal from dataTransfer:', mealToAdd);
           }
         }
       } catch (err) {
@@ -295,15 +292,11 @@ const PlanPageEnhanced: React.FC = () => {
       };
       const backendMealType = mealTypeMap[mealType];
 
-      console.log('Adding to plan:', { meal_id: mealToAdd.id, plan_date: date, meal_type: backendMealType });
-
       await addPlanItem.mutateAsync({
         meal_id: mealToAdd.id,
         plan_date: date,
         meal_type: backendMealType,
       });
-
-      console.log('Successfully added meal to plan!');
     } catch (error) {
       console.error('Failed to add meal to plan:', error);
     }
@@ -582,15 +575,12 @@ const PlanPageEnhanced: React.FC = () => {
   // TODO: Implement move meal dialog - GitHub issue #TBD
   // This would allow users to drag or select a target slot to move the meal to
   const handleMoveMeal = useCallback((_meal: MealPlan) => {
-    console.log('Move meal feature not yet implemented');
-    // Future implementation: Open a dialog to select target date/slot
+    // TODO: Open a dialog to select target date/slot
   }, []);
 
-  // TODO: Implement swap meal dialog - GitHub issue #TBD
-  // This would allow users to select another meal to swap positions with
+  // TODO: Implement swap meal dialog
   const handleSwapMeal = useCallback((_meal: MealPlan) => {
-    console.log('Swap meal feature not yet implemented');
-    // Future implementation: Open a dialog to select another meal to swap with
+    // TODO: Open a dialog to select another meal to swap with
   }, []);
 
   // Handler for viewing a meal's details

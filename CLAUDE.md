@@ -219,3 +219,10 @@ Extracts recipe from photos using Claude vision.
 ### Build Status
 - Clean build with no warnings
 - All 22 Playwright tests passing
+
+---
+
+## File Ownership (parallel work)
+- `client/` — frontend app, splittable by feature
+- `supabase/` — backend/database, independent from frontend
+- Root `.md` files — planning docs, independent

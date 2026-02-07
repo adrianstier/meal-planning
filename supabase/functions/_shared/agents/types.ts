@@ -134,6 +134,7 @@ export interface Leftover {
   meal_name: string
   servings_remaining: number
   created_date: string
+  /** Maps to `expires_date` column in database */
   expiry_date: string
 }
 

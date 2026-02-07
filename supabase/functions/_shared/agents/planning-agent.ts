@@ -527,9 +527,9 @@ Be helpful and conversational.`,
         .from('leftovers_inventory')
         .select('*, meals(name)')
         .eq('user_id', context.userId)
-        .gt('expiry_date', new Date().toISOString())
+        .gt('expires_date', new Date().toISOString())
         .gt('servings_remaining', 0)
-        .order('expiry_date')
+        .order('expires_date')
 
       if (error) {
         return { success: false, error: error.message }
@@ -541,7 +541,7 @@ Be helpful and conversational.`,
         meal_name: l.meals?.name || 'Unknown',
         servings_remaining: l.servings_remaining,
         created_date: l.created_date,
-        expiry_date: l.expiry_date,
+        expiry_date: l.expires_date,
       }))
 
       return { success: true, data: leftovers }

@@ -82,7 +82,6 @@ const PricingPage: React.FC = () => {
     // Stripe integration is planned but not yet implemented.
     // When ready, this will redirect to Stripe Checkout with the selected tier.
     // See: https://stripe.com/docs/payments/checkout
-    console.log(`Subscribing to ${tierName}`);
     alert(`Stripe integration coming soon! You selected: ${tierName}`);
   };
 

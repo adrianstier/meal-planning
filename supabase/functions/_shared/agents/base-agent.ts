@@ -105,50 +105,59 @@ export abstract class BaseAgent {
     // Build context from memory
     const contextSummary = this.buildContextSummary(context)
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: 4096,
-        system: `${systemPrompt}\n\n${contextSummary}`,
-        messages: [
-          {
-            role: 'user',
-            content: userMessage,
-          },
-        ],
-      }),
-    })
+    // 30-second timeout to prevent hanging requests
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`)
-    }
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          max_tokens: 4096,
+          system: `${systemPrompt}\n\n${contextSummary}`,
+          messages: [
+            {
+              role: 'user',
+              content: userMessage,
+            },
+          ],
+        }),
+        signal: controller.signal,
+      })
 
-    const data = await response.json() as AnthropicMessage
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`)
+      }
 
-    const content = data.content
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text || '')
-      .join('')
+      const data = await response.json() as AnthropicMessage
 
-    // Calculate approximate cost (Claude 3.5 Haiku pricing)
-    const inputCost = (data.usage.input_tokens / 1_000_000) * 0.25
-    const outputCost = (data.usage.output_tokens / 1_000_000) * 1.25
+      const content = data.content
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text || '')
+        .join('')
 
-    return {
-      content,
-      usage: {
-        inputTokens: data.usage.input_tokens,
-        outputTokens: data.usage.output_tokens,
-        model: this.model,
-        cost: inputCost + outputCost,
-      },
+      // Calculate approximate cost (Claude 3.5 Haiku pricing)
+      const inputCost = (data.usage.input_tokens / 1_000_000) * 0.25
+      const outputCost = (data.usage.output_tokens / 1_000_000) * 1.25
+
+      return {
+        content,
+        usage: {
+          inputTokens: data.usage.input_tokens,
+          outputTokens: data.usage.output_tokens,
+          model: this.model,
+          cost: inputCost + outputCost,
+        },
+      }
+    } finally {
+      clearTimeout(timeoutId)
     }
   }
 
@@ -192,60 +201,69 @@ export abstract class BaseAgent {
 
     const contextSummary = this.buildContextSummary(context)
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: 4096,
-        system: `${systemPrompt}\n\n${contextSummary}`,
-        messages: [
-          {
-            role: 'user',
-            content: userMessage,
-          },
-        ],
-        tools: anthropicTools,
-      }),
-    })
+    // 30-second timeout to prevent hanging requests
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`)
-    }
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          max_tokens: 4096,
+          system: `${systemPrompt}\n\n${contextSummary}`,
+          messages: [
+            {
+              role: 'user',
+              content: userMessage,
+            },
+          ],
+          tools: anthropicTools,
+        }),
+        signal: controller.signal,
+      })
 
-    const data = await response.json() as AnthropicMessage
-
-    let content = ''
-    const toolCalls: Array<{ name: string; input: Record<string, unknown> }> = []
-
-    for (const block of data.content) {
-      if (block.type === 'text') {
-        content += block.text || ''
-      } else if (block.type === 'tool_use') {
-        toolCalls.push({
-          name: block.name || '',
-          input: block.input || {},
-        })
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`)
       }
-    }
 
-    const inputCost = (data.usage.input_tokens / 1_000_000) * 0.25
-    const outputCost = (data.usage.output_tokens / 1_000_000) * 1.25
+      const data = await response.json() as AnthropicMessage
 
-    return {
-      content,
-      toolCalls,
-      usage: {
-        inputTokens: data.usage.input_tokens,
-        outputTokens: data.usage.output_tokens,
-        model: this.model,
-        cost: inputCost + outputCost,
-      },
+      let content = ''
+      const toolCalls: Array<{ name: string; input: Record<string, unknown> }> = []
+
+      for (const block of data.content) {
+        if (block.type === 'text') {
+          content += block.text || ''
+        } else if (block.type === 'tool_use') {
+          toolCalls.push({
+            name: block.name || '',
+            input: block.input || {},
+          })
+        }
+      }
+
+      const inputCost = (data.usage.input_tokens / 1_000_000) * 0.25
+      const outputCost = (data.usage.output_tokens / 1_000_000) * 1.25
+
+      return {
+        content,
+        toolCalls,
+        usage: {
+          inputTokens: data.usage.input_tokens,
+          outputTokens: data.usage.output_tokens,
+          model: this.model,
+          cost: inputCost + outputCost,
+        },
+      }
+    } finally {
+      clearTimeout(timeoutId)
     }
   }
 

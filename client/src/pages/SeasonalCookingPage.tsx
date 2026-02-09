@@ -487,6 +487,9 @@ const SeasonalCookingPage: React.FC = () => {
       herb: []
     };
     filteredSeasonalProduce.forEach(item => {
+      if (!groups[item.category]) {
+        groups[item.category] = [];
+      }
       groups[item.category].push(item);
     });
     return groups;

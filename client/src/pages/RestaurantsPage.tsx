@@ -755,7 +755,10 @@ const RestaurantsPage: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button onClick={editDialogOpen ? handleSubmitEdit : handleSubmitAdd}>
+            <Button
+              onClick={editDialogOpen ? handleSubmitEdit : handleSubmitAdd}
+              disabled={!editDialogOpen && !showManualEntry}
+            >
               {editDialogOpen ? 'Save Changes' : 'Add Restaurant'}
             </Button>
           </DialogFooter>

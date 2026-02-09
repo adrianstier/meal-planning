@@ -989,10 +989,10 @@ const RecipesPage: React.FC = () => {
                       </div>
                       {meal.last_cooked && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Last cooked: {new Date(meal.last_cooked).toLocaleDateString('en-US', {
+                          Last cooked: {new Date(meal.last_cooked + 'T00:00:00').toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
-                            year: new Date(meal.last_cooked).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                            year: new Date(meal.last_cooked + 'T00:00:00').getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
                           })}
                         </p>
                       )}

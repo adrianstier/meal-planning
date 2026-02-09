@@ -189,6 +189,8 @@ export default function LoginPage() {
 
         await updatePassword(password);
         setSuccessMessage('Password updated successfully!');
+        setPassword('');
+        setConfirmPassword('');
         setMode('login');
       }
     } catch (err) {

@@ -38,11 +38,34 @@ async function fetchPage(url: string): Promise<string> {
   try {
     const response = await fetch(url, {
       signal: controller.signal,
+      redirect: 'manual',
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; MealPlannerBot/1.0)",
         "Accept": "text/html,application/xhtml+xml",
       },
     });
+
+    // Handle redirects safely - validate redirect target against SSRF
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      if (!location) throw new Error('Redirect with no location');
+      const redirectUrl = new URL(location, url).href;
+      if (!isPublicUrl(redirectUrl)) {
+        throw new Error('Redirect to non-public URL blocked');
+      }
+      const redirectResponse = await fetch(redirectUrl, {
+        signal: controller.signal,
+        redirect: 'manual',
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; MealPlannerBot/1.0)",
+          "Accept": "text/html,application/xhtml+xml",
+        },
+      });
+      if (!redirectResponse.ok) {
+        throw new Error(`HTTP error ${redirectResponse.status} after redirect`);
+      }
+      return await redirectResponse.text();
+    }
 
     if (!response.ok) {
       // Categorize HTTP errors

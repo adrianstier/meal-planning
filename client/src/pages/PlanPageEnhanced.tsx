@@ -223,7 +223,10 @@ const PlanPageEnhanced: React.FC = () => {
     return (localStorage.getItem('planViewMode') as ViewMode) || 'compact';
   });
 
-  const [mealDisplayMode, setMealDisplayMode] = useState<MealDisplayMode>('dinners');
+  const [mealDisplayMode, setMealDisplayMode] = useState<MealDisplayMode>(() => {
+    const saved = localStorage.getItem('mealDisplayMode');
+    return (saved === 'dinners' || saved === '3-meals' || saved === 'all') ? saved : 'dinners';
+  });
 
   // Dialog state managed by reducer (reduces from 5 useState to 1 useReducer)
   const [dialogState, dispatchDialog] = useReducer(dialogReducer, dialogInitialState);
@@ -236,7 +239,10 @@ const PlanPageEnhanced: React.FC = () => {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [generateBentos] = useState(false);
   const [bentoChildName] = useState('');
-  const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(true);
+  const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(() => {
+    const saved = localStorage.getItem('recipeBrowserOpen');
+    return saved === null ? true : saved === 'true';
+  });
 
   // Undo/Redo state
   const [history, setHistory] = useState<HistoryAction[]>([]);

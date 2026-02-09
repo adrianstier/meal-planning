@@ -915,7 +915,9 @@ export const mealsApi = {
 
 export const planApi = {
   getWeek: async (startDate: string) => {
-    const endDate = new Date(startDate);
+    // Use parseISO instead of new Date() to avoid UTC parsing of YYYY-MM-DD strings
+    // new Date("2025-01-15") = UTC midnight, which is previous day in US timezones
+    const endDate = parseISO(startDate);
     endDate.setDate(endDate.getDate() + 6);
 
     const { data, error } = await supabase
@@ -949,7 +951,7 @@ export const planApi = {
         meal_id: plan.meal_id,
         meal_date: planDate,
         meal_type: plan.meal_type,
-        day_of_week: new Date(planDate).toLocaleDateString('en-US', { weekday: 'long' }),
+        day_of_week: parseISO(planDate).toLocaleDateString('en-US', { weekday: 'long' }),
         notes: plan.notes,
         servings: plan.servings || 4,
       })
@@ -976,7 +978,7 @@ export const planApi = {
     if (plan.servings !== undefined) updateData.servings = plan.servings;
     if (plan.plan_date !== undefined) {
       updateData.meal_date = plan.plan_date;
-      updateData.day_of_week = new Date(plan.plan_date).toLocaleDateString('en-US', { weekday: 'long' });
+      updateData.day_of_week = parseISO(plan.plan_date).toLocaleDateString('en-US', { weekday: 'long' });
     }
 
     const { data, error } = await supabase
@@ -1017,7 +1019,8 @@ export const planApi = {
 
   clearWeek: async (startDate: string) => {
     const userId = await getCurrentUserId();
-    const endDate = new Date(startDate);
+    // Use parseISO instead of new Date() to avoid UTC parsing of YYYY-MM-DD strings
+    const endDate = parseISO(startDate);
     endDate.setDate(endDate.getDate() + 6);
 
     const { error } = await supabase
@@ -1092,7 +1095,7 @@ export const planApi = {
     if (meals.length < numDays) {
       throw new Error(
         `You only have ${meals.length} ${mealTypes.join('/')} recipe${meals.length === 1 ? '' : 's'}, ` +
-        `but need at least ${numDays} for a full week. Add more recipes or we'll repeat some.`
+        `but need at least ${numDays} for a full week. Please add more recipes first.`
       );
     }
 
@@ -1106,7 +1109,8 @@ export const planApi = {
 
     // Generate plan for each day
     const generatedPlan: GeneratedMealPlanItem[] = [];
-    const startDateObj = new Date(startDate);
+    // Use parseISO instead of new Date() to avoid UTC parsing of YYYY-MM-DD strings
+    const startDateObj = parseISO(startDate);
 
     for (let i = 0; i < numDays; i++) {
       const currentDate = new Date(startDateObj);
@@ -1138,7 +1142,7 @@ export const planApi = {
       meal_id: item.meal_id,
       meal_date: item.date,
       meal_type: item.meal_type,
-      day_of_week: new Date(item.date).toLocaleDateString('en-US', { weekday: 'long' }),
+      day_of_week: parseISO(item.date).toLocaleDateString('en-US', { weekday: 'long' }),
     }));
 
     const { data, error } = await supabase
@@ -1547,8 +1551,11 @@ export const schoolMenuApi = {
       if (!calendar[item.menu_date]) {
         calendar[item.menu_date] = { breakfast: [], lunch: [], snack: [] };
       }
-      const mealType = item.meal_type as 'breakfast' | 'lunch' | 'snack';
-      calendar[item.menu_date][mealType].push(item as SchoolMenuItem);
+      const mealType = item.meal_type as string;
+      // Only add to known meal type buckets; skip unexpected meal types to avoid crash
+      if (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'snack') {
+        calendar[item.menu_date][mealType].push(item as SchoolMenuItem);
+      }
     });
 
     return wrapResponse({ success: true, calendar_data: calendar });

@@ -69,29 +69,48 @@ const decimalToFraction = (decimal: number): string => {
  * Scale a single ingredient line by the given multiplier
  */
 export const scaleIngredient = (ingredientLine: string, multiplier: number): string => {
-  // Try to find numbers at the start of the line (with optional fractions)
-  const numberPattern = /^(\d+\s*)?([¼½¾⅓⅔⅛⅜⅝⅞]|[\d/]+)?\s*/;
-  const match = ingredientLine.match(numberPattern);
+  // Try to find a quantity at the start of the line.
+  // Handles: "1 1/2 cups", "1½ cups", "1/2 cup", "½ cup", "2 cups", etc.
+  // Strategy: try patterns from most specific to least specific to avoid
+  // the bug where "1/2" was split into whole=1 + fraction="/2" (which maps to 0).
 
-  if (!match) {
-    // No number found, return as-is
-    return ingredientLine;
-  }
+  let originalQuantity = 0;
+  let matchLength = 0;
 
-  const wholeNumber = match[1] ? parseInt(match[1].trim()) : 0;
-  const fractionPart = match[2] || '';
-  const restOfLine = ingredientLine.slice(match[0].length);
+  // Pattern 1: whole number + space + slash fraction (e.g., "1 1/2")
+  const mixedSlashMatch = ingredientLine.match(/^(\d+)\s+(\d+\/\d+)\s*/);
+  // Pattern 2: whole number + unicode fraction, no space required (e.g., "1½" or "1 ½")
+  const mixedUnicodeMatch = ingredientLine.match(/^(\d+)\s*([¼½¾⅓⅔⅛⅜⅝⅞])\s*/);
+  // Pattern 3: standalone slash fraction (e.g., "1/2")
+  const slashFractionMatch = ingredientLine.match(/^(\d+\/\d+)\s*/);
+  // Pattern 4: standalone unicode fraction (e.g., "½")
+  const unicodeFractionMatch = ingredientLine.match(/^([¼½¾⅓⅔⅛⅜⅝⅞])\s*/);
+  // Pattern 5: plain number (e.g., "2")
+  const plainNumberMatch = ingredientLine.match(/^(\d+)\s*/);
 
-  // Calculate original quantity
-  let originalQuantity = wholeNumber;
-  if (fractionPart) {
-    originalQuantity += fractionToDecimal(fractionPart);
+  if (mixedSlashMatch) {
+    originalQuantity = parseInt(mixedSlashMatch[1]) + fractionToDecimal(mixedSlashMatch[2]);
+    matchLength = mixedSlashMatch[0].length;
+  } else if (mixedUnicodeMatch) {
+    originalQuantity = parseInt(mixedUnicodeMatch[1]) + fractionToDecimal(mixedUnicodeMatch[2]);
+    matchLength = mixedUnicodeMatch[0].length;
+  } else if (slashFractionMatch) {
+    originalQuantity = fractionToDecimal(slashFractionMatch[1]);
+    matchLength = slashFractionMatch[0].length;
+  } else if (unicodeFractionMatch) {
+    originalQuantity = fractionToDecimal(unicodeFractionMatch[1]);
+    matchLength = unicodeFractionMatch[0].length;
+  } else if (plainNumberMatch) {
+    originalQuantity = parseInt(plainNumberMatch[1]);
+    matchLength = plainNumberMatch[0].length;
   }
 
   // If no quantity found, return as-is
-  if (originalQuantity === 0 && !fractionPart) {
+  if (originalQuantity === 0) {
     return ingredientLine;
   }
+
+  const restOfLine = ingredientLine.slice(matchLength);
 
   // Scale the quantity
   const scaledQuantity = originalQuantity * multiplier;

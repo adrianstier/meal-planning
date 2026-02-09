@@ -342,7 +342,7 @@ const CSABoxPage: React.FC = () => {
                     <CardTitle className="text-lg">{box.name}</CardTitle>
                     <CardDescription className="mt-1">
                       <Calendar className="h-3 w-3 inline mr-1" />
-                      {new Date(box.delivery_date).toLocaleDateString()}
+                      {new Date(box.delivery_date + 'T00:00:00').toLocaleDateString()}
                     </CardDescription>
                     {box.source && (
                       <p className="text-xs text-muted-foreground mt-1">{box.source}</p>
@@ -398,7 +398,7 @@ const CSABoxPage: React.FC = () => {
                     <div>
                       <CardTitle>{selectedBox.name}</CardTitle>
                       <CardDescription>
-                        Delivered: {new Date(selectedBox.delivery_date).toLocaleDateString()}
+                        Delivered: {new Date(selectedBox.delivery_date + 'T00:00:00').toLocaleDateString()}
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
@@ -625,7 +625,7 @@ const CSABoxPage: React.FC = () => {
                               {item.ingredient_name}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              Used on {item.used_date && new Date(item.used_date).toLocaleDateString()}
+                              {item.used_date ? `Used on ${new Date(item.used_date + 'T00:00:00').toLocaleDateString()}` : 'Used'}
                             </div>
                           </div>
                           <Button

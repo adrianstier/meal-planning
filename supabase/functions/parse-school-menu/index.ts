@@ -41,11 +41,34 @@ async function fetchPage(url: string): Promise<string> {
   try {
     const response = await fetch(url, {
       signal: controller.signal,
+      redirect: 'manual',
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
         "Accept": "text/html,application/xhtml+xml",
       },
     });
+
+    // Handle redirects safely - validate redirect target against SSRF
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      if (!location) throw new Error('Redirect with no location');
+      const redirectUrl = new URL(location, url).href;
+      if (!isPublicUrl(redirectUrl)) {
+        throw new Error('Redirect to non-public URL blocked');
+      }
+      const redirectResponse = await fetch(redirectUrl, {
+        signal: controller.signal,
+        redirect: 'manual',
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          "Accept": "text/html,application/xhtml+xml",
+        },
+      });
+      if (!redirectResponse.ok) {
+        throw new Error(`HTTP ${redirectResponse.status} after redirect`);
+      }
+      return await redirectResponse.text();
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -114,7 +137,8 @@ async function callClaude(systemPrompt: string, userPrompt: string, apiKey: stri
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
+      console.error(`[parse-school-menu] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
+      throw new Error('AI service temporarily unavailable');
     }
 
     const data = await response.json();
@@ -173,7 +197,8 @@ async function callClaudeWithImage(
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
+      console.error(`[parse-school-menu] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
+      throw new Error('AI service temporarily unavailable');
     }
 
     const data = await response.json();

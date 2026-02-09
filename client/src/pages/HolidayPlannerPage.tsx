@@ -488,7 +488,7 @@ const HolidayPlannerPage: React.FC = () => {
                   min="1"
                   max="100"
                   value={newEvent.guest_count}
-                  onChange={e => setNewEvent({ ...newEvent, guest_count: parseInt(e.target.value) })}
+                  onChange={e => setNewEvent({ ...newEvent, guest_count: parseInt(e.target.value) || 1 })}
                   required
                 />
               </div>
@@ -598,7 +598,7 @@ const HolidayPlannerPage: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <Tabs defaultValue="dishes">
+            <Tabs defaultValue="dishes" key={selectedEvent.id}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="dishes">
                   <ChefHat className="h-4 w-4 mr-2" />
@@ -941,7 +941,7 @@ const HolidayPlannerPage: React.FC = () => {
                   type="number"
                   min="1"
                   value={newDish.servings}
-                  onChange={e => setNewDish({ ...newDish, servings: parseInt(e.target.value) })}
+                  onChange={e => setNewDish({ ...newDish, servings: parseInt(e.target.value) || 1 })}
                 />
               </div>
             </div>
@@ -952,7 +952,7 @@ const HolidayPlannerPage: React.FC = () => {
                   type="number"
                   min="0"
                   value={newDish.prep_time_minutes}
-                  onChange={e => setNewDish({ ...newDish, prep_time_minutes: parseInt(e.target.value) })}
+                  onChange={e => setNewDish({ ...newDish, prep_time_minutes: parseInt(e.target.value) || 0 })}
                 />
               </div>
               <div className="space-y-2">
@@ -961,7 +961,7 @@ const HolidayPlannerPage: React.FC = () => {
                   type="number"
                   min="0"
                   value={newDish.cook_time_minutes}
-                  onChange={e => setNewDish({ ...newDish, cook_time_minutes: parseInt(e.target.value) })}
+                  onChange={e => setNewDish({ ...newDish, cook_time_minutes: parseInt(e.target.value) || 0 })}
                 />
               </div>
             </div>

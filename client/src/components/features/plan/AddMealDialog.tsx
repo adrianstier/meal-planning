@@ -52,9 +52,11 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   // Filter meals based on search query
+  // Normalize snack types: morning_snack/afternoon_snack map to 'snack' meal_type
+  const normalizedMealType = (mealType === 'morning_snack' || mealType === 'afternoon_snack') ? 'snack' : mealType;
   const filteredMeals = meals?.filter((meal) => {
     const matchesSearch = meal.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = meal.meal_type === mealType;
+    const matchesType = meal.meal_type === normalizedMealType;
     return matchesSearch && matchesType;
   }) || [];
 
@@ -115,7 +117,7 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            Add {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+            Add {mealType === 'morning_snack' ? 'Morning Snack' : mealType === 'afternoon_snack' ? 'Afternoon Snack' : mealType.charAt(0).toUpperCase() + mealType.slice(1)}
           </DialogTitle>
           <DialogDescription>
             Select a meal for {(() => {

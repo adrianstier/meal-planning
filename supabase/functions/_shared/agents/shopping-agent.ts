@@ -482,6 +482,13 @@ Be smart about parsing:
       context
     )
 
+    if (!costResult.success || !costResult.data) {
+      return {
+        success: false,
+        message: `I couldn't estimate the cost for your shopping list. ${costResult.error || 'Please try again.'}`,
+      }
+    }
+
     const estimate = costResult.data as {
       total: number
       breakdown: Array<{ category: string; cost: number }>

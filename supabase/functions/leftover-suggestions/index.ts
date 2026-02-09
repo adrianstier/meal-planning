@@ -47,7 +47,8 @@ async function callClaude(systemPrompt: string, userPrompt: string, apiKey: stri
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
+      console.error(`[leftover-suggestions] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
+      throw new Error('AI service temporarily unavailable');
     }
 
     const data = await response.json();

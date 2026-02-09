@@ -82,7 +82,10 @@ const ListsPage: React.FC = () => {
 
   // Define category order for grocery stores
   const categoryOrder = ['Produce', 'Meat & Seafood', 'Dairy & Eggs', 'Bakery', 'Pantry', 'Frozen', 'Beverages', 'Other'];
-  const sortedCategories = categoryOrder.filter(cat => itemsByCategory[cat] && itemsByCategory[cat].length > 0);
+  // Include categories in preferred order, then append any extra categories from the API
+  const knownCategories = categoryOrder.filter(cat => itemsByCategory[cat] && itemsByCategory[cat].length > 0);
+  const extraCategories = Object.keys(itemsByCategory).filter(cat => !categoryOrder.includes(cat)).sort();
+  const sortedCategories = [...knownCategories, ...extraCategories];
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">

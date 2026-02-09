@@ -91,6 +91,7 @@ export class OrchestratorAgent extends BaseAgent {
       const { response, usage: aggregateUsage } = await this.aggregateResponses(
         agentResponses,
         intent,
+        message,
         context
       )
       totalUsage = this.mergeUsage(totalUsage, aggregateUsage)
@@ -327,6 +328,7 @@ Respond with JSON only:
   private async aggregateResponses(
     agentResponses: Array<{ agent: AgentType; response: AgentResponse }>,
     intent: IntentClassification,
+    userMessage: string,
     context: AgentContext
   ): Promise<{ response: AgentResponse; usage: TokenUsage }> {
     // If only one agent responded, return its response directly
@@ -339,7 +341,7 @@ Respond with JSON only:
 
     // If no agents responded, handle general question
     if (agentResponses.length === 0) {
-      return this.handleGeneralQuestion(intent, context)
+      return this.handleGeneralQuestion(userMessage, context)
     }
 
     // Multiple agents - aggregate their responses
@@ -402,7 +404,7 @@ Respond with JSON:
    * Handle general questions without specialized agents
    */
   private async handleGeneralQuestion(
-    intent: IntentClassification,
+    userMessage: string,
     context: AgentContext
   ): Promise<{ response: AgentResponse; usage: TokenUsage }> {
     const systemPrompt = `You are a helpful meal planning assistant. Answer the user's question about cooking, food, or meal planning.
@@ -410,11 +412,6 @@ Respond with JSON:
 Be concise but helpful. If the question is outside your domain (not about food/cooking/meal planning), politely redirect.
 
 If you don't know something, say so rather than making things up.`
-
-    const userMessage =
-      intent.entities.length > 0
-        ? `Question context: ${JSON.stringify(intent.entities)}`
-        : 'Please help with this general question.'
 
     const { content, usage } = await this.callAI(
       systemPrompt,

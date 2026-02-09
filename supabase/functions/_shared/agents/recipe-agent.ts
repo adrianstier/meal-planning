@@ -306,32 +306,98 @@ export class RecipeAgent extends BaseAgent {
       }
     }
 
-    // Use Claude Vision for OCR
-    const { content, usage } = await this.callAI(
-      this.getRecipeParsingPrompt('image'),
-      `Please extract the recipe from this image.`,
-      context
-    )
+    const mediaType = base64Match[1] as 'jpeg' | 'png' | 'gif' | 'webp'
+    const base64Data = base64Match[2]
 
-    const recipe = this.parseJSON<Partial<Recipe>>(content)
+    // Use Claude Vision for OCR - must send image content block directly
+    // since callAI() only supports text messages
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
 
-    if (!recipe) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          max_tokens: 4096,
+          system: this.getRecipeParsingPrompt('image'),
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: `image/${mediaType}`,
+                    data: base64Data,
+                  },
+                },
+                {
+                  type: 'text',
+                  text: 'Please extract the recipe from this image.',
+                },
+              ],
+            },
+          ],
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+
+      const textContent = data.content
+        .filter((block: { type: string }) => block.type === 'text')
+        .map((block: { text?: string }) => block.text || '')
+        .join('')
+
+      const inputCost = (data.usage.input_tokens / 1_000_000) * 0.25
+      const outputCost = (data.usage.output_tokens / 1_000_000) * 1.25
+      const usage = {
+        inputTokens: data.usage.input_tokens,
+        outputTokens: data.usage.output_tokens,
+        model: this.model,
+        cost: inputCost + outputCost,
+      }
+
+      const recipe = this.parseJSON<Partial<Recipe>>(textContent)
+
+      if (!recipe) {
+        return {
+          success: false,
+          message: `I couldn't read the recipe from that image. Is it a clear photo of a recipe?`,
+        }
+      }
+
+      return {
+        success: true,
+        message: `I've extracted "${recipe.name}" from the image.`,
+        data: { recipe, _usage: usage },
+        actions: [
+          {
+            type: 'save_recipe',
+            payload: { recipe },
+          },
+        ],
+      }
+    } catch (error) {
+      console.error('[RecipeAgent] Image processing error:', error)
       return {
         success: false,
-        message: `I couldn't read the recipe from that image. Is it a clear photo of a recipe?`,
+        message: `I couldn't process that image. ${error instanceof Error ? error.message : 'Please try again.'}`,
       }
-    }
-
-    return {
-      success: true,
-      message: `I've extracted "${recipe.name}" from the image.`,
-      data: { recipe, _usage: usage },
-      actions: [
-        {
-          type: 'save_recipe',
-          payload: { recipe },
-        },
-      ],
+    } finally {
+      clearTimeout(timeoutId)
     }
   }
 
@@ -616,6 +682,10 @@ Be reasonable in estimates. If unsure, provide conservative middle-ground values
         fat_g: number
         fiber_g: number
       }>(content)
+
+      if (!nutrition) {
+        return { success: false, error: 'Failed to parse nutrition estimate' }
+      }
 
       return { success: true, data: nutrition }
     } catch {

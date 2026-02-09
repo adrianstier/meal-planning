@@ -63,7 +63,8 @@ async function callClaude(systemPrompt: string, userPrompt: string, apiKey: stri
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
+      console.error(`[parse-recipe] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
+      throw new Error('AI service temporarily unavailable');
     }
 
     const data = await response.json();
@@ -194,7 +195,7 @@ Difficulty: easy (<30min total), medium (30-60min), hard (>60min)`;
 ${sanitizedText}
 
 Return this exact JSON structure (no markdown, no explanation):
-{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null,"source_url":${sourceUrl ? `"${sourceUrl}"` : "null"}}`;
+{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null,"source_url":${sourceUrl ? JSON.stringify(sourceUrl) : "null"}}`;
 
     const aiResponse = await callClaude(systemPrompt, userPrompt, apiKey);
     const parsed = extractJSON(aiResponse);

@@ -68,11 +68,9 @@ export function BroadcastSyncProvider({ children }: { children: React.ReactNode 
     // Handle visibility change to refetch stale queries when tab becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // Only refetch queries that are stale (not all queries)
-        // This prevents unnecessary network requests when switching tabs
+        // Refetch active (mounted) queries when tab becomes visible
         queryClient.invalidateQueries({
-          refetchType: 'active', // Only refetch active queries
-          stale: true, // Only if they're actually stale
+          refetchType: 'active',
         });
       }
     };

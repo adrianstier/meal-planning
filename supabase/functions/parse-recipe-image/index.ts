@@ -205,23 +205,23 @@ Estimate nutrition from ingredients if not shown.`;
         : 'dinner',
       ingredients: parsedRecipe.ingredients || '',
       instructions: parsedRecipe.instructions || '',
-      prep_time_minutes: parsedRecipe.prep_time_minutes || null,
-      cook_time_minutes: parsedRecipe.cook_time_minutes || null,
-      servings: parsedRecipe.servings || 4,
+      prep_time_minutes: typeof parsedRecipe.prep_time_minutes === 'number' ? parsedRecipe.prep_time_minutes : null,
+      cook_time_minutes: typeof parsedRecipe.cook_time_minutes === 'number' ? parsedRecipe.cook_time_minutes : null,
+      servings: typeof parsedRecipe.servings === 'number' && parsedRecipe.servings > 0 ? parsedRecipe.servings : 4,
       difficulty: ['easy', 'medium', 'hard'].includes(parsedRecipe.difficulty)
         ? parsedRecipe.difficulty
         : 'medium',
       cuisine: parsedRecipe.cuisine || null,
       tags: parsedRecipe.tags || '',
       notes: parsedRecipe.notes || null,
-      calories: parsedRecipe.calories || null,
-      protein_g: parsedRecipe.protein_g || null,
-      carbs_g: parsedRecipe.carbs_g || null,
-      fat_g: parsedRecipe.fat_g || null,
-      fiber_g: parsedRecipe.fiber_g || null,
-      kid_friendly_level: Math.min(10, Math.max(1, parsedRecipe.kid_friendly_level || 5)),
+      calories: typeof parsedRecipe.calories === 'number' ? parsedRecipe.calories : null,
+      protein_g: typeof parsedRecipe.protein_g === 'number' ? parsedRecipe.protein_g : null,
+      carbs_g: typeof parsedRecipe.carbs_g === 'number' ? parsedRecipe.carbs_g : null,
+      fat_g: typeof parsedRecipe.fat_g === 'number' ? parsedRecipe.fat_g : null,
+      fiber_g: typeof parsedRecipe.fiber_g === 'number' ? parsedRecipe.fiber_g : null,
+      kid_friendly_level: Math.min(10, Math.max(1, typeof parsedRecipe.kid_friendly_level === 'number' ? parsedRecipe.kid_friendly_level : 5)),
       makes_leftovers: parsedRecipe.makes_leftovers ?? true,
-      leftover_days: parsedRecipe.leftover_days || null,
+      leftover_days: typeof parsedRecipe.leftover_days === 'number' ? parsedRecipe.leftover_days : null,
     };
 
     log({ requestId, event: 'parse_image_success', recipeName: recipe.name });

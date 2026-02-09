@@ -3,19 +3,20 @@ import { planApi } from '../lib/api';
 import { errorLogger } from '../utils/errorLogger';
 import type { MealPlan, PlanConstraints } from '../types/api';
 
-// Helper to get the Monday of the week for a given date
+// Helper to get the Sunday of the week for a given date
 // Uses local timezone to avoid UTC midnight shift issues
+// Note: The app uses weekStartsOn: 0 (Sunday) in date-fns startOfWeek
 function getWeekStart(dateStr: string): string {
   // Parse as local date by splitting the string (avoids UTC interpretation)
   const [year, month, day] = dateStr.split('-').map(Number);
   const date = new Date(year, month - 1, day); // month is 0-indexed
-  const dayOfWeek = date.getDay();
-  const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday
-  const monday = new Date(date.getFullYear(), date.getMonth(), diff);
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+  const diff = date.getDate() - dayOfWeek; // Go back to Sunday
+  const sunday = new Date(date.getFullYear(), date.getMonth(), diff);
   // Format as YYYY-MM-DD in local timezone
-  const y = monday.getFullYear();
-  const m = String(monday.getMonth() + 1).padStart(2, '0');
-  const d = String(monday.getDate()).padStart(2, '0');
+  const y = sunday.getFullYear();
+  const m = String(sunday.getMonth() + 1).padStart(2, '0');
+  const d = String(sunday.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
 

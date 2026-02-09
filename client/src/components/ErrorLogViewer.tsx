@@ -36,7 +36,7 @@ const ErrorLogViewer: React.FC = () => {
   // Keyboard shortcut to open viewer: Ctrl+Shift+E
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'E') {
         e.preventDefault();
         setIsOpen(true);
       }
@@ -164,7 +164,7 @@ const ErrorLogViewer: React.FC = () => {
                 {filter === 'all' ? 'No errors logged' : `No ${filter} errors`}
               </div>
             ) : (
-              filteredLogs.reverse().map((log, index) => (
+              [...filteredLogs].reverse().map((log, index) => (
                 <div key={index} className="border rounded p-3 bg-white hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">

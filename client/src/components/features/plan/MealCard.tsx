@@ -86,8 +86,8 @@ const MealCard: React.FC<MealCardProps> = ({
       className="group relative rounded border border-slate-200 bg-white hover:border-slate-300 cursor-pointer transition-colors overflow-hidden"
       onClick={onClick}
     >
-      {/* Quick Delete Button - Simple X */}
-      {onDelete && (
+      {/* Quick Delete Button - Simple X, only when no other actions menu exists */}
+      {onDelete && !(onCopy || onMove || onSwap) && (
         <button
           className="absolute top-0.5 right-0.5 h-6 w-6 min-h-[24px] min-w-[24px] flex items-center justify-center rounded opacity-0 group-hover:opacity-100 sm:transition-opacity z-10 bg-white/95 shadow-sm hover:bg-red-50 hover:text-red-600 touch:opacity-100"
           onClick={(e) => {

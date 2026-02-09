@@ -125,12 +125,12 @@ const LeftoversPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">
-                        Cooked: {new Date(leftover.cooked_date).toLocaleDateString()}
+                        Cooked: {new Date(leftover.cooked_date + 'T00:00:00').toLocaleDateString()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">
-                        Expires: {new Date(leftover.expires_date).toLocaleDateString()}
+                        Expires: {new Date(leftover.expires_date + 'T00:00:00').toLocaleDateString()}
                       </span>
                     </div>
                     <div>

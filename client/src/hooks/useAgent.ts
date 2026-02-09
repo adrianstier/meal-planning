@@ -8,7 +8,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query'
-import { supabase, supabaseUrl } from '../lib/supabase'
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 
 // Types
 export interface AgentMessage {
@@ -73,6 +73,7 @@ async function callAgent(
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`,
+        'apikey': supabaseAnonKey,
         'X-Requested-With': 'XMLHttpRequest', // CSRF protection header
       },
       body: JSON.stringify({
@@ -81,6 +82,7 @@ async function callAgent(
         metadata,
       }),
       signal,
+      credentials: 'omit',
     }
   )
 
@@ -139,9 +141,8 @@ export function useAgent(options: UseAgentOptions = {}) {
         const result = await callAgent(message, conversationId, metadata, controller.signal)
         return result
       } finally {
-        // Clean up timeout and ref
+        // Clean up timeout and ref (don't reset isTimeoutRef here - onError needs to read it)
         clearTimeout(timeoutId)
-        isTimeoutRef.current = false
         abortControllerRef.current = null
       }
     },
@@ -200,10 +201,10 @@ export function useAgent(options: UseAgentOptions = {}) {
               queryClient.invalidateQueries({ queryKey: ['meals'] })
               break
             case 'update_plan':
-              queryClient.invalidateQueries({ queryKey: ['weekPlan'] })
+              queryClient.invalidateQueries({ queryKey: ['plan'] })
               break
             case 'add_to_list':
-              queryClient.invalidateQueries({ queryKey: ['shoppingItems'] })
+              queryClient.invalidateQueries({ queryKey: ['shopping'] })
               break
           }
         }

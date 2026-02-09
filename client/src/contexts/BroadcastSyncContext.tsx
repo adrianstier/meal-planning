@@ -100,7 +100,11 @@ export function BroadcastSyncProvider({ children }: { children: React.ReactNode 
       timestamp: Date.now(),
     };
 
-    channelRef.current.postMessage(message);
+    try {
+      channelRef.current.postMessage(message);
+    } catch (err) {
+      console.error('[BroadcastSync] Failed to post message:', err);
+    }
   }, []);
 
   return (

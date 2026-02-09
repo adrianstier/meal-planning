@@ -7,6 +7,8 @@ import {
   isPublicUrl,
   requireCsrfHeader,
   validateJWT,
+  checkRateLimitSync,
+  rateLimitExceededResponse,
   jsonResponse,
   errorResponse,
   log,
@@ -238,6 +240,12 @@ Deno.serve(async (req: Request) => {
   const auth = await validateJWT(req);
   if (!auth.authenticated) {
     return errorResponse(auth.error || "Unauthorized", corsHeaders, 401);
+  }
+
+  // Rate limit
+  const rateLimit = checkRateLimitSync(auth.userId!);
+  if (!rateLimit.allowed) {
+    return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
   }
 
   try {

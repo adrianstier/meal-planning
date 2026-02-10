@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { cn } from '../../../lib/utils'
-import { useAgent, AgentMessage } from '../../../hooks/useAgent'
+import { useAgent, useAgentFeedback, AgentMessage } from '../../../hooks/useAgent'
 
 interface AgentChatProps {
   // Display mode
@@ -85,6 +85,8 @@ export function AgentChat({
     conversationId: initialConversationId,
     onAction,
   })
+
+  const feedbackMutation = useAgentFeedback()
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -360,10 +362,20 @@ export function AgentChat({
                       <Copy className="h-3 w-3 text-gray-400" />
                     )}
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => feedbackMutation.mutate({ messageId: message.id, feedbackType: 'helpful' })}
+                  >
                     <ThumbsUp className="h-3 w-3 text-gray-400" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => feedbackMutation.mutate({ messageId: message.id, feedbackType: 'not_helpful' })}
+                  >
                     <ThumbsDown className="h-3 w-3 text-gray-400" />
                   </Button>
                 </div>

@@ -133,7 +133,8 @@ export abstract class BaseAgent {
 
       if (!response.ok) {
         const errorText = await response.text()
-        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`)
+        console.error(`[${this.name}] Anthropic API error (${response.status}): ${errorText.substring(0, 200)}`)
+        throw new Error('AI service temporarily unavailable')
       }
 
       const data = await response.json() as AnthropicMessage
@@ -230,7 +231,8 @@ export abstract class BaseAgent {
 
       if (!response.ok) {
         const errorText = await response.text()
-        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`)
+        console.error(`[${this.name}] Anthropic API error (${response.status}): ${errorText.substring(0, 200)}`)
+        throw new Error('AI service temporarily unavailable')
       }
 
       const data = await response.json() as AnthropicMessage

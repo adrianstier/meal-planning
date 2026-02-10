@@ -481,7 +481,8 @@ Be helpful and conversational.`,
       }
 
       if (params.cuisine) {
-        query = query.ilike('cuisine', `%${params.cuisine}%`)
+        const escapedCuisine = String(params.cuisine).replace(/%/g, '\\%').replace(/_/g, '\\_')
+        query = query.ilike('cuisine', `%${escapedCuisine}%`)
       }
 
       if (params.max_time) {

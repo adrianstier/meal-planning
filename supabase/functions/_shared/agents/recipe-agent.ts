@@ -351,7 +351,8 @@ export class RecipeAgent extends BaseAgent {
 
       if (!response.ok) {
         const errorText = await response.text()
-        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`)
+        console.error(`[RecipeAgent] Vision API error (${response.status}): ${errorText.substring(0, 200)}`)
+        throw new Error('AI service temporarily unavailable')
       }
 
       const data = await response.json()

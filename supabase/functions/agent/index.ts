@@ -17,6 +17,7 @@ const ALLOWED_ORIGINS = ENV_ALLOWED_ORIGINS
   ? ENV_ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : [
       'http://localhost:3000',
+      'http://localhost:3001',
       'http://localhost:5173',
       'https://meal-planning-virid.vercel.app',
       'https://meal-planning-adrianstiers-projects.vercel.app',

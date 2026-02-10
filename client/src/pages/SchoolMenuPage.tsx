@@ -225,11 +225,7 @@ const SchoolMenuPage: React.FC = () => {
                     {items.map((item) => (
                       <div
                         key={item.id}
-                        className={`flex items-start justify-between p-3 rounded-md border ${
-                          item.dislike_count && item.dislike_count > 0
-                            ? 'border-red-300 bg-red-50 dark:bg-red-950/20'
-                            : 'border-border bg-card'
-                        }`}
+                        className="flex items-start justify-between p-3 rounded-md border border-border bg-card"
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -237,11 +233,6 @@ const SchoolMenuPage: React.FC = () => {
                             <span className="text-xs px-2 py-0.5 rounded-full bg-secondary capitalize">
                               {item.meal_type}
                             </span>
-                            {item.dislike_count && item.dislike_count > 0 && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200">
-                                Disliked
-                              </span>
-                            )}
                           </div>
                           {item.description && (
                             <p className="text-sm text-muted-foreground mt-1">

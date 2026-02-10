@@ -1112,15 +1112,17 @@ export const planApi = {
     // Use parseISO instead of new Date() to avoid UTC parsing of YYYY-MM-DD strings
     const startDateObj = parseISO(startDate);
 
+    let mealIndex = 0;
     for (let i = 0; i < numDays; i++) {
       const currentDate = new Date(startDateObj);
       currentDate.setDate(startDateObj.getDate() + i);
       const dateStr = toLocalDateString(currentDate);
 
-      // Pick a meal (cycle through if we don't have enough)
-      const meal = shuffled[i % shuffled.length];
-
       for (const mealType of mealTypes) {
+        // Pick a different meal for each meal type slot (cycle through if needed)
+        const meal = shuffled[mealIndex % shuffled.length];
+        mealIndex++;
+
         generatedPlan.push({
           meal_id: meal.id,
           date: dateStr,
@@ -1765,15 +1767,13 @@ export const shoppingApi = {
         // Guess category based on common ingredients
         let category = 'Other';
         const lowerName = name.toLowerCase();
-        if (/milk|cheese|yogurt|butter|cream|egg/i.test(lowerName)) category = 'Dairy';
+        if (/milk|cheese|yogurt|butter|cream|egg/i.test(lowerName)) category = 'Dairy & Eggs';
         else if (/chicken|beef|pork|fish|salmon|shrimp|bacon|sausage/i.test(lowerName)) category = 'Meat & Seafood';
-        else if (/apple|banana|orange|lemon|lime|berry|fruit/i.test(lowerName)) category = 'Fruits';
-        else if (/lettuce|tomato|onion|garlic|pepper|carrot|celery|potato|vegetable|broccoli|spinach/i.test(lowerName)) category = 'Vegetables';
-        else if (/bread|flour|pasta|rice|cereal|oat/i.test(lowerName)) category = 'Grains & Bread';
-        else if (/salt|pepper|spice|herb|oregano|basil|cumin|paprika/i.test(lowerName)) category = 'Spices';
-        else if (/oil|vinegar|sauce|ketchup|mustard|mayo/i.test(lowerName)) category = 'Condiments';
-        else if (/can|canned|broth|stock|tomato paste/i.test(lowerName)) category = 'Canned Goods';
+        else if (/apple|banana|orange|lemon|lime|berry|fruit|lettuce|tomato|onion|garlic|pepper|carrot|celery|potato|vegetable|broccoli|spinach|avocado|cucumber|mushroom|zucchini/i.test(lowerName)) category = 'Produce';
+        else if (/bread|flour|tortilla|bun|roll|pita|naan/i.test(lowerName)) category = 'Bakery';
+        else if (/pasta|rice|cereal|oat|sugar|oil|vinegar|sauce|ketchup|mustard|mayo|can|canned|broth|stock|tomato paste|soy sauce|honey|syrup|salt|pepper|spice|herb|oregano|basil|cumin|paprika/i.test(lowerName)) category = 'Pantry';
         else if (/frozen/i.test(lowerName)) category = 'Frozen';
+        else if (/juice|soda|water|wine|beer|coffee|tea/i.test(lowerName)) category = 'Beverages';
 
         ingredientMap.set(name, { quantity, category });
       }

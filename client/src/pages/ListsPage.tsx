@@ -81,7 +81,8 @@ const ListsPage: React.FC = () => {
   }, {} as Record<string, typeof activeItems>);
 
   // Define category order for grocery stores
-  const categoryOrder = ['Produce', 'Meat & Seafood', 'Dairy & Eggs', 'Bakery', 'Pantry', 'Frozen', 'Beverages', 'Other'];
+  // Includes legacy category names (Dairy, Vegetables, Fruits, etc.) for backwards compatibility
+  const categoryOrder = ['Produce', 'Vegetables', 'Fruits', 'Meat & Seafood', 'Dairy & Eggs', 'Dairy', 'Bakery', 'Grains & Bread', 'Pantry', 'Spices', 'Condiments', 'Canned Goods', 'Frozen', 'Beverages', 'Other'];
   // Include categories in preferred order, then append any extra categories from the API
   const knownCategories = categoryOrder.filter(cat => itemsByCategory[cat] && itemsByCategory[cat].length > 0);
   const extraCategories = Object.keys(itemsByCategory).filter(cat => !categoryOrder.includes(cat)).sort();

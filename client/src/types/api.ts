@@ -4,22 +4,33 @@ export interface Meal {
   name: string;
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   cook_time_minutes?: number;
+  prep_time_minutes?: number;
   servings?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
   tags?: string;
   ingredients?: string;
   instructions?: string;
   created_at: string;
+  updated_at?: string;
   is_favorite?: boolean;
   last_cooked?: string;
   makes_leftovers?: boolean;
   leftover_servings?: number;
   leftover_days?: number;
+  kid_friendly_level?: number;
   kid_rating?: number;
   image_url?: string;
   cuisine?: string;
   source_url?: string;
   top_comments?: string;
+  is_leftover?: boolean;
+  original_meal_id?: number;
+  times_cooked?: number;
+  calories?: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fat_g?: number;
+  fiber_g?: number;
 }
 
 export interface MealPlan {
@@ -69,7 +80,6 @@ export interface SchoolMenuItem {
   meal_type: 'breakfast' | 'lunch' | 'snack';
   description?: string;
   created_at: string;
-  dislike_count?: number;
 }
 
 export interface MenuFeedback {
@@ -180,8 +190,8 @@ export interface Restaurant {
   website?: string;
   cuisine_type?: string;
   price_range?: string;
-  hours_data?: string; // JSON string
-  happy_hour_info?: string; // JSON string
+  hours_data?: Record<string, unknown> | null; // JSONB in database
+  happy_hour_info?: Record<string, unknown> | null; // JSONB in database
   outdoor_seating: boolean;
   has_bar: boolean;
   takes_reservations: boolean;

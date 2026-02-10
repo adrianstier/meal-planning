@@ -189,20 +189,20 @@ const RestaurantsPage: React.FC = () => {
     }
     try {
       const result = await searchRestaurant.mutateAsync(searchQuery);
-      // Parse hours_data and happy_hour_info if they're strings
+      // Edge functions may return JSONB fields as strings; normalize to objects
       const searchedData = result.data;
       if (typeof searchedData.hours_data === 'string') {
         try {
-          searchedData.hours_data = JSON.parse(searchedData.hours_data);
-        } catch (e) {
-          // Keep as string if parse fails
+          searchedData.hours_data = JSON.parse(searchedData.hours_data) as Record<string, unknown>;
+        } catch {
+          searchedData.hours_data = null;
         }
       }
       if (typeof searchedData.happy_hour_info === 'string') {
         try {
-          searchedData.happy_hour_info = JSON.parse(searchedData.happy_hour_info);
-        } catch (e) {
-          // Keep as string if parse fails
+          searchedData.happy_hour_info = JSON.parse(searchedData.happy_hour_info) as Record<string, unknown>;
+        } catch {
+          searchedData.happy_hour_info = null;
         }
       }
       // Fill form with searched data
@@ -227,20 +227,20 @@ const RestaurantsPage: React.FC = () => {
     }
     try {
       const result = await scrapeRestaurantUrl.mutateAsync(scrapeUrl);
-      // Parse hours_data and happy_hour_info if they're strings
+      // Edge functions may return JSONB fields as strings; normalize to objects
       const scrapedData = result.data;
       if (typeof scrapedData.hours_data === 'string') {
         try {
-          scrapedData.hours_data = JSON.parse(scrapedData.hours_data);
-        } catch (e) {
-          // Keep as string if parse fails
+          scrapedData.hours_data = JSON.parse(scrapedData.hours_data) as Record<string, unknown>;
+        } catch {
+          scrapedData.hours_data = null;
         }
       }
       if (typeof scrapedData.happy_hour_info === 'string') {
         try {
-          scrapedData.happy_hour_info = JSON.parse(scrapedData.happy_hour_info);
-        } catch (e) {
-          // Keep as string if parse fails
+          scrapedData.happy_hour_info = JSON.parse(scrapedData.happy_hour_info) as Record<string, unknown>;
+        } catch {
+          scrapedData.happy_hour_info = null;
         }
       }
       // Merge scraped data into form, but don't override existing data
@@ -465,7 +465,11 @@ const RestaurantsPage: React.FC = () => {
                 )}
                 {restaurant.hours_data && (() => {
                   try {
-                    const hours = JSON.parse(restaurant.hours_data);
+                    // JSONB columns are returned as parsed objects by Supabase
+                    const hours = typeof restaurant.hours_data === 'string'
+                      ? JSON.parse(restaurant.hours_data)
+                      : restaurant.hours_data;
+                    if (!hours || typeof hours !== 'object') return null;
                     return (
                       <div className="mt-3 pt-3 border-t">
                         <div className="flex items-center gap-1 text-xs font-medium mb-1">
@@ -488,11 +492,15 @@ const RestaurantsPage: React.FC = () => {
                 })()}
                 {restaurant.happy_hour_info && (() => {
                   try {
-                    const happyHour = JSON.parse(restaurant.happy_hour_info);
+                    // JSONB columns are returned as parsed objects by Supabase
+                    const happyHour = typeof restaurant.happy_hour_info === 'string'
+                      ? JSON.parse(restaurant.happy_hour_info)
+                      : restaurant.happy_hour_info;
+                    if (!happyHour || typeof happyHour !== 'object') return null;
                     return (
                       <div className="mt-2 text-xs">
                         <Badge variant="secondary" className="text-xs">
-                          Happy Hour: {happyHour.time}
+                          Happy Hour: {(happyHour as Record<string, unknown>).time as string}
                         </Badge>
                       </div>
                     );

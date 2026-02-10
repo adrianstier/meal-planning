@@ -1,29 +1,22 @@
-# Bug Bash Plan — Wave 2 (Multi-Agent)
+# Bug Bash Plan — Wave 3 (Deep Pass + Remaining Issues)
 
-## Previous Wave
-Commit `01242ad` fixed 8 bugs: edge function timeouts, query key mismatches, agent headers, broadcast error handling. This wave goes deeper.
+## Previous Waves
+- Wave 1: 8 bugs fixed (serial)
+- Wave 2: 43 bugs fixed (6 parallel agents + review)
+- Total: 51 bugs fixed across 40 files
 
-## Scope Splits (6 parallel agents)
+## Wave 3 Strategy
+Previous waves did broad coverage. Wave 3 goes deeper:
+1. **Fix the 5 remaining issues** flagged by Wave 2 review
+2. **Regression check** the Wave 2 fixes (verify the edits are correct)
+3. **Integration-level analysis** — data flows across file boundaries
+4. **Database schema alignment** — verify client types match DB schema
 
-| Agent | Scope | Key Files | Lines |
-|-------|-------|-----------|-------|
-| **api-layer** | Core API + data layer | `api.ts`, `supabase.ts`, `types/api.ts`, `utils/*` | ~2600 |
-| **pages-plan** | Plan & meal pages + plan components | `PlanPageEnhanced.tsx`, `PlanPage.tsx`, `RecipesPage.tsx`, plan components, `usePlan.ts`, `useMeals.ts` | ~3800 |
-| **pages-features** | Feature pages (seasonal, holiday, bento, CSA, leftovers, school, restaurants, lists, pricing, profile) | 10 page files + `useLeftovers.ts`, `useSchoolMenu.ts`, `useRestaurants.ts`, `useShopping.ts` | ~6400 |
-| **auth-contexts** | Auth, contexts, layout, error boundary, onboarding | `AuthContext.tsx`, `BroadcastSyncContext.tsx`, `DragDropContext.tsx`, `Layout.tsx`, `ErrorBoundary.tsx`, `OnboardingTour.tsx`, `App.tsx`, `LoginPage.tsx` | ~2000 |
-| **edge-functions** | All Supabase edge functions + shared cors | 12 edge functions, `_shared/cors.ts` | ~3500 |
-| **agent-system** | Multi-agent AI system | `_shared/agents/*`, `agent/index.ts`, `useAgent.ts`, `AgentChat.tsx` | ~4400 |
+## Scope Splits (4 parallel agents)
 
-## Agent Instructions
-Each scope agent will:
-1. Read every file in its scope thoroughly
-2. Identify bugs: logic errors, race conditions, null safety, type errors, security issues, missing error handling
-3. For each bug: assess severity, describe the issue, provide the fix
-4. Apply fixes directly to the code
-5. Write findings to `bug-bash-reports/<scope>.md`
-
-## Review Phase
-After all scope agents complete:
-1. Review agent reads all reports + runs `npm run build`
-2. Checks for cross-cutting issues between scopes
-3. Writes `bug-bash-reports/summary.md`
+| Agent | Scope | Focus |
+|-------|-------|-------|
+| **remaining-issues** | Fix the 5 actionable items from Wave 2 summary | Agent feedback wiring, 404 route, CORS divergence, generateWeek meal assignment, PostgREST wildcards |
+| **regression-check** | Verify all Wave 2 fixes are correct | Read every modified file, check each fix for correctness and side effects |
+| **integration-flows** | Cross-file data flow analysis | Plan creation→display→edit→delete flow, recipe parse→save→display flow, shopping list generation→display flow |
+| **schema-alignment** | DB schema vs client types | Compare supabase/schema.sql + migrations against client/src/types/api.ts and actual API usage |

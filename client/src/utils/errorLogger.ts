@@ -396,11 +396,4 @@ class ErrorLogger {
 // Export singleton instance
 export const errorLogger = new ErrorLogger();
 
-// Export utility function for easy use
-export const logError = (
-  error: Error | string,
-  type?: ErrorLog['type'],
-  context?: ErrorContext
-) => errorLogger.log(error, type, context);
-
 export default errorLogger;

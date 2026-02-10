@@ -95,7 +95,7 @@ const HolidayPlannerPage: React.FC = () => {
     make_ahead_items: TimelineItem[];
     day_of_schedule: TimelineItem[];
   } | null>(null);
-  const [, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({ show: false, type: 'info', message: '' });
 
@@ -1037,8 +1037,14 @@ const HolidayPlannerPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {loading && (
+              <div className="text-center py-4 text-muted-foreground">
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2" />
+                Applying template...
+              </div>
+            )}
             <Card
-              className="cursor-pointer hover:border-primary transition-colors"
+              className={`cursor-pointer hover:border-primary transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}
               onClick={() => applyTemplate('thanksgiving')}
             >
               <CardHeader>
@@ -1052,7 +1058,7 @@ const HolidayPlannerPage: React.FC = () => {
               </CardHeader>
             </Card>
             <Card
-              className="cursor-pointer hover:border-primary transition-colors"
+              className={`cursor-pointer hover:border-primary transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}
               onClick={() => applyTemplate('christmas')}
             >
               <CardHeader>
@@ -1066,7 +1072,7 @@ const HolidayPlannerPage: React.FC = () => {
               </CardHeader>
             </Card>
             <Card
-              className="cursor-pointer hover:border-primary transition-colors"
+              className={`cursor-pointer hover:border-primary transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}
               onClick={() => applyTemplate('easter')}
             >
               <CardHeader>

@@ -110,18 +110,4 @@ export function checkRateLimit(
   }
 }
 
-/**
- * Decorator-style wrapper for rate-limited async functions
- */
-export function withRateLimit<T extends (...args: unknown[]) => Promise<unknown>>(
-  fn: T,
-  limiter: RateLimiter,
-  key: string
-): T {
-  return (async (...args: Parameters<T>) => {
-    checkRateLimit(limiter, key);
-    return fn(...args);
-  }) as T;
-}
-
 export default rateLimiters;

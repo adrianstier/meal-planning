@@ -3,7 +3,7 @@
  * Returns subtle background colors and border colors for each cuisine
  */
 
-export const CUISINE_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+const CUISINE_COLORS: Record<string, { bg: string; border: string; text: string }> = {
   Italian: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-900' },
   Mexican: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-900' },
   Chinese: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-900' },
@@ -28,8 +28,3 @@ export const getCuisineColors = (cuisine: string | null | undefined) => {
   return CUISINE_COLORS[cuisine] || { bg: 'bg-accent/50', border: 'border-accent', text: 'text-foreground' };
 };
 
-// getCuisineEmoji is deprecated - use getCuisineColors for styling instead
-// This function now returns null to indicate icon should be used
-export const getCuisineEmoji = (cuisine: string | null | undefined): null => {
-  return null;
-};

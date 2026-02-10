@@ -41,15 +41,6 @@ interface GeneratedMealPlanItem {
   cuisine?: string;
 }
 
-/**
- * Result from planApi.generateWeek function.
- * Contains the generated meal plan items and optionally a bento message.
- */
-export interface GenerateWeekResult {
-  data: GeneratedMealPlanItem[];
-  bentoMessage?: string;
-}
-
 // ============================================================================
 // DATE UTILITIES (Timezone-safe)
 // ============================================================================
@@ -1039,15 +1030,24 @@ export const planApi = {
 
   suggest: async (date: string, mealType: string, constraints?: PlanConstraints) => {
     // Call Edge Function for AI suggestions with timeout handling
-    const { data, error } = await invokeWithTimeout<Meal[]>('suggest-meal', {
-      date, meal_type: mealType, ...constraints,
+    // Edge function reads: mealType, cuisinePreferences, dietaryRestrictions, etc.
+    const { data, error } = await invokeWithTimeout<{ suggestions: Array<{ name: string; description: string; reason: string; estimated_time: string; difficulty: string }> }>('suggest-meal', {
+      date, mealType, ...constraints,
     });
 
     if (error) {
       errorLogger.logApiError(error, '/functions/suggest-meal', 'POST');
       throw error;
     }
-    return wrapResponse(data as Meal[]);
+    // Edge function returns { suggestions: [...] }, extract and map to Meal-like objects
+    const suggestions = data?.suggestions || [];
+    const meals: Partial<Meal>[] = suggestions.map((s) => ({
+      name: s.name,
+      meal_type: mealType as Meal['meal_type'],
+      difficulty: s.difficulty as Meal['difficulty'],
+      instructions: s.description,
+    } as Partial<Meal>));
+    return wrapResponse(meals as Meal[]);
   },
 
   generateWeek: async (
@@ -1291,7 +1291,8 @@ export const leftoversApi = {
     // Get the most recent leftover as the "original meal" for context
     const originalMeal = leftovers[0]?.meal?.name || leftovers[0]?.meal_name;
 
-    const { data, error } = await invokeWithTimeout<{ suggestions: LeftoverSuggestion[] }>('leftover-suggestions', {
+    // Edge function returns: { suggestions: Array<{ name, description, transformationType, additionalIngredients, instructions, estimatedTime }> }
+    const { data, error } = await invokeWithTimeout<{ suggestions: Array<{ name: string; description: string; transformationType: string; additionalIngredients: string[]; instructions: string; estimatedTime: string }> }>('leftover-suggestions', {
       originalMeal,
       leftoverIngredients,
       availableTime: '30 minutes',
@@ -1303,8 +1304,15 @@ export const leftoversApi = {
       throw error;
     }
 
-    // Edge function returns { suggestions: [...] }, extract the array
-    const suggestions = data?.suggestions || [];
+    // Map edge function response to LeftoverSuggestion format the UI expects
+    const rawSuggestions = data?.suggestions || [];
+    const suggestions: LeftoverSuggestion[] = rawSuggestions.map((s, index) => ({
+      meal_id: leftovers[index]?.meal_id || 0,
+      meal_name: s.name,
+      suggestion: `${s.description} (${s.transformationType}). ${s.instructions}. Additional ingredients: ${s.additionalIngredients?.join(', ') || 'none'}. Time: ${s.estimatedTime}`,
+      servings_remaining: leftovers[index]?.servings_remaining || 0,
+      days_until_expiry: differenceInDays(parseISO(leftovers[index]?.expires_date || new Date().toISOString()), new Date()),
+    }));
     return wrapResponse(suggestions);
   },
 };
@@ -1441,13 +1449,49 @@ export const schoolMenuApi = {
   },
 
   getLunchAlternatives: async (date: string) => {
-    const { data, error } = await invokeWithTimeout<LunchAlternative>('lunch-alternatives', { date });
+    // First, fetch the school menu for this date to get the meal name
+    const { data: menuItems, error: menuError } = await supabase
+      .from('school_menu_items')
+      .select('*')
+      .eq('menu_date', date)
+      .eq('meal_type', 'lunch')
+      .limit(1);
+
+    if (menuError) {
+      errorLogger.logApiError(menuError, `/school-menu/lunch-alternatives/${date}`, 'GET');
+      throw menuError;
+    }
+
+    const schoolMeal = menuItems?.[0]?.meal_name || 'school lunch';
+
+    // Edge function expects: { schoolMeal, dietaryRestrictions, preferences, packingConstraints, childAge }
+    // Edge function returns: { alternatives: Array<{ name, description, type, portionSize, nutritionNotes, prepInstructions, packingTips }> }
+    const { data, error } = await invokeWithTimeout<{ alternatives: Array<{ name: string; description: string; type: string; portionSize: string; nutritionNotes: string; prepInstructions: string; packingTips: string }> }>('lunch-alternatives', {
+      schoolMeal,
+    });
 
     if (error) {
       errorLogger.logApiError(error, `/school-menu/lunch-alternatives/${date}`, 'GET');
       throw error;
     }
-    return wrapResponse(data as LunchAlternative);
+
+    // Transform the edge function response into the LunchAlternative type the UI expects
+    const alternatives = data?.alternatives || [];
+    const result: LunchAlternative = {
+      date,
+      school_menu: (menuItems || []) as SchoolMenuItem[],
+      needs_alternative: true,
+      available_leftovers: [],
+      quick_lunch_options: alternatives.map((alt) => ({
+        name: alt.name,
+        instructions: alt.prepInstructions,
+      } as Meal)),
+      recommendation: alternatives.length > 0
+        ? `Try "${alternatives[0].name}": ${alternatives[0].description}`
+        : 'No alternatives available',
+    };
+
+    return wrapResponse(result);
   },
 
   parsePhoto: async (imageData: string, imageType: string, autoAdd: boolean = false) => {
@@ -2024,13 +2068,30 @@ export const restaurantsApi = {
   },
 
   suggest: async (filters?: RestaurantFilters) => {
-    const { data, error } = await invokeWithTimeout<Restaurant[]>('suggest-restaurant', { ...filters });
+    // Edge function expects: { occasion, cuisinePreferences, dietaryRestrictions, priceRange, partySize, hasKids, location }
+    // Edge function returns: { suggestions: Array<{ name, cuisine, description, priceRange, kidFriendly, dietaryOptions, whyRecommended, typicalDishes }> }
+    const { data, error } = await invokeWithTimeout<{ suggestions: Array<{ name: string; cuisine: string; description: string; priceRange: string; kidFriendly: boolean; dietaryOptions: string[]; whyRecommended: string; typicalDishes: string[] }> }>('suggest-restaurant', {
+      cuisinePreferences: filters?.cuisine_type ? [filters.cuisine_type] : [],
+      hasKids: filters?.kid_friendly,
+      priceRange: filters?.price_range || 'moderate',
+    });
 
     if (error) {
       errorLogger.logApiError(error, '/functions/suggest-restaurant', 'POST');
       throw error;
     }
-    return wrapResponse(data as Restaurant[]);
+
+    // Map AI suggestions to Restaurant-like objects
+    const suggestions = data?.suggestions || [];
+    const restaurants: Partial<Restaurant>[] = suggestions.map((s) => ({
+      name: s.name,
+      cuisine_type: s.cuisine,
+      notes: `${s.description}\n\nWhy recommended: ${s.whyRecommended}`,
+      price_range: s.priceRange,
+      kid_friendly: s.kidFriendly,
+      tags: s.typicalDishes?.join(', '),
+    } as Partial<Restaurant>));
+    return wrapResponse(restaurants as Restaurant[]);
   },
 
   search: async (query: string) => {
@@ -2054,13 +2115,34 @@ export const restaurantsApi = {
   },
 
   scrapeUrl: async (url: string) => {
-    const { data, error } = await invokeWithTimeout<Partial<Restaurant>>('scrape-restaurant-url', { url });
+    // Edge function returns: { restaurantName, cuisine, menuSections, hours, address, phone }
+    interface ScrapedRestaurant {
+      restaurantName: string | null;
+      cuisine: string | null;
+      menuSections: Array<{ name: string; items: Array<{ name: string; description: string | null; price: string | null; category: string; dietaryTags: string[] }> }>;
+      hours: string | null;
+      address: string | null;
+      phone: string | null;
+    }
+
+    const { data, error } = await invokeWithTimeout<ScrapedRestaurant>('scrape-restaurant-url', { url });
 
     if (error) {
       errorLogger.logApiError(error, '/functions/scrape-restaurant-url', 'POST');
       throw error;
     }
-    return wrapResponse(data as Partial<Restaurant>);
+
+    // Transform the scraped data into Restaurant format
+    const menuItems = data?.menuSections?.flatMap(s => s.items.map(i => i.name)) || [];
+    const restaurant: Partial<Restaurant> = {
+      name: data?.restaurantName || undefined,
+      cuisine_type: data?.cuisine || undefined,
+      address: data?.address || undefined,
+      phone: data?.phone || undefined,
+      website: url,
+      notes: menuItems.length > 0 ? `Menu highlights: ${menuItems.slice(0, 10).join(', ')}` : undefined,
+    };
+    return wrapResponse(restaurant);
   },
 
   geocode: async (address: string) => {

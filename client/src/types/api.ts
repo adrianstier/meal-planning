@@ -127,19 +127,6 @@ export interface MealHistory {
   notes?: string;
 }
 
-// API response types
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
-
-export interface MealWithHistory extends Meal {
-  cook_count?: number;
-  last_cooked?: string;
-  avg_rating?: number;
-}
 
 // Constraints for meal planning
 export interface PlanConstraints {
@@ -162,7 +149,7 @@ export interface BentoItem {
   created_at: string;
 }
 
-export interface BentoCompartment {
+interface BentoCompartment {
   id: number;
   name: string;
   category: string;

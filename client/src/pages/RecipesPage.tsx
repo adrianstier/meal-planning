@@ -198,8 +198,8 @@ const RecipesPage: React.FC = () => {
         instructionsText = parsedData.instructions;
       }
 
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         name: parsedData.name || '',
         meal_type: parsedData.meal_type || 'dinner',
         cook_time_minutes: parsedData.cook_time_minutes,
@@ -211,7 +211,7 @@ const RecipesPage: React.FC = () => {
         image_url: parsedData.image_url,
         source_url: parsedData.source_url,
         cuisine: parsedData.cuisine,
-      });
+      }));
       setAddDialogOpen(true);
       setRecipeText('');
     } catch (error) {
@@ -244,8 +244,8 @@ const RecipesPage: React.FC = () => {
       instructionsText = parsedData.instructions;
     }
 
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       name: parsedData.name || '',
       meal_type: parsedData.meal_type || 'dinner',
       cook_time_minutes: parsedData.cook_time_minutes,
@@ -257,7 +257,7 @@ const RecipesPage: React.FC = () => {
       image_url: parsedData.image_url,
       source_url: parsedData.source_url,
       cuisine: parsedData.cuisine,
-    });
+    }));
   };
 
   // AI-enhanced import - uses Claude to parse the page
@@ -351,10 +351,10 @@ const RecipesPage: React.FC = () => {
       } catch (saveError) {
         console.error('Failed to auto-save recipe:', saveError);
         // If auto-save fails, fall back to showing the form for manual save
-        setFormData({
-          ...formData,
+        setFormData(prev => ({
+          ...prev,
           ...recipeToSave,
-        });
+        }));
         setAddDialogOpen(true);
         alert('Recipe parsed successfully! Please review and save manually.');
       }
@@ -1070,7 +1070,12 @@ const RecipesPage: React.FC = () => {
       </Tabs>
 
       {/* Parse Recipe Dialog */}
-      <Dialog open={parseDialogOpen} onOpenChange={setParseDialogOpen}>
+      <Dialog open={parseDialogOpen} onOpenChange={(open) => {
+        setParseDialogOpen(open);
+        if (!open) {
+          setRecipeText('');
+        }
+      }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Parse Recipe from Text</DialogTitle>
@@ -1434,7 +1439,12 @@ const RecipesPage: React.FC = () => {
       </Dialog>
 
       {/* View Recipe Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+      <Dialog open={viewDialogOpen} onOpenChange={(open) => {
+        setViewDialogOpen(open);
+        if (!open) {
+          setSelectedMeal(null);
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedMeal?.name}</DialogTitle>
@@ -1560,7 +1570,12 @@ const RecipesPage: React.FC = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog open={deleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) {
+          setSelectedMeal(null);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Recipe</DialogTitle>
@@ -1584,7 +1599,12 @@ const RecipesPage: React.FC = () => {
       </Dialog>
 
       {/* Bulk Tag Dialog */}
-      <Dialog open={bulkTagDialogOpen} onOpenChange={setBulkTagDialogOpen}>
+      <Dialog open={bulkTagDialogOpen} onOpenChange={(open) => {
+        setBulkTagDialogOpen(open);
+        if (!open) {
+          setBulkTagInput('');
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Tags to "{selectedMeal?.name}"</DialogTitle>

@@ -30,7 +30,6 @@ import {
   useSuggestRestaurants,
   useGeocodeAddress,
   useSearchRestaurant,
-  useScrapeRestaurantUrl,
 } from '../hooks/useRestaurants';
 import type { Restaurant, RestaurantFilters } from '../types/api';
 import RestaurantMap from '../components/RestaurantMap';
@@ -47,7 +46,6 @@ const RestaurantsPage: React.FC = () => {
   // Filters
   const [filters, setFilters] = useState<RestaurantFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [scrapeUrl, setScrapeUrl] = useState('');
   const [searchQuery, setSearchQuery] = useState(''); // For web search
   const [showManualEntry, setShowManualEntry] = useState(false); // Toggle between search and manual
 
@@ -75,7 +73,6 @@ const RestaurantsPage: React.FC = () => {
   const suggestRestaurants = useSuggestRestaurants();
   const searchRestaurant = useSearchRestaurant();
   const geocodeAddress = useGeocodeAddress();
-  const scrapeRestaurantUrl = useScrapeRestaurantUrl();
 
   // Filter restaurants by search term
   const filteredRestaurants = useMemo(() => {
@@ -216,43 +213,6 @@ const RestaurantsPage: React.FC = () => {
       const error = err as Error;
       console.error('Error searching restaurant:', error);
       alert(error.message || 'Failed to find restaurant. Try a more specific search like "Restaurant Name, City"');
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleScrapeFromUrl = async () => {
-    if (!scrapeUrl) {
-      alert('Please enter a URL first');
-      return;
-    }
-    try {
-      const result = await scrapeRestaurantUrl.mutateAsync(scrapeUrl);
-      // Edge functions may return JSONB fields as strings; normalize to objects
-      const scrapedData = result.data;
-      if (typeof scrapedData.hours_data === 'string') {
-        try {
-          scrapedData.hours_data = JSON.parse(scrapedData.hours_data) as Record<string, unknown>;
-        } catch {
-          scrapedData.hours_data = null;
-        }
-      }
-      if (typeof scrapedData.happy_hour_info === 'string') {
-        try {
-          scrapedData.happy_hour_info = JSON.parse(scrapedData.happy_hour_info) as Record<string, unknown>;
-        } catch {
-          scrapedData.happy_hour_info = null;
-        }
-      }
-      // Merge scraped data into form, but don't override existing data
-      setFormData({
-        ...formData,
-        ...scrapedData,
-      });
-      setScrapeUrl('');
-    } catch (err) {
-      const error = err as Error;
-      console.error('Error scraping from URL:', error);
-      alert(error.message || 'Failed to scrape restaurant from URL');
     }
   };
 

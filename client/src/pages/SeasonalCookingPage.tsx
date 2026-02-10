@@ -115,9 +115,6 @@ const getUrgencyLevel = (daysLeft: number): 'critical' | 'warning' | 'ok' => {
 };
 
 const SeasonalCookingPage: React.FC = () => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const navigate = useNavigate();
-
   // Seasonal data
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [selectedSeasonalItems, setSelectedSeasonalItems] = useState<Set<string>>(new Set());

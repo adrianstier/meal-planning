@@ -454,17 +454,6 @@ const PlanPageEnhanced: React.FC = () => {
     }
   }, []);
 
-  // Toggle cuisine selection for AI plan generation filters
-  // TODO: Wire up to cuisine filter UI in generate plan dialog - GitHub issue #TBD
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const toggleCuisine = useCallback((cuisine: string) => {
-    setSelectedCuisines(prev =>
-      prev.includes(cuisine)
-        ? prev.filter(c => c !== cuisine)
-        : [...prev, cuisine]
-    );
-  }, []);
-
   // Simple navigation - React's state batching handles rapid updates
   const navigateToWeek = useCallback((newWeekStart: string) => {
     setCurrentWeekStart(newWeekStart);
@@ -561,32 +550,17 @@ const PlanPageEnhanced: React.FC = () => {
     }, 3000);
   }, []);
 
-  // Paste copied meal to a slot (used by click-to-paste flow)
-  // TODO: Wire up to empty slot click handler to enable paste - GitHub issue #TBD
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handlePasteMeal = useCallback(async (date: string, mealType: string) => {
-    if (!mealSelection.copiedMeal) return;
-    try {
-      await addPlanItem.mutateAsync({
-        meal_id: mealSelection.copiedMeal.meal_id,
-        plan_date: date,
-        meal_type: mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack'
-      });
-      dispatchMealSelection({ type: 'CLEAR_COPIED_MEAL' });
-    } catch (error) {
-      console.error('Failed to paste meal:', error);
-    }
-  }, [mealSelection.copiedMeal, addPlanItem]);
-
   // TODO: Implement move meal dialog - GitHub issue #TBD
   // This would allow users to drag or select a target slot to move the meal to
   const handleMoveMeal = useCallback((_meal: MealPlan) => {
-    // TODO: Open a dialog to select target date/slot
+    // Not yet implemented - show user feedback instead of silent no-op
+    alert('Move meal is coming soon! For now, copy the meal and delete the original.');
   }, []);
 
   // TODO: Implement swap meal dialog
   const handleSwapMeal = useCallback((_meal: MealPlan) => {
-    // TODO: Open a dialog to select another meal to swap with
+    // Not yet implemented - show user feedback instead of silent no-op
+    alert('Swap meals is coming soon! For now, you can delete and re-add meals to rearrange.');
   }, []);
 
   // Handler for viewing a meal's details

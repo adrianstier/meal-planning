@@ -6,7 +6,8 @@
 | Wave 1 | Serial (orchestrator only) | 3 audit + manual | 8 | 8 |
 | Wave 2 | Parallel (6 scope agents + review) | 7 | 43 | 30 |
 | Wave 3 | Deep pass (remaining issues, regression, integration, schema) | 6 | 13 | 12 |
-| **Total** | | **16 agents** | **64 bugs** | **~45 unique files** |
+| Wave 4 | Hardening (state machines, dead code, edge contracts) | 3 | 26+ | 13 |
+| **Total** | | **19 agents** | **90+ bugs** | **~50 unique files** |
 
 Build status: **PASS** (zero warnings across all waves)
 
@@ -91,6 +92,31 @@ Plus: BroadcastSyncContext postMessage error handling, deleted dead useBroadcast
 - All 51 Wave 1-2 fixes verified correct by dedicated regression agents
 - Zero regressions in original fixes
 
+## Wave 4 — Hardening (26+ bugs)
+
+### State Machines (10 bugs)
+- PlanPageEnhanced: `handleMoveMeal`/`handleSwapMeal` were silent no-ops reachable from UI
+- RecipesPage: 3x stale `formData` closures in parse handlers (used spread instead of functional update)
+- RecipesPage: 4x dialog `onOpenChange` not clearing state (`selectedMeal`, `bulkTagInput`, `recipeText`)
+- HolidayPlannerPage: `loading` state set but never read — zero loading feedback on template apply
+
+### Edge Function Contracts (8 bugs)
+- `suggest-meal`: Client sent `meal_type` (snake_case) but edge reads `mealType` — always defaulted to dinner
+- `suggest-meal`: Client expected `Meal[]` but edge returns `{ suggestions }` wrapper
+- `lunch-alternatives`: Client sent `{ date }` but edge expects `{ schoolMeal }` — always returned 400 error
+- `lunch-alternatives`: Response type completely mismatched between client and edge function
+- `suggest-restaurant`: Filter parameters all ignored (snake_case vs camelCase mismatch)
+- `suggest-restaurant`: Response format mismatch (suggestions wrapper + different field shapes)
+- `leftover-suggestions`: Client `LeftoverSuggestion` type had different fields than edge `LeftoverIdea`
+- `scrape-restaurant-url`: Edge returns `ParsedRestaurantMenu` but client expected `Partial<Restaurant>`
+
+### Dead Code Cleanup (8+ items removed)
+- Removed unused `navigate` from SeasonalCookingPage
+- Removed dead `handleScrapeFromUrl`, `scrapeUrl` state, `useScrapeRestaurantUrl` from RestaurantsPage
+- Removed unused `useMeal`, `useSearchMeals`, `useParseRecipeFromUrl`, `useDebounce` from useMeals.ts
+- Removed unused `getCuisineEmoji` usage from WeeklyVarietySummary
+- Cleaned up unused exports in cuisineColors, errorLogger, rateLimiter, api types
+
 ---
 
 ## Security Fixes Summary
@@ -104,14 +130,17 @@ Plus: BroadcastSyncContext postMessage error handling, deleted dead useBroadcast
 
 ## Top Impact Fixes
 1. **UTC date parsing** (9 locations) — every US timezone user saw wrong dates
-2. **Ingredient scaler** — doubled all slash-fraction ingredients
-3. **SSRF bypass** — attackers could reach internal services via redirect
-4. **Cache key mismatch** — plan UI silently failed to refresh after mutations
-5. **Invisible shopping categories** — items counted but never rendered
-6. **Shopping category mismatch** — generated items fell into unsorted bucket
+2. **Edge function contract mismatches** (5 endpoints) — suggest-meal, lunch-alternatives, suggest-restaurant, leftover-suggestions, scrape-restaurant-url all silently broken
+3. **Ingredient scaler** — doubled all slash-fraction ingredients
+4. **SSRF bypass** — attackers could reach internal services via redirect
+5. **Cache key mismatch** — plan UI silently failed to refresh after mutations
+6. **Invisible shopping categories** — items counted but never rendered
+7. **Shopping category mismatch** — generated items fell into unsorted bucket
 
 ## Remaining Concerns (won't fix — require design decisions)
 1. Edge functions return nutrition data the frontend drops during recipe import
 2. AI-powered generate-shopping-list edge function exists but is never called
 3. `meal_plans` DB table is completely unused
 4. Multi-agent orchestrator framework is dead code (endpoint calls Claude directly)
+5. 3 non-existent edge functions referenced by client: `scrape-restaurant`, `search-restaurant`, `geocode-address`
+6. `needsAI` flag in parse-recipe-url 422 response not propagated to client (fallback to AI never triggers)

@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { getCuisineEmoji } from '../../../utils/cuisineColors';
 import type { MealPlan } from '../../../types/api';
 
 interface WeeklyVarietySummaryProps {
@@ -41,7 +40,6 @@ const WeeklyVarietySummary: React.FC<WeeklyVarietySummaryProps> = ({ weekPlan })
                     : 'bg-secondary text-secondary-foreground'
                 }`}
               >
-                <span>{getCuisineEmoji(cuisine)}</span>
                 <span className="font-medium">{cuisine}</span>
                 <span className="text-xs opacity-75">×{count}</span>
               </div>

@@ -2,7 +2,39 @@ import type { Restaurant } from '../types/api';
 
 type SeedRestaurant = Omit<Partial<Restaurant>, 'id' | 'created_at' | 'updated_at'>;
 
-export const sbRestaurants: SeedRestaurant[] = [
+// Cuisine-type photo URLs from Unsplash (free, permanent)
+const PHOTOS: Record<string, string> = {
+  mexican: 'https://images.unsplash.com/photo-1585803518902-58a3ef005b51?w=400&h=300&fit=crop',
+  pizza: 'https://images.unsplash.com/photo-1559978137-8c560d91e9e1?w=400&h=300&fit=crop',
+  cocktails: 'https://plus.unsplash.com/premium_photo-1753311640025-7eb3e0165974?w=400&h=300&fit=crop',
+  brewery: 'https://plus.unsplash.com/premium_photo-1695658863103-9bc9f5984837?w=400&h=300&fit=crop',
+  seafood: 'https://images.unsplash.com/photo-1715249792962-5359b4b17f21?w=400&h=300&fit=crop',
+  asian_fusion: 'https://plus.unsplash.com/premium_photo-1699983842585-adb9cc6e217b?w=400&h=300&fit=crop',
+  thai: 'https://images.unsplash.com/photo-1628430043154-290c67c19550?w=400&h=300&fit=crop',
+  indonesian: 'https://images.unsplash.com/photo-1666854799113-1ba582079996?w=400&h=300&fit=crop',
+  breakfast: 'https://plus.unsplash.com/premium_photo-1692193554100-e02115b9acde?w=400&h=300&fit=crop',
+  bakery: 'https://images.unsplash.com/photo-1767939409311-fa76713560cb?w=400&h=300&fit=crop',
+  coffee: 'https://plus.unsplash.com/premium_photo-1663932464937-e677ddfc1d55?w=400&h=300&fit=crop',
+  dessert: 'https://images.unsplash.com/photo-1636564499112-6113e73c504a?w=400&h=300&fit=crop',
+  sandwiches: 'https://images.unsplash.com/photo-1764620977411-9f06b1425064?w=400&h=300&fit=crop',
+  bbq: 'https://images.unsplash.com/photo-1592412544617-7c962b8b7271?w=400&h=300&fit=crop',
+  farm_to_table: 'https://images.unsplash.com/photo-1763867641433-e7d2c0f62361?w=400&h=300&fit=crop',
+  wine_bar: 'https://images.unsplash.com/photo-1743599233961-380b19996ad7?w=400&h=300&fit=crop',
+  vietnamese: 'https://images.unsplash.com/photo-1766050586763-723571af4dde?w=400&h=300&fit=crop',
+  smoothies: 'https://plus.unsplash.com/premium_photo-1726862746882-859fa60350ce?w=400&h=300&fit=crop',
+  french: 'https://plus.unsplash.com/premium_photo-1665669263531-cdcbe18e7fe4?w=400&h=300&fit=crop',
+  american: 'https://plus.unsplash.com/premium_photo-1749558051414-e767b290ac33?w=400&h=300&fit=crop',
+  burgers: 'https://images.unsplash.com/photo-1592412544617-7c962b8b7271?w=400&h=300&fit=crop',
+  bar: 'https://plus.unsplash.com/premium_photo-1753311640025-7eb3e0165974?w=400&h=300&fit=crop',
+  healthy: 'https://plus.unsplash.com/premium_photo-1726862746882-859fa60350ce?w=400&h=300&fit=crop',
+};
+
+function photoFor(cuisineType: string): string {
+  const key = cuisineType.toLowerCase().replace(/\s+/g, '_');
+  return PHOTOS[key] || PHOTOS.american;
+}
+
+const _sbRestaurants: SeedRestaurant[] = [
   // ============================================================================
   // SANTA BARBARA - Dinner (Fancy/Special Occasion)
   // ============================================================================
@@ -840,3 +872,9 @@ export const sbRestaurants: SeedRestaurant[] = [
     kid_friendly: false,
   },
 ];
+
+// Export with photos auto-assigned by cuisine type
+export const sbRestaurants: SeedRestaurant[] = _sbRestaurants.map((r) => ({
+  ...r,
+  image_url: r.image_url || photoFor(r.cuisine_type || 'American'),
+}));

@@ -34,6 +34,7 @@ import {
 import type { Restaurant, RestaurantFilters } from '../types/api';
 import RestaurantMap from '../components/RestaurantMap';
 import { sbRestaurants } from '../data/sbRestaurants';
+import { restaurantsApi } from '../lib/api';
 
 const RestaurantsPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -187,33 +188,97 @@ const RestaurantsPage: React.FC = () => {
   };
 
   const handleImportSBGuide = async () => {
-    const existingNames = new Set((restaurants || []).map((r) => r.name.toLowerCase()));
-    const toImport = sbRestaurants.filter((r) => !existingNames.has(r.name!.toLowerCase()));
+    // Fetch ALL restaurants in pages to get complete list
+    const allRestaurants: Restaurant[] = [];
+    let offset = 0;
+    const pageSize = 100;
+    while (true) {
+      const result = await restaurantsApi.getAll(undefined, { limit: pageSize, offset });
+      const page = ('data' in result && Array.isArray(result.data)) ? result.data as Restaurant[] : [];
+      allRestaurants.push(...page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
 
-    if (toImport.length === 0) {
-      alert('All SB restaurants are already imported!');
+    // Remove duplicates: keep the first occurrence of each name, delete extras
+    const seenNames: Record<string, Restaurant> = {};
+    const duplicateIds: number[] = [];
+    for (const r of allRestaurants) {
+      const key = r.name.toLowerCase();
+      if (seenNames[key]) {
+        duplicateIds.push(r.id);
+      } else {
+        seenNames[key] = r;
+      }
+    }
+
+    const toInsert = sbRestaurants.filter((r) => !seenNames[r.name!.toLowerCase()]);
+    const toUpdate = sbRestaurants.filter((r) => {
+      const existing = seenNames[r.name!.toLowerCase()];
+      return existing && (!existing.image_url || existing.image_url !== r.image_url);
+    });
+
+    const totalWork = toInsert.length + toUpdate.length + duplicateIds.length;
+
+    if (totalWork === 0) {
+      alert('All SB restaurants are imported with photos, no duplicates!');
       return;
     }
 
-    if (!window.confirm(`Import ${toImport.length} restaurants from the SB Food & Drink guide? (${sbRestaurants.length - toImport.length} already exist)`)) {
+    const parts = [
+      toInsert.length > 0 ? `${toInsert.length} new` : '',
+      toUpdate.length > 0 ? `${toUpdate.length} to update with photos` : '',
+      duplicateIds.length > 0 ? `${duplicateIds.length} duplicates to remove` : '',
+    ].filter(Boolean).join(', ');
+
+    if (!window.confirm(`${parts}. Proceed?`)) {
       return;
     }
 
-    setImportStatus({ importing: true, progress: 0, total: toImport.length });
+    setImportStatus({ importing: true, progress: 0, total: totalWork });
+    let completed = 0;
 
-    let imported = 0;
-    for (const restaurant of toImport) {
+    // 1. Delete duplicates first
+    for (const id of duplicateIds) {
+      try {
+        await deleteRestaurant.mutateAsync(id);
+        completed++;
+        setImportStatus((prev) => ({ ...prev, progress: completed }));
+      } catch (error) {
+        console.error(`Failed to delete duplicate id ${id}:`, error);
+      }
+    }
+
+    // 2. Insert new restaurants
+    for (const restaurant of toInsert) {
       try {
         await createRestaurant.mutateAsync(restaurant);
-        imported++;
-        setImportStatus((prev) => ({ ...prev, progress: imported }));
+        completed++;
+        setImportStatus((prev) => ({ ...prev, progress: completed }));
       } catch (error) {
         console.error(`Failed to import ${restaurant.name}:`, error);
       }
     }
 
+    // 3. Update existing restaurants with photos
+    for (const restaurant of toUpdate) {
+      const existing = seenNames[restaurant.name!.toLowerCase()];
+      if (existing) {
+        try {
+          await updateRestaurant.mutateAsync({
+            id: existing.id,
+            restaurant: { image_url: restaurant.image_url },
+          });
+          completed++;
+          setImportStatus((prev) => ({ ...prev, progress: completed }));
+        } catch (error) {
+          console.error(`Failed to update ${restaurant.name}:`, error);
+        }
+      }
+    }
+
     setImportStatus({ importing: false, progress: 0, total: 0 });
-    alert(`Imported ${imported} of ${toImport.length} restaurants.`);
+    alert(`Done! ${duplicateIds.length} dupes removed, ${toInsert.length} added, ${toUpdate.length} updated.`);
   };
 
   const handleSearch = async () => {

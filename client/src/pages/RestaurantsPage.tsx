@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, MapPin, Phone, Globe, Star, Trash2, Pencil, Sparkles, Filter, X, Utensils, Navigation, Clock, Map, List } from 'lucide-react';
+import { Plus, MapPin, Phone, Globe, Star, Trash2, Pencil, Sparkles, Filter, X, Utensils, Navigation, Clock, Map, List, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -33,6 +33,7 @@ import {
 } from '../hooks/useRestaurants';
 import type { Restaurant, RestaurantFilters } from '../types/api';
 import RestaurantMap from '../components/RestaurantMap';
+import { sbRestaurants } from '../data/sbRestaurants';
 
 const RestaurantsPage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -64,6 +65,12 @@ const RestaurantsPage: React.FC = () => {
     rating: undefined,
     notes: '',
     tags: '',
+  });
+
+  const [importStatus, setImportStatus] = useState<{ importing: boolean; progress: number; total: number }>({
+    importing: false,
+    progress: 0,
+    total: 0,
   });
 
   const { data: restaurants, isLoading } = useRestaurants(filters);
@@ -179,6 +186,36 @@ const RestaurantsPage: React.FC = () => {
     }
   };
 
+  const handleImportSBGuide = async () => {
+    const existingNames = new Set((restaurants || []).map((r) => r.name.toLowerCase()));
+    const toImport = sbRestaurants.filter((r) => !existingNames.has(r.name!.toLowerCase()));
+
+    if (toImport.length === 0) {
+      alert('All SB restaurants are already imported!');
+      return;
+    }
+
+    if (!window.confirm(`Import ${toImport.length} restaurants from the SB Food & Drink guide? (${sbRestaurants.length - toImport.length} already exist)`)) {
+      return;
+    }
+
+    setImportStatus({ importing: true, progress: 0, total: toImport.length });
+
+    let imported = 0;
+    for (const restaurant of toImport) {
+      try {
+        await createRestaurant.mutateAsync(restaurant);
+        imported++;
+        setImportStatus((prev) => ({ ...prev, progress: imported }));
+      } catch (error) {
+        console.error(`Failed to import ${restaurant.name}:`, error);
+      }
+    }
+
+    setImportStatus({ importing: false, progress: 0, total: 0 });
+    alert(`Imported ${imported} of ${toImport.length} restaurants.`);
+  };
+
   const handleSearch = async () => {
     if (!searchQuery) {
       alert('Please enter a restaurant name and city');
@@ -251,6 +288,23 @@ const RestaurantsPage: React.FC = () => {
               <span className="hidden sm:inline">Map</span>
             </Button>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImportSBGuide}
+            disabled={importStatus.importing}
+            className="flex-shrink-0"
+          >
+            <Upload className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">
+              {importStatus.importing
+                ? `Importing ${importStatus.progress}/${importStatus.total}...`
+                : 'Import SB Guide'}
+            </span>
+            <span className="sm:hidden">
+              {importStatus.importing ? `${importStatus.progress}/${importStatus.total}` : 'Import'}
+            </span>
+          </Button>
           <Button variant="outline" size="sm" onClick={handleSuggest} className="flex-shrink-0">
             <Sparkles className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Suggest 3 Places</span>

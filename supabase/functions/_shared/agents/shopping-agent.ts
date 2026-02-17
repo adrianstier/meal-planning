@@ -695,11 +695,11 @@ Respond with JSON:
       }
 
       const items: ShoppingItem[] = (data || []).map((row) => ({
-        name: row.name,
-        quantity: row.quantity || 1,
-        unit: row.unit || '',
+        name: row.item_name,
+        quantity: typeof row.quantity === 'number' ? row.quantity : parseFloat(row.quantity) || 1,
+        unit: '',
         category: row.category || 'Other',
-        recipes: row.recipes || [],
+        recipes: [],
         checked: row.is_purchased || false,
       }))
 
@@ -728,11 +728,9 @@ Respond with JSON:
       // Insert new items
       const rows = items.map((item) => ({
         user_id: context.userId,
-        name: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
+        item_name: item.name,
+        quantity: String(item.quantity),
         category: item.category,
-        recipes: item.recipes,
         is_purchased: item.checked,
       }))
 

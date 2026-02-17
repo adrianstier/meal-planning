@@ -63,30 +63,6 @@ export const useSuggestRestaurants = () => {
   });
 };
 
-export const useScrapeRestaurant = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: number) => restaurantsApi.scrape(id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['restaurants', id] });
-      queryClient.invalidateQueries({ queryKey: ['restaurants'] });
-    },
-  });
-};
-
-export const useGeocodeAddress = () => {
-  return useMutation({
-    mutationFn: (address: string) => restaurantsApi.geocode(address),
-  });
-};
-
-export const useSearchRestaurant = () => {
-  return useMutation({
-    mutationFn: (query: string) => restaurantsApi.search(query),
-  });
-};
-
 export const useScrapeRestaurantUrl = () => {
   return useMutation({
     mutationFn: (url: string) => restaurantsApi.scrapeUrl(url),

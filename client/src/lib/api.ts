@@ -2099,26 +2099,6 @@ export const restaurantsApi = {
     return wrapResponse(restaurants as Restaurant[]);
   },
 
-  search: async (query: string) => {
-    const { data, error } = await invokeWithTimeout<Partial<Restaurant>>('search-restaurant', { query });
-
-    if (error) {
-      errorLogger.logApiError(error, '/functions/search-restaurant', 'POST');
-      throw error;
-    }
-    return wrapResponse(data as Partial<Restaurant>);
-  },
-
-  scrape: async (id: number) => {
-    const { data, error } = await invokeWithTimeout<Restaurant>('scrape-restaurant', { restaurant_id: id });
-
-    if (error) {
-      errorLogger.logApiError(error, `/functions/scrape-restaurant/${id}`, 'POST');
-      throw error;
-    }
-    return wrapResponse(data as Restaurant);
-  },
-
   scrapeUrl: async (url: string) => {
     // Edge function returns: { restaurantName, cuisine, menuSections, hours, address, phone }
     interface ScrapedRestaurant {
@@ -2150,15 +2130,6 @@ export const restaurantsApi = {
     return wrapResponse(restaurant);
   },
 
-  geocode: async (address: string) => {
-    const { data, error } = await invokeWithTimeout<{ latitude: number; longitude: number; display_name: string }>('geocode-address', { address });
-
-    if (error) {
-      errorLogger.logApiError(error, '/functions/geocode-address', 'POST');
-      throw error;
-    }
-    return wrapResponse(data as { latitude: number; longitude: number; display_name: string });
-  },
 };
 
 // ============================================================================

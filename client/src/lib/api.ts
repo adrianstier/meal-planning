@@ -1767,6 +1767,49 @@ export const shoppingApi = {
   generateFromPlan: async (startDate: string, endDate: string) => {
     const userId = await getCurrentUserId();
 
+    // Call AI-powered edge function for smart ingredient consolidation
+    const { data, error } = await invokeWithTimeout<{
+      items: Array<{ name: string; quantity: string; unit: string; category: string; recipe: string; notes: string | null }>;
+      byCategory: Record<string, Array<{ name: string; quantity: string; unit: string; category: string; recipe: string; notes: string | null }>>;
+      totalItems: number;
+      suggestedOrder: string[];
+    }>('generate-shopping-list', { startDate, endDate });
+
+    if (error) {
+      errorLogger.logApiError(error, '/functions/generate-shopping-list', 'POST');
+      // Fall back to simple client-side generation if AI fails
+      return shoppingApi._generateFromPlanFallback(startDate, endDate);
+    }
+
+    if (!data || !data.items || data.items.length === 0) {
+      throw new Error('No items generated. Make sure you have meals planned for this date range.');
+    }
+
+    // Map AI response into shopping_items inserts
+    const shoppingItems = data.items.map(item => ({
+      user_id: userId,
+      item_name: item.name,
+      quantity: item.quantity ? `${item.quantity}${item.unit ? ' ' + item.unit : ''}` : null,
+      category: item.category || 'Other',
+      is_purchased: false,
+    }));
+
+    const { data: insertedItems, error: insertError } = await supabase
+      .from('shopping_items')
+      .insert(shoppingItems)
+      .select();
+
+    if (insertError) {
+      errorLogger.logApiError(insertError, '/shopping/generate', 'POST');
+      throw insertError;
+    }
+
+    return wrapResponse(insertedItems as ShoppingItem[]);
+  },
+
+  _generateFromPlanFallback: async (startDate: string, endDate: string) => {
+    const userId = await getCurrentUserId();
+
     // Fetch meal plan items for the date range (using scheduled_meals table)
     const { data: planItems, error: planError } = await supabase
       .from('scheduled_meals')

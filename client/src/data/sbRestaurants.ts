@@ -2,36 +2,84 @@ import type { Restaurant } from '../types/api';
 
 type SeedRestaurant = Omit<Partial<Restaurant>, 'id' | 'created_at' | 'updated_at'>;
 
-// Cuisine-type photo URLs from Unsplash (free, permanent)
-const PHOTOS: Record<string, string> = {
+// Real restaurant photos from Yelp CDN
+const RESTAURANT_PHOTOS: Record<string, string> = {
+  'Reunion': 'https://s3-media0.fl.yelpcdn.com/bphoto/TVMiloNeMstwwSv74Sja2A/o.jpg',
+  'Kanaloa Seafood': 'https://s3-media0.fl.yelpcdn.com/bphoto/cbJJ8AddSWRJ6Sy7_zpDAw/o.jpg',
+  'Secret Bao': 'https://s3-media0.fl.yelpcdn.com/bphoto/R7AgY-gZHBPEQkFUjCHoFA/o.jpg',
+  'Barbareno': 'https://s3-media0.fl.yelpcdn.com/bphoto/TqxYfUV_YjTpEHt9Jc4oVA/o.jpg',
+  'The Lark': 'https://s3-media0.fl.yelpcdn.com/bphoto/l25-jALzl2ialvzgLp78RQ/o.jpg',
+  'Santo Mezcal': 'https://s3-media0.fl.yelpcdn.com/bphoto/_thwVr7x0lEly8IO-FVQPw/o.jpg',
+  'Lucky Penny': 'https://s3-media0.fl.yelpcdn.com/bphoto/F0H812o2x3Nkl3UVvhScIw/o.jpg',
+  'Sama Sama': 'https://s3-media0.fl.yelpcdn.com/bphoto/QbniYwlWUuXByOFgwpxkLw/o.jpg',
+  'The Good Lion': 'https://s3-media0.fl.yelpcdn.com/bphoto/ktZ979vfW4hMTZ4D4W3RPQ/o.jpg',
+  'Test Pilot': 'https://s3-media0.fl.yelpcdn.com/bphoto/QZ19nxd2LhxpecePqKrTBA/o.jpg',
+  'Shaker Mill': 'https://s3-media0.fl.yelpcdn.com/bphoto/busXLss-L53fLYHmJ6PEyA/o.jpg',
+  'Lab Social': 'https://s3-media0.fl.yelpcdn.com/bphoto/cTXVkFm83Tdbw0eQaGPBBQ/o.jpg',
+  'Pearl Social': 'https://s3-media0.fl.yelpcdn.com/bphoto/sEXtOHHDZ7bPHdZ55OAoZw/o.jpg',
+  'Satellite': 'https://s3-media0.fl.yelpcdn.com/bphoto/4bqVhIEQF0OJLWnTMvp2-A/o.jpg',
+  'Corazon Comedor': 'https://s3-media0.fl.yelpcdn.com/bphoto/X8BD1AMDoBXr-2SHceONtw/o.jpg',
+  "Jeannine's": 'https://s3-media0.fl.yelpcdn.com/bphoto/sd4c9hnE--aXPE-KxXQT5w/o.jpg',
+  "Boathouse at Hendry's": 'https://s3-media0.fl.yelpcdn.com/bphoto/fSi5VAy-DVweMXT3EM1Y4w/o.jpg',
+  "Renaud's": 'https://s3-media0.fl.yelpcdn.com/bphoto/GwXFSwjzT6ocmsj6WslPAw/o.jpg',
+  'Finch and Fork': 'https://s3-media0.fl.yelpcdn.com/bphoto/W4wsx3BQpcLsK-PBZDyc-w/o.jpg',
+  "D'Angelo's": 'https://s3-media0.fl.yelpcdn.com/bphoto/GWSOH7lBbh2XotKfoigtTg/o.jpg',
+  'Hook and Press': 'https://s3-media0.fl.yelpcdn.com/bphoto/uVG3FB7u_BydZBSZvkGqlg/o.jpg',
+  'Oat Bakery': 'https://s3-media0.fl.yelpcdn.com/bphoto/mH71CkwC959XHLXljMPJ7g/o.jpg',
+  'Broad Street Oyster Company': 'https://s3-media0.fl.yelpcdn.com/bphoto/G7TXxImBr8L10l4foesKDw/o.jpg',
+  'La Super Rica': 'https://s3-media0.fl.yelpcdn.com/bphoto/PgB9-RJWdeTWx9Cg-ogyyw/o.jpg',
+  'Los Agaves': 'https://s3-media0.fl.yelpcdn.com/bphoto/kdLE-b2D-ZxY6rEVeIDGPw/o.jpg',
+  'Los Arroyos': 'https://s3-media0.fl.yelpcdn.com/bphoto/N8tbT9NPWSWgweEZH0gxVw/o.jpg',
+  'South Coast Deli': 'https://s3-media0.fl.yelpcdn.com/bphoto/HCZvztWIHXHXhatlWT0qDw/o.jpg',
+  'Olio Crudo Bar & Pizzeria': 'https://s3-media0.fl.yelpcdn.com/bphoto/6NI2Af70qgeCW0BGtIMElg/o.jpg',
+  'Empty Bowl': 'https://s3-media0.fl.yelpcdn.com/bphoto/y9tgQTgqsVSj_7wbPpqUOA/o.jpg',
+  "Joe's": 'https://s3-media0.fl.yelpcdn.com/bphoto/oUuFNKYuKKC_upCI0qAVdw/o.jpg',
+  'Blue Owl': 'https://s3-media0.fl.yelpcdn.com/bphoto/DB-jB-LyOnkngpe0wWAICw/o.jpg',
+  'Saint Bibiana': 'https://s3-media0.fl.yelpcdn.com/bphoto/E-Sn7IRJLLsKClXtHZ6waQ/o.jpg',
+  "Mony's Mexican Food": 'https://s3-media0.fl.yelpcdn.com/bphoto/gmOw-NXv6tPPMj6Yc2kl_g/o.jpg',
+  'Corazon Cocina': 'https://s3-media0.fl.yelpcdn.com/bphoto/5uFZ9nSYlS8ECEfVZs0SWw/o.jpg',
+  'Shaloob': 'https://s3-media0.fl.yelpcdn.com/bphoto/-szPvuzJDRMVCzK4nI8jig/o.jpg',
+  "McConnell's Ice Cream": 'https://s3-media0.fl.yelpcdn.com/bphoto/a7tshiXSHSi9tS5u6KtuwA/o.jpg',
+  'Handlebar Coffee': 'https://s3-media0.fl.yelpcdn.com/bphoto/Mwav0IOQjCPCbHdncYZ6GA/o.jpg',
+  'Dune Coffee': 'https://s3-media0.fl.yelpcdn.com/bphoto/3Zq2Gzflmahkooe2GRKlHQ/o.jpg',
+  'Lilac Patisserie': 'https://s3-media0.fl.yelpcdn.com/bphoto/6pP0IFlgNz_S8fseeLK51g/o.jpg',
+  'Blenders in the Grass': 'https://s3-media0.fl.yelpcdn.com/bphoto/8fHextGdNSh07q1SAlocmw/o.jpg',
+  'M Special Brewery': 'https://s3-media0.fl.yelpcdn.com/bphoto/5c0WAiVvgm9-3_ScS4_ECw/o.jpg',
+  'Hollister Brewing Company': 'https://s3-media0.fl.yelpcdn.com/bphoto/3qHxki9v6tzDnjGfuYjHzw/o.jpg',
+  'Draughtsman Aleworks': 'https://s3-media0.fl.yelpcdn.com/bphoto/Hyi5ybGEyVnfVfHWtWVb8Q/o.jpg',
+  'The Mercury Lounge': 'https://s3-media0.fl.yelpcdn.com/bphoto/UI8LHgZ8SdjYKeLEDPreYQ/o.jpg',
+  'The Imperial': 'https://s3-media0.fl.yelpcdn.com/bphoto/2TCqmm0MqEv4SF-v2-CdFA/o.jpg',
+  'Cajun Kitchen Cafe': 'https://s3-media0.fl.yelpcdn.com/bphoto/JK1H1LdQfw4KKNbQrjjfUg/o.jpg',
+  'Sage and Onion Cafe': 'https://s3-media0.fl.yelpcdn.com/bphoto/-Yhj59CRuApHhaMy639Gsg/o.jpg',
+  'Backyard Bowls': 'https://s3-media0.fl.yelpcdn.com/bphoto/CuLl4dROXKC_k1gHe2UtuQ/o.jpg',
+  'The Shop Kitchen': 'https://s3-media0.fl.yelpcdn.com/bphoto/lIJigXGOlwKDFL8h--nEEg/o.jpg',
+  'Pickles and Swiss': 'https://s3-media0.fl.yelpcdn.com/bphoto/qX5w-M-9nnHT9YsSUri_Jg/o.jpg',
+  'Noodle City': 'https://s3-media0.fl.yelpcdn.com/bphoto/MURle9bQNm6vFPHO1caj6g/o.jpg',
+  'La Chapala Market': 'https://s3-media0.fl.yelpcdn.com/bphoto/AakovgIYizf2esbhQTLRfw/o.jpg',
+  'Los Agaves (Goleta)': 'https://s3-media0.fl.yelpcdn.com/bphoto/1gltDOFYOreuPb_w1SHB6w/o.jpg',
+  "Lily's Tacos": 'https://s3-media0.fl.yelpcdn.com/bphoto/JKL5xUaqxTgjfkyhxKE2QA/o.jpg',
+  'On the Alley': 'https://s3-media0.fl.yelpcdn.com/bphoto/KjsZk3KaQxgyy1OnDc3IrQ/o.jpg',
+  'The Habit': 'https://s3-media0.fl.yelpcdn.com/bphoto/dAMhF9B6mNZk3rTy07R2hg/o.jpg',
+  "Kyle's Kitchen": 'https://s3-media0.fl.yelpcdn.com/bphoto/MQR6NaMu2w_gPIwhGCNZqw/o.jpg',
+  'Beachside Bar/Cafe': 'https://s3-media0.fl.yelpcdn.com/bphoto/c7Tt1yHDX41HrafCOkiSMQ/o.jpg',
+  'Jane at the Marketplace': 'https://s3-media0.fl.yelpcdn.com/bphoto/RYggb9fxbBpKLNlmyHwgfw/o.jpg',
+  'Outpost': 'https://s3-media0.fl.yelpcdn.com/bphoto/lX6FgWoDzH_xw_XfSeg5ZQ/o.jpg',
+};
+
+// Fallback cuisine-type photos from Unsplash
+const CUISINE_PHOTOS: Record<string, string> = {
   mexican: 'https://images.unsplash.com/photo-1585803518902-58a3ef005b51?w=400&h=300&fit=crop',
   pizza: 'https://images.unsplash.com/photo-1559978137-8c560d91e9e1?w=400&h=300&fit=crop',
   cocktails: 'https://plus.unsplash.com/premium_photo-1753311640025-7eb3e0165974?w=400&h=300&fit=crop',
   brewery: 'https://plus.unsplash.com/premium_photo-1695658863103-9bc9f5984837?w=400&h=300&fit=crop',
   seafood: 'https://images.unsplash.com/photo-1715249792962-5359b4b17f21?w=400&h=300&fit=crop',
-  asian_fusion: 'https://plus.unsplash.com/premium_photo-1699983842585-adb9cc6e217b?w=400&h=300&fit=crop',
-  thai: 'https://images.unsplash.com/photo-1628430043154-290c67c19550?w=400&h=300&fit=crop',
-  indonesian: 'https://images.unsplash.com/photo-1666854799113-1ba582079996?w=400&h=300&fit=crop',
-  breakfast: 'https://plus.unsplash.com/premium_photo-1692193554100-e02115b9acde?w=400&h=300&fit=crop',
-  bakery: 'https://images.unsplash.com/photo-1767939409311-fa76713560cb?w=400&h=300&fit=crop',
-  coffee: 'https://plus.unsplash.com/premium_photo-1663932464937-e677ddfc1d55?w=400&h=300&fit=crop',
-  dessert: 'https://images.unsplash.com/photo-1636564499112-6113e73c504a?w=400&h=300&fit=crop',
-  sandwiches: 'https://images.unsplash.com/photo-1764620977411-9f06b1425064?w=400&h=300&fit=crop',
-  bbq: 'https://images.unsplash.com/photo-1592412544617-7c962b8b7271?w=400&h=300&fit=crop',
-  farm_to_table: 'https://images.unsplash.com/photo-1763867641433-e7d2c0f62361?w=400&h=300&fit=crop',
-  wine_bar: 'https://images.unsplash.com/photo-1743599233961-380b19996ad7?w=400&h=300&fit=crop',
-  vietnamese: 'https://images.unsplash.com/photo-1766050586763-723571af4dde?w=400&h=300&fit=crop',
-  smoothies: 'https://plus.unsplash.com/premium_photo-1726862746882-859fa60350ce?w=400&h=300&fit=crop',
-  french: 'https://plus.unsplash.com/premium_photo-1665669263531-cdcbe18e7fe4?w=400&h=300&fit=crop',
   american: 'https://plus.unsplash.com/premium_photo-1749558051414-e767b290ac33?w=400&h=300&fit=crop',
-  burgers: 'https://images.unsplash.com/photo-1592412544617-7c962b8b7271?w=400&h=300&fit=crop',
-  bar: 'https://plus.unsplash.com/premium_photo-1753311640025-7eb3e0165974?w=400&h=300&fit=crop',
-  healthy: 'https://plus.unsplash.com/premium_photo-1726862746882-859fa60350ce?w=400&h=300&fit=crop',
 };
 
-function photoFor(cuisineType: string): string {
+function photoFor(name: string, cuisineType: string): string {
+  if (RESTAURANT_PHOTOS[name]) return RESTAURANT_PHOTOS[name];
   const key = cuisineType.toLowerCase().replace(/\s+/g, '_');
-  return PHOTOS[key] || PHOTOS.american;
+  return CUISINE_PHOTOS[key] || CUISINE_PHOTOS.american;
 }
 
 const _sbRestaurants: SeedRestaurant[] = [
@@ -873,8 +921,8 @@ const _sbRestaurants: SeedRestaurant[] = [
   },
 ];
 
-// Export with photos auto-assigned by cuisine type
+// Export with real restaurant photos (Yelp CDN), fallback to cuisine-type generic
 export const sbRestaurants: SeedRestaurant[] = _sbRestaurants.map((r) => ({
   ...r,
-  image_url: r.image_url || photoFor(r.cuisine_type || 'American'),
+  image_url: r.image_url || photoFor(r.name || '', r.cuisine_type || 'American'),
 }));

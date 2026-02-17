@@ -131,30 +131,12 @@ CREATE TABLE IF NOT EXISTS public.meal_ingredients (
 CREATE INDEX IF NOT EXISTS idx_meal_ingredients_meal ON public.meal_ingredients(meal_id);
 
 -- ============================================================================
--- 6. MEAL PLANS
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS public.meal_plans (
-    id SERIAL PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    week_start_date DATE NOT NULL,
-    week_end_date DATE NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_meal_plans_user ON public.meal_plans(user_id);
-CREATE INDEX IF NOT EXISTS idx_meal_plans_dates ON public.meal_plans(week_start_date, week_end_date);
-
--- ============================================================================
--- 7. SCHEDULED MEALS
+-- 6. SCHEDULED MEALS
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.scheduled_meals (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    meal_plan_id INTEGER REFERENCES public.meal_plans(id) ON DELETE CASCADE,
     meal_id INTEGER NOT NULL REFERENCES public.meals(id) ON DELETE CASCADE,
     day_of_week TEXT NOT NULL,
     meal_date DATE NOT NULL,

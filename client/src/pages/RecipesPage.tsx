@@ -48,6 +48,11 @@ interface ParsedRecipeData {
   image_url?: string;
   source_url?: string;
   cuisine?: string;
+  calories?: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fat_g?: number;
+  fiber_g?: number;
 }
 
 // Helper function to safely parse top_comments JSON with validation
@@ -106,6 +111,11 @@ const RecipesPage: React.FC = () => {
     ingredients: '',
     instructions: '',
     image_url: '',
+    calories: undefined,
+    protein_g: undefined,
+    carbs_g: undefined,
+    fat_g: undefined,
+    fiber_g: undefined,
   });
 
   const { data: meals, isLoading } = useMeals();
@@ -211,6 +221,11 @@ const RecipesPage: React.FC = () => {
         image_url: parsedData.image_url,
         source_url: parsedData.source_url,
         cuisine: parsedData.cuisine,
+        calories: parsedData.calories ?? undefined,
+        protein_g: parsedData.protein_g ?? undefined,
+        carbs_g: parsedData.carbs_g ?? undefined,
+        fat_g: parsedData.fat_g ?? undefined,
+        fiber_g: parsedData.fiber_g ?? undefined,
       }));
       setAddDialogOpen(true);
       setRecipeText('');
@@ -257,6 +272,11 @@ const RecipesPage: React.FC = () => {
       image_url: parsedData.image_url,
       source_url: parsedData.source_url,
       cuisine: parsedData.cuisine,
+      calories: parsedData.calories ?? undefined,
+      protein_g: parsedData.protein_g ?? undefined,
+      carbs_g: parsedData.carbs_g ?? undefined,
+      fat_g: parsedData.fat_g ?? undefined,
+      fiber_g: parsedData.fiber_g ?? undefined,
     }));
   };
 
@@ -342,6 +362,11 @@ const RecipesPage: React.FC = () => {
         instructions: instructionsText,
         image_url: parsedData.image_url,
         cuisine: parsedData.cuisine,
+        calories: parsedData.calories ?? undefined,
+        protein_g: parsedData.protein_g ?? undefined,
+        carbs_g: parsedData.carbs_g ?? undefined,
+        fat_g: parsedData.fat_g ?? undefined,
+        fiber_g: parsedData.fiber_g ?? undefined,
       };
 
       // Auto-save the recipe to the database
@@ -386,6 +411,11 @@ const RecipesPage: React.FC = () => {
         ingredients: '',
         instructions: '',
         image_url: '',
+        calories: undefined,
+        protein_g: undefined,
+        carbs_g: undefined,
+        fat_g: undefined,
+        fiber_g: undefined,
       });
       setParsedRecipe(null);
       setIsEditing(false);
@@ -1028,6 +1058,11 @@ const RecipesPage: React.FC = () => {
                             ingredients: meal.ingredients || '',
                             instructions: meal.instructions || '',
                             image_url: meal.image_url || '',
+                            calories: meal.calories,
+                            protein_g: meal.protein_g,
+                            carbs_g: meal.carbs_g,
+                            fat_g: meal.fat_g,
+                            fiber_g: meal.fiber_g,
                           });
                           setSelectedMeal(meal);
                           setIsEditing(true);
@@ -1421,6 +1456,69 @@ const RecipesPage: React.FC = () => {
                 className="min-h-[200px]"
               />
             </div>
+
+            {/* Nutrition (auto-filled from parsing) */}
+            <details className="col-span-2">
+              <summary className="text-sm font-medium cursor-pointer text-muted-foreground hover:text-foreground">
+                Nutrition Info (optional)
+              </summary>
+              <div className="grid grid-cols-5 gap-2 mt-2">
+                <div>
+                  <Label htmlFor="calories" className="text-xs">Calories</Label>
+                  <Input
+                    id="calories"
+                    type="number"
+                    value={formData.calories ?? ''}
+                    onChange={(e) => setFormData({ ...formData, calories: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="—"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="protein_g" className="text-xs">Protein (g)</Label>
+                  <Input
+                    id="protein_g"
+                    type="number"
+                    step="0.1"
+                    value={formData.protein_g ?? ''}
+                    onChange={(e) => setFormData({ ...formData, protein_g: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="—"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="carbs_g" className="text-xs">Carbs (g)</Label>
+                  <Input
+                    id="carbs_g"
+                    type="number"
+                    step="0.1"
+                    value={formData.carbs_g ?? ''}
+                    onChange={(e) => setFormData({ ...formData, carbs_g: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="—"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fat_g" className="text-xs">Fat (g)</Label>
+                  <Input
+                    id="fat_g"
+                    type="number"
+                    step="0.1"
+                    value={formData.fat_g ?? ''}
+                    onChange={(e) => setFormData({ ...formData, fat_g: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="—"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fiber_g" className="text-xs">Fiber (g)</Label>
+                  <Input
+                    id="fiber_g"
+                    type="number"
+                    step="0.1"
+                    value={formData.fiber_g ?? ''}
+                    onChange={(e) => setFormData({ ...formData, fiber_g: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="—"
+                  />
+                </div>
+              </div>
+            </details>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>

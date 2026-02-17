@@ -313,31 +313,72 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[Agent] Processing request from user ${user.id}: "${message.slice(0, 100)}..."`)
 
-    // Load user's recipes for context
-    const { data: recipes } = await supabase
-      .from('meals')
-      .select('name, cuisine, meal_type, difficulty')
-      .eq('user_id', user.id)
-      .limit(10)
+    // Try orchestrator-based processing
+    try {
+      const { OrchestratorAgent } = await import('../_shared/agents/index.ts')
+      const orchestrator = new OrchestratorAgent()
 
-    const recipeContext = recipes?.length
-      ? `User has ${recipes.length} recipes saved: ${recipes.map(r => r.name).join(', ')}`
-      : 'User has no recipes saved yet.'
+      const agentContext = {
+        userId: user.id,
+        conversationId,
+        memory: {
+          userPreferences: null,
+          recentRecipes: [],
+          activePlan: null,
+          leftovers: [],
+          conversationHistory: [],
+        },
+        metadata: metadata || {},
+      }
 
-    // Load active leftovers
-    const { data: leftovers } = await supabase
-      .from('leftovers_inventory')
-      .select('meals:meal_id(name), servings_remaining, expires_date')
-      .eq('user_id', user.id)
-      .gt('expires_date', new Date().toISOString().split('T')[0])
-      .gt('servings_remaining', 0)
+      const response = await orchestrator.process(message, agentContext)
 
-    const leftoverContext = leftovers?.length
-      ? `Active leftovers: ${leftovers.map(l => `${(l.meals as any)?.name || 'Unknown'} (${l.servings_remaining} servings)`).join(', ')}`
-      : 'No active leftovers.'
+      const executionTime = Date.now() - startTime
+      console.log(`[Agent] Orchestrator completed in ${executionTime}ms`)
 
-    // Call AI with comprehensive system prompt
-    const systemPrompt = `You are a helpful meal planning AI assistant. You help users with:
+      return new Response(
+        JSON.stringify({
+          success: response.success !== false,
+          message: response.message,
+          conversationId,
+          executionTimeMs: executionTime,
+          data: {
+            usage: response.data?._meta?.tokenUsage || { input: 0, output: 0 },
+            intent: response.data?._meta?.intent || 'unknown',
+          },
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    } catch (orchestratorError) {
+      // Fallback to direct Claude call if orchestrator fails
+      console.error('[Agent] Orchestrator failed, falling back to direct call:', orchestratorError)
+
+      // Load user's recipes for context
+      const { data: recipes } = await supabase
+        .from('meals')
+        .select('name, cuisine, meal_type, difficulty')
+        .eq('user_id', user.id)
+        .limit(10)
+
+      const recipeContext = recipes?.length
+        ? `User has ${recipes.length} recipes saved: ${recipes.map(r => r.name).join(', ')}`
+        : 'User has no recipes saved yet.'
+
+      const { data: leftovers } = await supabase
+        .from('leftovers_inventory')
+        .select('meals:meal_id(name), servings_remaining, expires_date')
+        .eq('user_id', user.id)
+        .gt('expires_date', new Date().toISOString().split('T')[0])
+        .gt('servings_remaining', 0)
+
+      const leftoverContext = leftovers?.length
+        ? `Active leftovers: ${leftovers.map(l => `${(l.meals as any)?.name || 'Unknown'} (${l.servings_remaining} servings)`).join(', ')}`
+        : 'No active leftovers.'
+
+      const systemPrompt = `You are a helpful meal planning AI assistant. You help users with:
 
 **Recipe Management:**
 - Save recipes from URLs, text, or images
@@ -372,28 +413,30 @@ When the user wants to:
 - Plan meals: Ask what days they want to plan and any preferences
 - Make a shopping list: Confirm which meals to include`
 
-    const aiResponse = await callAI(systemPrompt, message)
+      const aiResponse = await callAI(systemPrompt, message)
 
-    const executionTime = Date.now() - startTime
-    console.log(`[Agent] Completed in ${executionTime}ms`)
+      const executionTime = Date.now() - startTime
+      console.log(`[Agent] Fallback completed in ${executionTime}ms`)
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: aiResponse.content,
-        conversationId: conversationId,
-        executionTimeMs: executionTime,
-        data: {
-          usage: aiResponse.usage,
-          recipesLoaded: recipes?.length || 0,
-          leftoverCount: leftovers?.length || 0,
-        },
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: aiResponse.content,
+          conversationId,
+          executionTimeMs: executionTime,
+          data: {
+            usage: aiResponse.usage,
+            recipesLoaded: recipes?.length || 0,
+            leftoverCount: leftovers?.length || 0,
+            fallback: true,
+          },
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    }
   } catch (error) {
     // Log full error server-side for debugging
     console.error('[Agent] Unhandled error:', error)

@@ -160,13 +160,18 @@ async function directEdgeFunctionFetch<T>(
       const errorText = await response.text();
       devError(`[directEdgeFunctionFetch] Error response: ${errorText}`);
       let errorMessage = `Edge function error: ${response.status}`;
+      let responseBody: Record<string, unknown> | undefined;
       try {
         const errorJson = JSON.parse(errorText);
+        responseBody = errorJson;
         errorMessage = errorJson.error || errorMessage;
       } catch {
         if (errorText) errorMessage = errorText;
       }
-      return { data: null, error: new Error(errorMessage) };
+      const error: EdgeFunctionError = new Error(errorMessage);
+      error.status = response.status;
+      error.responseBody = responseBody;
+      return { data: null, error };
     }
 
     devLog('[directEdgeFunctionFetch] Parsing JSON response...');
@@ -1762,6 +1767,49 @@ export const shoppingApi = {
   generateFromPlan: async (startDate: string, endDate: string) => {
     const userId = await getCurrentUserId();
 
+    // Call AI-powered edge function for smart ingredient consolidation
+    const { data, error } = await invokeWithTimeout<{
+      items: Array<{ name: string; quantity: string; unit: string; category: string; recipe: string; notes: string | null }>;
+      byCategory: Record<string, Array<{ name: string; quantity: string; unit: string; category: string; recipe: string; notes: string | null }>>;
+      totalItems: number;
+      suggestedOrder: string[];
+    }>('generate-shopping-list', { startDate, endDate });
+
+    if (error) {
+      errorLogger.logApiError(error, '/functions/generate-shopping-list', 'POST');
+      // Fall back to simple client-side generation if AI fails
+      return shoppingApi._generateFromPlanFallback(startDate, endDate);
+    }
+
+    if (!data || !data.items || data.items.length === 0) {
+      throw new Error('No items generated. Make sure you have meals planned for this date range.');
+    }
+
+    // Map AI response into shopping_items inserts
+    const shoppingItems = data.items.map(item => ({
+      user_id: userId,
+      item_name: item.name,
+      quantity: item.quantity ? `${item.quantity}${item.unit ? ' ' + item.unit : ''}` : null,
+      category: item.category || 'Other',
+      is_purchased: false,
+    }));
+
+    const { data: insertedItems, error: insertError } = await supabase
+      .from('shopping_items')
+      .insert(shoppingItems)
+      .select();
+
+    if (insertError) {
+      errorLogger.logApiError(insertError, '/shopping/generate', 'POST');
+      throw insertError;
+    }
+
+    return wrapResponse(insertedItems as ShoppingItem[]);
+  },
+
+  _generateFromPlanFallback: async (startDate: string, endDate: string) => {
+    const userId = await getCurrentUserId();
+
     // Fetch meal plan items for the date range (using scheduled_meals table)
     const { data: planItems, error: planError } = await supabase
       .from('scheduled_meals')
@@ -2094,26 +2142,6 @@ export const restaurantsApi = {
     return wrapResponse(restaurants as Restaurant[]);
   },
 
-  search: async (query: string) => {
-    const { data, error } = await invokeWithTimeout<Partial<Restaurant>>('search-restaurant', { query });
-
-    if (error) {
-      errorLogger.logApiError(error, '/functions/search-restaurant', 'POST');
-      throw error;
-    }
-    return wrapResponse(data as Partial<Restaurant>);
-  },
-
-  scrape: async (id: number) => {
-    const { data, error } = await invokeWithTimeout<Restaurant>('scrape-restaurant', { restaurant_id: id });
-
-    if (error) {
-      errorLogger.logApiError(error, `/functions/scrape-restaurant/${id}`, 'POST');
-      throw error;
-    }
-    return wrapResponse(data as Restaurant);
-  },
-
   scrapeUrl: async (url: string) => {
     // Edge function returns: { restaurantName, cuisine, menuSections, hours, address, phone }
     interface ScrapedRestaurant {
@@ -2145,15 +2173,6 @@ export const restaurantsApi = {
     return wrapResponse(restaurant);
   },
 
-  geocode: async (address: string) => {
-    const { data, error } = await invokeWithTimeout<{ latitude: number; longitude: number; display_name: string }>('geocode-address', { address });
-
-    if (error) {
-      errorLogger.logApiError(error, '/functions/geocode-address', 'POST');
-      throw error;
-    }
-    return wrapResponse(data as { latitude: number; longitude: number; display_name: string });
-  },
 };
 
 // ============================================================================

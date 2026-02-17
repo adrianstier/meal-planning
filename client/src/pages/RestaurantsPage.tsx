@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, MapPin, Phone, Globe, Star, Trash2, Pencil, Sparkles, Filter, X, Utensils, Navigation, Clock, Map, List, Upload } from 'lucide-react';
+import { Plus, MapPin, Phone, Globe, Star, Trash2, Pencil, Sparkles, Filter, X, Utensils, Clock, Map, List, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -28,8 +28,6 @@ import {
   useUpdateRestaurant,
   useDeleteRestaurant,
   useSuggestRestaurants,
-  useGeocodeAddress,
-  useSearchRestaurant,
 } from '../hooks/useRestaurants';
 import type { Restaurant, RestaurantFilters } from '../types/api';
 import RestaurantMap from '../components/RestaurantMap';
@@ -48,8 +46,6 @@ const RestaurantsPage: React.FC = () => {
   // Filters
   const [filters, setFilters] = useState<RestaurantFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchQuery, setSearchQuery] = useState(''); // For web search
-  const [showManualEntry, setShowManualEntry] = useState(false); // Toggle between search and manual
 
   const [formData, setFormData] = useState<Partial<Restaurant>>({
     name: '',
@@ -79,8 +75,6 @@ const RestaurantsPage: React.FC = () => {
   const updateRestaurant = useUpdateRestaurant();
   const deleteRestaurant = useDeleteRestaurant();
   const suggestRestaurants = useSuggestRestaurants();
-  const searchRestaurant = useSearchRestaurant();
-  const geocodeAddress = useGeocodeAddress();
 
   // Filter restaurants by search term
   const filteredRestaurants = useMemo(() => {
@@ -113,8 +107,6 @@ const RestaurantsPage: React.FC = () => {
       notes: '',
       tags: '',
     });
-    setShowManualEntry(false); // Reset to search mode
-    setSearchQuery('');
     setAddDialogOpen(true);
   };
 
@@ -165,25 +157,6 @@ const RestaurantsPage: React.FC = () => {
       setSuggestDialogOpen(true);
     } catch (error) {
       console.error('Error getting suggestions:', error);
-    }
-  };
-
-  const handleGeocode = async () => {
-    if (!formData.address) {
-      alert('Please enter an address first');
-      return;
-    }
-    try {
-      const result = await geocodeAddress.mutateAsync(formData.address);
-      setFormData({
-        ...formData,
-        latitude: result.data.latitude,
-        longitude: result.data.longitude,
-      });
-    } catch (err) {
-      const error = err as Error;
-      console.error('Error geocoding address:', error);
-      alert(error.message || 'Failed to geocode address');
     }
   };
 
@@ -279,43 +252,6 @@ const RestaurantsPage: React.FC = () => {
 
     setImportStatus({ importing: false, progress: 0, total: 0 });
     alert(`Done! ${duplicateIds.length} dupes removed, ${toInsert.length} added, ${toUpdate.length} updated.`);
-  };
-
-  const handleSearch = async () => {
-    if (!searchQuery) {
-      alert('Please enter a restaurant name and city');
-      return;
-    }
-    try {
-      const result = await searchRestaurant.mutateAsync(searchQuery);
-      // Edge functions may return JSONB fields as strings; normalize to objects
-      const searchedData = result.data;
-      if (typeof searchedData.hours_data === 'string') {
-        try {
-          searchedData.hours_data = JSON.parse(searchedData.hours_data) as Record<string, unknown>;
-        } catch {
-          searchedData.hours_data = null;
-        }
-      }
-      if (typeof searchedData.happy_hour_info === 'string') {
-        try {
-          searchedData.happy_hour_info = JSON.parse(searchedData.happy_hour_info) as Record<string, unknown>;
-        } catch {
-          searchedData.happy_hour_info = null;
-        }
-      }
-      // Fill form with searched data
-      setFormData({
-        ...formData,
-        ...searchedData,
-      });
-      setSearchQuery('');
-      setShowManualEntry(true); // Show form after search
-    } catch (err) {
-      const error = err as Error;
-      console.error('Error searching restaurant:', error);
-      alert(error.message || 'Failed to find restaurant. Try a more specific search like "Restaurant Name, City"');
-    }
   };
 
   const uniqueCuisines = useMemo(() => {
@@ -607,53 +543,6 @@ const RestaurantsPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Smart Search Section - Only show when adding and not in manual mode */}
-            {!editDialogOpen && !showManualEntry && (
-              <div className="p-6 border rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                  <h3 className="text-lg font-semibold">Find Restaurant</h3>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Enter the restaurant name and city. We'll find all the details for you!
-                </p>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Input
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="e.g., Chez Panisse, Berkeley"
-                      className="flex-1 text-base"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && searchQuery) {
-                          handleSearch();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      onClick={handleSearch}
-                      disabled={searchRestaurant.isPending || !searchQuery}
-                      size="lg"
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      {searchRestaurant.isPending ? 'Searching...' : 'Search'}
-                    </Button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowManualEntry(true)}
-                    className="text-sm text-muted-foreground hover:text-primary underline"
-                  >
-                    or enter details manually
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Show form only when editing OR when in manual entry mode for adding */}
-            {(editDialogOpen || showManualEntry) && (
-            <>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <Label htmlFor="name">Name *</Label>
@@ -666,24 +555,12 @@ const RestaurantsPage: React.FC = () => {
               </div>
               <div className="col-span-2">
                 <Label htmlFor="address">Address</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="address"
-                    value={formData.address || ''}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="123 Main St, City"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGeocode}
-                    disabled={geocodeAddress.isPending || !formData.address}
-                  >
-                    <Navigation className="h-4 w-4 mr-2" />
-                    {geocodeAddress.isPending ? 'Getting...' : 'Get Coords'}
-                  </Button>
-                </div>
+                <Input
+                  id="address"
+                  value={formData.address || ''}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="123 Main St, City"
+                />
               </div>
               <div>
                 <Label htmlFor="latitude">Latitude</Label>
@@ -829,8 +706,6 @@ const RestaurantsPage: React.FC = () => {
                 placeholder="date-night, brunch, happy-hour"
               />
             </div>
-            </>
-            )}
           </div>
           <DialogFooter>
             <Button
@@ -844,7 +719,6 @@ const RestaurantsPage: React.FC = () => {
             </Button>
             <Button
               onClick={editDialogOpen ? handleSubmitEdit : handleSubmitAdd}
-              disabled={!editDialogOpen && !showManualEntry}
             >
               {editDialogOpen ? 'Save Changes' : 'Add Restaurant'}
             </Button>

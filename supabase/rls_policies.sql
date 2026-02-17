@@ -7,7 +7,6 @@
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.meals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.meal_ingredients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.meal_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scheduled_meals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shopping_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.school_menu_items ENABLE ROW LEVEL SECURITY;
@@ -95,15 +94,6 @@ CREATE POLICY "Users can delete own meal ingredients"
         WHERE meals.id = meal_ingredients.meal_id
         AND meals.user_id = auth.uid()
     ));
-
--- ============================================================================
--- MEAL PLANS
--- ============================================================================
-
-CREATE POLICY "Users can manage own meal plans"
-    ON public.meal_plans FOR ALL
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
 
 -- ============================================================================
 -- SCHEDULED MEALS

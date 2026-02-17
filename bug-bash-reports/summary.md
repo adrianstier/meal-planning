@@ -137,10 +137,13 @@ Plus: BroadcastSyncContext postMessage error handling, deleted dead useBroadcast
 6. **Invisible shopping categories** — items counted but never rendered
 7. **Shopping category mismatch** — generated items fell into unsorted bucket
 
-## Remaining Concerns (won't fix — require design decisions)
-1. Edge functions return nutrition data the frontend drops during recipe import
-2. AI-powered generate-shopping-list edge function exists but is never called
-3. `meal_plans` DB table is completely unused
-4. Multi-agent orchestrator framework is dead code (endpoint calls Claude directly)
-5. 3 non-existent edge functions referenced by client: `scrape-restaurant`, `search-restaurant`, `geocode-address`
-6. `needsAI` flag in parse-recipe-url 422 response not propagated to client (fallback to AI never triggers)
+## Remaining Concerns — ALL RESOLVED (Wave 5)
+
+All 6 deferred concerns have been addressed:
+
+1. ~~Edge functions return nutrition data the frontend drops~~ → **Fixed:** Nutrition fields (calories, protein, carbs, fat, fiber) now flow from parse handlers through formData to database. Collapsible nutrition UI added to recipe form.
+2. ~~AI-powered generate-shopping-list edge function unused~~ → **Fixed:** `shoppingApi.generateFromPlan()` now calls the AI edge function, with client-side regex as fallback.
+3. ~~`meal_plans` DB table completely unused~~ → **Fixed:** Table dropped via migration, `meal_plan_id` FK removed from `scheduled_meals`.
+4. ~~Multi-agent orchestrator is dead code~~ → **Fixed:** `agent/index.ts` now routes through `OrchestratorAgent` (intent classification → agent dispatch → response aggregation) with direct Claude fallback.
+5. ~~3 non-existent edge functions referenced by client~~ → **Fixed:** Removed `search-restaurant`, `scrape-restaurant`, `geocode-address` API functions, hooks, and UI buttons.
+6. ~~`needsAI` flag not propagated~~ → **Fixed:** `directEdgeFunctionFetch()` now attaches `responseBody` and `status` to `EdgeFunctionError`, enabling AI fallback path.

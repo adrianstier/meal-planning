@@ -160,13 +160,18 @@ async function directEdgeFunctionFetch<T>(
       const errorText = await response.text();
       devError(`[directEdgeFunctionFetch] Error response: ${errorText}`);
       let errorMessage = `Edge function error: ${response.status}`;
+      let responseBody: Record<string, unknown> | undefined;
       try {
         const errorJson = JSON.parse(errorText);
+        responseBody = errorJson;
         errorMessage = errorJson.error || errorMessage;
       } catch {
         if (errorText) errorMessage = errorText;
       }
-      return { data: null, error: new Error(errorMessage) };
+      const error: EdgeFunctionError = new Error(errorMessage);
+      error.status = response.status;
+      error.responseBody = responseBody;
+      return { data: null, error };
     }
 
     devLog('[directEdgeFunctionFetch] Parsing JSON response...');

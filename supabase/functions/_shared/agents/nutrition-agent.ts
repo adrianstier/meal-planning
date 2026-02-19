@@ -43,7 +43,7 @@ export class NutritionAgent extends BaseAgent {
     super(
       'nutrition',
       'Analyzes nutrition, checks dietary compliance, detects allergens, and suggests substitutions',
-      'claude-3-5-haiku-20241022'
+      'claude-haiku-4-5-20251001'
     )
   }
 

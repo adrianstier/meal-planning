@@ -38,7 +38,7 @@ export abstract class BaseAgent {
   constructor(
     name: AgentType,
     description: string,
-    model: string = 'claude-3-5-haiku-20241022'
+    model: string = 'claude-haiku-4-5-20251001'
   ) {
     this.name = name
     this.description = description

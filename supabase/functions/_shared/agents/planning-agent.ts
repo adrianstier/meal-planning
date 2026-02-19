@@ -23,7 +23,7 @@ export class PlanningAgent extends BaseAgent {
     super(
       'planning',
       'Generates intelligent meal plans based on preferences, leftovers, and dietary goals',
-      'claude-3-5-haiku-20241022'
+      'claude-haiku-4-5-20251001'
     )
 
     this.supabase = createClient(

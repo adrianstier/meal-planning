@@ -444,6 +444,8 @@ const RecipesPage: React.FC = () => {
       setSelectedMeal(null);
     } catch (error) {
       console.error('Failed to save meal:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to save recipe: ${errorMessage}`);
     }
   };
 
@@ -1173,6 +1175,8 @@ const RecipesPage: React.FC = () => {
         setUrlDialogOpen(open);
         if (!open) {
           setRecipeUrl('');
+          parseRecipeFromUrl.reset();
+          parseRecipeFromUrlAI.reset();
         }
       }}>
         <DialogContent className="max-w-xl">

@@ -12,7 +12,7 @@ import {
   logError,
 } from "../_shared/cors.ts";
 
-const ANTHROPIC_MODEL = "claude-3-5-haiku-20241022";
+const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
 interface MealSuggestion {
   name: string;

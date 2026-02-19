@@ -16,8 +16,8 @@ import {
 } from "../_shared/cors.ts";
 
 // Use Sonnet for vision capabilities (Haiku doesn't support images well)
-const ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022";
-const ANTHROPIC_MODEL_TEXT = "claude-3-5-haiku-20241022";
+const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
+const ANTHROPIC_MODEL_TEXT = "claude-haiku-4-5-20251001";
 
 interface SchoolMenuItem {
   date: string;

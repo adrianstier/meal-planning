@@ -30,7 +30,7 @@ export class OrchestratorAgent extends BaseAgent {
     super(
       'orchestrator',
       'Central coordinator that routes requests to specialized agents and manages workflows',
-      'claude-3-5-sonnet-20241022' // Use Sonnet for orchestration (better reasoning)
+      'claude-sonnet-4-5-20250929' // Use Sonnet for orchestration (better reasoning)
     )
 
     // Initialize Supabase client

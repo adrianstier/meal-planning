@@ -13,7 +13,7 @@ import {
 } from "../_shared/cors.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const ANTHROPIC_MODEL = "claude-3-5-haiku-20241022";
+const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
 interface ShoppingItem {
   name: string;

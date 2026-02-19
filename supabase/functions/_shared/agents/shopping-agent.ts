@@ -44,7 +44,7 @@ export class ShoppingAgent extends BaseAgent {
     super(
       'shopping',
       'Generates optimized shopping lists from meal plans with intelligent aggregation',
-      'claude-3-5-haiku-20241022'
+      'claude-haiku-4-5-20251001'
     )
 
     this.supabase = createClient(

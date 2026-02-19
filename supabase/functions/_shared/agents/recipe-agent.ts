@@ -19,7 +19,7 @@ export class RecipeAgent extends BaseAgent {
     super(
       'recipe',
       'Extracts, parses, and validates recipes from URLs, text, or images',
-      'claude-3-5-haiku-20241022'
+      'claude-haiku-4-5-20251001'
     )
   }
 

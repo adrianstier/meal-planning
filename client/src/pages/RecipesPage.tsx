@@ -28,7 +28,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { RecipeParsingProgress } from '../components/features/recipes/RecipeParsingProgress';
-import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage, useBulkDeleteMeals, useParseRecipeFromUrlAI } from '../hooks/useMeals';
+import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage, useBulkDeleteMeals, useParseRecipeFromUrl, useParseRecipeFromUrlAI } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
 import StarRating from '../components/StarRating';
 import { useDragDrop } from '../contexts/DragDropContext';
@@ -126,6 +126,7 @@ const RecipesPage: React.FC = () => {
   const bulkDeleteMeals = useBulkDeleteMeals();
   const parseRecipe = useParseRecipe();
   const parseRecipeFromImage = useParseRecipeFromImage();
+  const parseRecipeFromUrl = useParseRecipeFromUrl();
   const parseRecipeFromUrlAI = useParseRecipeFromUrlAI();
   const { setDraggedRecipe } = useDragDrop();
   const { showUndoToast } = useUndoToast();
@@ -280,7 +281,7 @@ const RecipesPage: React.FC = () => {
     }));
   };
 
-  // AI-enhanced import - uses Claude to parse the page
+  // URL import - tries non-AI JSON-LD extraction first, falls back to AI parsing
   const handleParseFromUrlAI = async () => {
     if (!recipeUrl.trim()) {
       alert('Please enter a recipe URL');
@@ -288,7 +289,8 @@ const RecipesPage: React.FC = () => {
     }
 
     try {
-      const result = await parseRecipeFromUrlAI.mutateAsync(recipeUrl);
+      // Try non-AI parser first (fast JSON-LD extraction)
+      const result = await parseRecipeFromUrl.mutateAsync(recipeUrl);
       const parsedData = result.data;
 
       setParsedRecipe(parsedData);
@@ -296,10 +298,30 @@ const RecipesPage: React.FC = () => {
       processParseResult(parsedData);
       setAddDialogOpen(true);
       setRecipeUrl('');
-    } catch (error) {
-      console.error('Failed to parse recipe from URL with AI:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to import recipe: ${errorMessage}`);
+    } catch (nonAiError) {
+      // Check if the non-AI parser says we need AI
+      const edgeError = nonAiError as { responseBody?: { needsAI?: boolean } };
+      if (edgeError.responseBody?.needsAI) {
+        // Auto-fallback to AI parser
+        try {
+          const result = await parseRecipeFromUrlAI.mutateAsync(recipeUrl);
+          const parsedData = result.data;
+
+          setParsedRecipe(parsedData);
+          setUrlDialogOpen(false);
+          processParseResult(parsedData);
+          setAddDialogOpen(true);
+          setRecipeUrl('');
+        } catch (aiError) {
+          console.error('Failed to parse recipe from URL with AI:', aiError);
+          const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown error';
+          alert(`Failed to import recipe: ${errorMessage}`);
+        }
+      } else {
+        console.error('Failed to parse recipe from URL:', nonAiError);
+        const errorMessage = nonAiError instanceof Error ? nonAiError.message : 'Unknown error';
+        alert(`Failed to import recipe: ${errorMessage}`);
+      }
     }
   };
 
@@ -1161,13 +1183,15 @@ const RecipesPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {parseRecipeFromUrlAI.isPending ? (
+            {(parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending) ? (
               <div className="py-8">
                 <RecipeParsingProgress
-                  isVisible={parseRecipeFromUrlAI.isPending}
+                  isVisible={parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
                 />
                 <p className="text-center text-sm text-muted-foreground mt-4">
-                  AI is analyzing the page... this may take a moment
+                  {parseRecipeFromUrlAI.isPending
+                    ? 'AI is analyzing the page... this may take a moment'
+                    : 'Checking for recipe data...'}
                 </p>
               </div>
             ) : (
@@ -1204,16 +1228,16 @@ const RecipesPage: React.FC = () => {
                 setUrlDialogOpen(false);
                 setRecipeUrl('');
               }}
-              disabled={parseRecipeFromUrlAI.isPending}
+              disabled={parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={handleParseFromUrlAI}
-              disabled={!recipeUrl || parseRecipeFromUrlAI.isPending}
+              disabled={!recipeUrl || parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending}
               className="bg-teal-500 hover:bg-teal-600"
             >
-              {parseRecipeFromUrlAI.isPending ? (
+              {(parseRecipeFromUrl.isPending || parseRecipeFromUrlAI.isPending) ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Importing...

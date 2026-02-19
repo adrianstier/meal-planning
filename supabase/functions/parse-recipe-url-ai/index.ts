@@ -14,6 +14,7 @@ import {
   log,
   logError,
 } from "../_shared/cors.ts";
+import { callClaude, extractJSON } from "../_shared/ai.ts";
 
 interface ParsedRecipe {
   name: string;
@@ -38,8 +39,6 @@ interface ParsedRecipe {
   source_url: string;
   image_url: string | null;
 }
-
-const ANTHROPIC_MODEL = "claude-3-5-haiku-20241022";
 
 async function fetchPage(url: string): Promise<string> {
   const controller = new AbortController();
@@ -98,7 +97,6 @@ function extractImageUrl(html: string): string | null {
 }
 
 function extractMainContent(html: string): string {
-  // Remove scripts, styles, nav, etc.
   let content = html
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -108,7 +106,6 @@ function extractMainContent(html: string): string {
     .replace(/<aside[\s\S]*?<\/aside>/gi, "")
     .replace(/<!--[\s\S]*?-->/g, "");
 
-  // Try to find recipe containers
   const patterns = [
     /<article[^>]*class="[^"]*recipe[^"]*"[^>]*>([\s\S]*?)<\/article>/i,
     /<div[^>]*class="[^"]*recipe-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
@@ -123,7 +120,6 @@ function extractMainContent(html: string): string {
     }
   }
 
-  // Convert to text
   content = content
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
@@ -140,7 +136,6 @@ function extractMainContent(html: string): string {
     .replace(/\n\s+/g, "\n")
     .trim();
 
-  // Limit to ~8000 chars for faster AI processing
   return content.substring(0, 8000);
 }
 
@@ -164,61 +159,6 @@ function extractJsonLd(html: string): any | null {
       }
     } catch {
       continue;
-    }
-  }
-  return null;
-}
-
-async function callClaude(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
-  // 30-second timeout to prevent hanging requests
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 2000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[parse-recipe-url-ai] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
-      throw new Error('AI service temporarily unavailable');
-    }
-
-    const data = await response.json();
-    return data.content?.[0]?.text || "";
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-function extractJSON(text: string): ParsedRecipe | null {
-  const patterns = [
-    /```json\s*([\s\S]*?)\s*```/,
-    /```\s*([\s\S]*?)\s*```/,
-    /(\{[\s\S]*\})/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      try {
-        return JSON.parse(match[1].trim());
-      } catch {
-        continue;
-      }
     }
   }
   return null;
@@ -254,11 +194,9 @@ Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID().substring(0, 8);
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
-  // CORS preflight
   const preflight = handleCorsPrelight(req);
   if (preflight) return preflight;
 
-  // CSRF protection
   if (!requireCsrfHeader(req)) {
     return new Response(
       JSON.stringify({ error: 'Missing security header' }),
@@ -266,13 +204,11 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // Auth
   const auth = await validateJWT(req);
   if (!auth.authenticated) {
     return errorResponse(auth.error || "Unauthorized", corsHeaders, 401);
   }
 
-  // Rate limit
   const rateLimit = checkRateLimitSync(auth.userId!);
   if (!rateLimit.allowed) {
     return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
@@ -286,7 +222,6 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Valid URL is required", corsHeaders, 400);
     }
 
-    // SSRF protection - block private/internal URLs
     if (!isPublicUrl(url)) {
       return errorResponse("URL must point to a public website", corsHeaders, 400);
     }
@@ -299,7 +234,6 @@ Deno.serve(async (req: Request) => {
       return errorResponse("AI service not configured", corsHeaders, 500);
     }
 
-    // Fetch page
     let html: string;
     try {
       html = await fetchPage(url);
@@ -312,7 +246,6 @@ Deno.serve(async (req: Request) => {
     const jsonLd = extractJsonLd(html);
     const mainContent = extractMainContent(html);
 
-    // Build context
     let context = "";
     if (jsonLd) {
       context = `STRUCTURED DATA:\n${JSON.stringify(jsonLd, null, 2)}\n\n`;
@@ -335,7 +268,7 @@ Return this exact JSON structure (no markdown, no explanation):
 {"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null}`;
 
     const aiResponse = await callClaude(systemPrompt, userPrompt, apiKey);
-    const parsed = extractJSON(aiResponse);
+    const parsed = extractJSON<ParsedRecipe>(aiResponse);
 
     if (!parsed) {
       logError({ requestId, event: "ai_parse_failed", reason: "no_json", response: aiResponse.substring(0, 500) });

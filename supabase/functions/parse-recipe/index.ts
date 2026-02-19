@@ -13,6 +13,7 @@ import {
   log,
   logError,
 } from "../_shared/cors.ts";
+import { callClaude, extractJSON } from "../_shared/ai.ts";
 
 interface ParsedRecipe {
   name: string;
@@ -35,64 +36,6 @@ interface ParsedRecipe {
   makes_leftovers: boolean;
   leftover_days: number | null;
   source_url: string | null;
-}
-
-const ANTHROPIC_MODEL = "claude-3-5-haiku-20241022";
-
-async function callClaude(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
-  // 30-second timeout to prevent hanging requests
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 2000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[parse-recipe] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
-      throw new Error('AI service temporarily unavailable');
-    }
-
-    const data = await response.json();
-    return data.content?.[0]?.text || "";
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-function extractJSON(text: string): ParsedRecipe | null {
-  // Try to find JSON in the response
-  const jsonPatterns = [
-    /```json\s*([\s\S]*?)\s*```/,
-    /```\s*([\s\S]*?)\s*```/,
-    /(\{[\s\S]*\})/,
-  ];
-
-  for (const pattern of jsonPatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      try {
-        return JSON.parse(match[1].trim());
-      } catch {
-        continue;
-      }
-    }
-  }
-  return null;
 }
 
 function validateRecipe(parsed: Partial<ParsedRecipe>): ParsedRecipe {
@@ -198,7 +141,7 @@ Return this exact JSON structure (no markdown, no explanation):
 {"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null,"source_url":${sourceUrl ? JSON.stringify(sourceUrl) : "null"}}`;
 
     const aiResponse = await callClaude(systemPrompt, userPrompt, apiKey);
-    const parsed = extractJSON(aiResponse);
+    const parsed = extractJSON<ParsedRecipe>(aiResponse);
 
     if (!parsed) {
       logError({ requestId, event: "parse_failed", reason: "no_json", response: aiResponse.substring(0, 500) });

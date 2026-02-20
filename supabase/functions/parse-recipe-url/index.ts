@@ -29,6 +29,7 @@ interface ParsedRecipe {
   notes: string | null;
   source_url: string;
   image_url: string | null;
+  top_comments: string | null;
 }
 
 async function fetchPage(url: string): Promise<string> {
@@ -226,6 +227,29 @@ function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): Parsed
     else if (jsonLd.image.url) finalImageUrl = jsonLd.image.url;
   }
 
+  // Extract top 3 reviews from JSON-LD
+  let topComments: string | null = null;
+  if (jsonLd.review && Array.isArray(jsonLd.review)) {
+    const reviews = jsonLd.review
+      // deno-lint-ignore no-explicit-any
+      .filter((r: any) => r.reviewBody)
+      // deno-lint-ignore no-explicit-any
+      .sort((a: any, b: any) => {
+        const ratingA = a.reviewRating?.ratingValue ? Number(a.reviewRating.ratingValue) : 0;
+        const ratingB = b.reviewRating?.ratingValue ? Number(b.reviewRating.ratingValue) : 0;
+        return ratingB - ratingA;
+      })
+      .slice(0, 3)
+      // deno-lint-ignore no-explicit-any
+      .map((r: any) => ({
+        text: String(r.reviewBody).substring(0, 500),
+        upvotes: 0,
+      }));
+    if (reviews.length > 0) {
+      topComments = JSON.stringify(reviews);
+    }
+  }
+
   return {
     name: jsonLd.name || "Untitled Recipe",
     meal_type: mealType,
@@ -240,6 +264,7 @@ function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): Parsed
     notes: jsonLd.description || null,
     source_url: url,
     image_url: finalImageUrl,
+    top_comments: topComments,
   };
 }
 

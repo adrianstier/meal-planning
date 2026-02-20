@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X, Coffee, Salad, UtensilsCrossed, Apple, Globe, Brain, Loader2 } from 'lucide-react';
+import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X, Coffee, Salad, UtensilsCrossed, Apple, Globe, Brain, Loader2, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -53,6 +53,7 @@ interface ParsedRecipeData {
   carbs_g?: number;
   fat_g?: number;
   fiber_g?: number;
+  top_comments?: string;
 }
 
 // Helper function to safely parse top_comments JSON with validation
@@ -87,6 +88,7 @@ const RecipesPage: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [parsedRecipe, setParsedRecipe] = useState<Partial<Meal> | null>(null);
   const [bulkTagInput, setBulkTagInput] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -278,6 +280,7 @@ const RecipesPage: React.FC = () => {
       carbs_g: parsedData.carbs_g ?? undefined,
       fat_g: parsedData.fat_g ?? undefined,
       fiber_g: parsedData.fiber_g ?? undefined,
+      top_comments: parsedData.top_comments,
     }));
   };
 
@@ -389,6 +392,7 @@ const RecipesPage: React.FC = () => {
         carbs_g: parsedData.carbs_g ?? undefined,
         fat_g: parsedData.fat_g ?? undefined,
         fiber_g: parsedData.fiber_g ?? undefined,
+        top_comments: parsedData.top_comments,
       };
 
       // Auto-save the recipe to the database
@@ -446,6 +450,48 @@ const RecipesPage: React.FC = () => {
       console.error('Failed to save meal:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to save recipe: ${errorMessage}`);
+    }
+  };
+
+  const handleRefreshRecipe = async (meal: Meal) => {
+    if (!meal.source_url) return;
+
+    setIsRefreshing(true);
+    try {
+      const result = await parseRecipeFromUrlAI.mutateAsync(meal.source_url);
+      const parsedData = result.data;
+
+      // Only override recipe content fields, preserve user-specific data
+      const updatePayload: Partial<Meal> = {
+        name: parsedData.name || meal.name,
+        ingredients: typeof parsedData.ingredients === 'string'
+          ? parsedData.ingredients
+          : meal.ingredients,
+        instructions: typeof parsedData.instructions === 'string'
+          ? parsedData.instructions
+          : meal.instructions,
+        cook_time_minutes: parsedData.cook_time_minutes ?? meal.cook_time_minutes,
+        servings: parsedData.servings ?? meal.servings,
+        cuisine: parsedData.cuisine ?? meal.cuisine,
+        tags: parsedData.tags || meal.tags,
+        image_url: parsedData.image_url || meal.image_url,
+        calories: parsedData.calories ?? meal.calories,
+        protein_g: parsedData.protein_g ?? meal.protein_g,
+        carbs_g: parsedData.carbs_g ?? meal.carbs_g,
+        fat_g: parsedData.fat_g ?? meal.fat_g,
+        fiber_g: parsedData.fiber_g ?? meal.fiber_g,
+        top_comments: parsedData.top_comments ?? meal.top_comments,
+      };
+
+      await updateMeal.mutateAsync({ id: meal.id, meal: updatePayload });
+      setSelectedMeal(prev => prev ? { ...prev, ...updatePayload } : prev);
+      alert(`"${meal.name}" has been refreshed with the latest recipe data.`);
+    } catch (error) {
+      console.error('Failed to refresh recipe:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to refresh recipe: ${errorMessage}`);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -1600,7 +1646,7 @@ const RecipesPage: React.FC = () => {
 
             {/* Source URL */}
             {selectedMeal?.source_url && (
-              <div>
+              <div className="flex items-center gap-3">
                 <a
                   href={selectedMeal.source_url}
                   target="_blank"
@@ -1610,6 +1656,15 @@ const RecipesPage: React.FC = () => {
                   <ExternalLink className="w-4 h-4" />
                   View Original Recipe
                 </a>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRefreshRecipe(selectedMeal)}
+                  disabled={isRefreshing || parseRecipeFromUrlAI.isPending}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh from Source'}
+                </Button>
               </div>
             )}
 

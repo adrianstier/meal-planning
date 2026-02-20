@@ -38,6 +38,8 @@ interface ParsedRecipe {
   leftover_days: number | null;
   source_url: string;
   image_url: string | null;
+  // deno-lint-ignore no-explicit-any
+  top_comments: any;
 }
 
 async function fetchPage(url: string): Promise<string> {
@@ -139,6 +141,31 @@ function extractMainContent(html: string): string {
   return content.substring(0, 8000);
 }
 
+function extractCommentSection(html: string): string {
+  const cleaned = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "");
+
+  const patterns = [
+    /<section[^>]*(?:id|class)="[^"]*(?:comment|review)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+    /<div[^>]*(?:id|class)="[^"]*(?:comments|reviews|user-review)[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?=<(?:footer|aside|div[^>]*class="[^"]*(?:footer|sidebar)))/i,
+    /<ol[^>]*class="[^"]*comment[^"]*"[^>]*>([\s\S]*?)<\/ol>/i,
+    /<ul[^>]*class="[^"]*(?:comment|review)[^"]*"[^>]*>([\s\S]*?)<\/ul>/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = cleaned.match(pattern);
+    if (match) {
+      return match[1]
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .substring(0, 3000);
+    }
+  }
+  return "";
+}
+
 // deno-lint-ignore no-explicit-any
 function extractJsonLd(html: string): any | null {
   const regex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -187,6 +214,11 @@ function validateRecipe(parsed: Partial<ParsedRecipe>, url: string, imageUrl: st
     leftover_days: typeof parsed.leftover_days === "number" ? parsed.leftover_days : null,
     source_url: url,
     image_url: imageUrl || parsed.image_url || null,
+    top_comments: Array.isArray(parsed.top_comments)
+      ? JSON.stringify(parsed.top_comments)
+      : typeof parsed.top_comments === "string"
+        ? parsed.top_comments
+        : null,
   };
 }
 
@@ -252,20 +284,26 @@ Deno.serve(async (req: Request) => {
     }
     context += `PAGE CONTENT:\n${mainContent}`;
 
+    const commentSection = extractCommentSection(html);
+    if (commentSection) {
+      context += `\n\nUSER COMMENTS/REVIEWS:\n${commentSection}`;
+    }
+
     const systemPrompt = `You are a recipe parser. Extract recipe data and return ONLY valid JSON, no other text.
 
 Format ingredients as one per line with quantities.
 Format instructions as numbered steps.
 Estimate nutrition if not provided.
 Kid-friendliness: 1-10 (10 = kid favorites like mac & cheese, 1 = spicy/complex)
-Difficulty: easy (<30min total), medium (30-60min), hard (>60min)`;
+Difficulty: easy (<30min total), medium (30-60min), hard (>60min)
+If the page contains user comments or reviews, extract the top 3 most helpful ones (prefer tips, substitutions, or cooking adjustments). Format as a JSON array of {"text":"...","upvotes":0} where upvotes is the number if shown, or 0.`;
 
     const userPrompt = `Parse this recipe into JSON:
 
 ${context}
 
 Return this exact JSON structure (no markdown, no explanation):
-{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null}`;
+{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null,"top_comments":null}`;
 
     const aiResponse = await callClaude(systemPrompt, userPrompt, apiKey);
     const parsed = extractJSON<ParsedRecipe>(aiResponse);

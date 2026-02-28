@@ -19,7 +19,9 @@ if (envOrigins) {
 }
 
 // Pattern to match Vercel preview deployments for both meal-planning and client projects
-const VERCEL_PREVIEW_PATTERN = /^https:\/\/(meal-planning|client)-[a-z0-9]+-adrian-stiers-projects(-807dad27)?\.vercel\.app$/;
+// Vercel preview URLs: {project}-{hash-or-git-branch}-{team}.vercel.app
+// The [a-z0-9-]+ segment allows hyphens for git branch names (e.g., git-fix-remaining-issues)
+const VERCEL_PREVIEW_PATTERN = /^https:\/\/(meal-planning|client)-[a-z0-9-]+-adrianstiers-projects\.vercel\.app$/;
 
 export function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;

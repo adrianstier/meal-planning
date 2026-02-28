@@ -213,6 +213,11 @@ export function isPublicUrl(url: string): boolean {
       /^169\.254\./, // AWS metadata
       /^0\./, /^localhost$/i, /\.local$/i, /\.internal$/i,
       /^fc00:/, /^fe80:/, /^::1$/,  // IPv6 private
+      /^::ffff:/i,     // IPv6-mapped IPv4 addresses
+      /^0000:/i,       // IPv6 zero prefix
+      /^\d+$/,         // Pure numeric hostnames (decimal IP notation)
+      /^\[/,           // IPv6 literal in brackets
+      /^0\.0\.0\.0$/,  // Wildcard address
     ];
     return !blockedPatterns.some(pattern => pattern.test(hostname));
   } catch {

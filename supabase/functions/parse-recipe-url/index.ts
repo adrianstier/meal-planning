@@ -41,8 +41,9 @@ async function fetchPage(url: string): Promise<string> {
       signal: controller.signal,
       redirect: 'manual',
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; MealPlannerBot/1.0)",
-        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
       },
     });
 
@@ -56,10 +57,10 @@ async function fetchPage(url: string): Promise<string> {
       }
       const redirectResponse = await fetch(redirectUrl, {
         signal: controller.signal,
-        redirect: 'manual',
+        redirect: 'follow',
         headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; MealPlannerBot/1.0)",
-          "Accept": "text/html,application/xhtml+xml",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
       });
       if (!redirectResponse.ok) {
@@ -69,7 +70,6 @@ async function fetchPage(url: string): Promise<string> {
     }
 
     if (!response.ok) {
-      // Categorize HTTP errors
       if (response.status === 404) {
         throw new Error('Recipe page not found (404)');
       } else if (response.status === 403) {
@@ -317,7 +317,14 @@ Deno.serve(async (req: Request) => {
       html = await fetchPage(url);
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unknown";
-      return errorResponse(`Failed to fetch URL: ${msg}`, corsHeaders, 422);
+      // If the site blocks us (403, timeout, etc.), suggest AI parsing as fallback
+      log({ requestId, event: "fetch_failed", error: msg });
+      return errorResponse(
+        `Could not access recipe page: ${msg}. Try AI Enhanced parsing.`,
+        corsHeaders,
+        422,
+        { needsAI: true, message: `Could not access this site directly. Use AI Enhanced parsing instead.` }
+      );
     }
 
     // Extract JSON-LD

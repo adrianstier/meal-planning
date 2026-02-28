@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Package, CheckCircle, Trash2,
@@ -119,13 +118,17 @@ const SeasonalCookingPage: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [selectedSeasonalItems, setSelectedSeasonalItems] = useState<Set<string>>(new Set());
 
-  // CSA boxes and items
+  // CSA boxes and items - reserved for future use when backend is implemented
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [boxes, setBoxes] = useState<CSABox[]>([]);
   const [selectedBox, setSelectedBox] = useState<CSABox | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [allItems, setAllItems] = useState<ProduceItemData[]>([]);
 
-  // Recipe matching
+  // Recipe matching - reserved for future use when backend is implemented
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [recipeMatches, setRecipeMatches] = useState<RecipeMatch[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loadingRecipes, setLoadingRecipes] = useState(false);
 
   // UI state
@@ -199,249 +202,49 @@ const SeasonalCookingPage: React.FC = () => {
     return unusedItems.filter(item => item.daysUntilExpiry > 7);
   }, [unusedItems]);
 
-  // Load data on mount
-  useEffect(() => {
-    loadBoxes();
-    loadAllProduce(); // Load unified produce list
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Reload produce when box selection changes
-  useEffect(() => {
-    if (selectedBox) {
-      loadBoxDetails(selectedBox.id);
-    } else {
-      // When no specific box selected, use all produce
-      loadAllProduce();
-    }
-  }, [selectedBox]);
-
-  // Auto-find recipes when items change
-  useEffect(() => {
-    if (unusedItems.length > 0 || selectedSeasonalItems.size > 0) {
-      // Debounce recipe search
-      const timer = setTimeout(() => {
-        findRecipesForProduce();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unusedItems.length, selectedSeasonalItems.size]);
-
-  const loadBoxes = async () => {
-    try {
-      const response = await axios.get('/api/csa/boxes');
-      setBoxes(response.data.boxes);
-
-      // Auto-select most recent active box if none selected
-      if (response.data.boxes.length > 0 && !selectedBox) {
-        const activeBox = response.data.boxes.find((b: CSABox) => b.is_active) || response.data.boxes[0];
-        setSelectedBox(activeBox);
-      }
-    } catch (error) {
-      console.error('Error loading boxes:', error);
-    }
-  };
-
-  // Load ALL produce across all sources - unified view
-  const loadAllProduce = async () => {
-    try {
-      const response = await axios.get('/api/csa/produce');
-      setAllItems(response.data.items || []);
-    } catch (error) {
-      console.error('Error loading produce:', error);
-    }
-  };
-
-  const loadBoxDetails = async (boxId: number) => {
-    try {
-      const response = await axios.get(`/api/csa/boxes/${boxId}`);
-      setAllItems(response.data.box.items.map((item: ProduceItemData) => ({
-        ...item,
-        source: response.data.box.source || 'CSA',
-        box_id: boxId
-      })));
-    } catch (error) {
-      console.error('Error loading box details:', error);
-    }
-  };
+  // NOTE: All data operations are disabled - the backend endpoints
+  // (/api/csa/boxes, /api/csa/produce, etc.) do not exist.
+  // The app uses Supabase directly. This feature needs a csaApi layer in api.ts.
 
   const findRecipesForProduce = async () => {
-    if (unusedItems.length === 0 && selectedSeasonalItems.size === 0) return;
-
-    setLoadingRecipes(true);
-    try {
-      // Use the new unified recipe suggestions endpoint that considers ALL produce
-      const response = await axios.get('/api/csa/produce/recipe-suggestions');
-
-      // Backend already sorts by total_score (urgency + match)
-      setRecipeMatches(response.data.suggestions || []);
-    } catch (error) {
-      console.error('Error finding recipes:', error);
-      // Fallback to old method if new endpoint fails
-      if (selectedBox) {
-        try {
-          const fallbackResponse = await axios.get(`/api/csa/boxes/${selectedBox.id}/recipe-matches`);
-          setRecipeMatches(fallbackResponse.data.matches || []);
-        } catch (fallbackError) {
-          console.error('Fallback also failed:', fallbackError);
-        }
-      }
-    } finally {
-      setLoadingRecipes(false);
-    }
+    // No-op: backend endpoint does not exist
   };
 
   const createBox = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await axios.post('/api/csa/boxes', newBoxForm);
-      setShowAddBox(false);
-      setNewBoxForm({
-        name: '',
-        delivery_date: new Date().toISOString().split('T')[0],
-        source: '',
-        notes: ''
-      });
-      loadBoxes();
-      // Select the newly created box
-      if (response.data.box) {
-        setSelectedBox(response.data.box);
-      }
-    } catch (error) {
-      console.error('Error creating box:', error);
-    }
+    // No-op: backend endpoint does not exist
+    setShowAddBox(false);
   };
 
   const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedBox) return;
-
-    try {
-      await axios.post(`/api/csa/boxes/${selectedBox.id}/items`, {
-        ...newItemForm,
-        quantity: newItemForm.quantity ? parseFloat(newItemForm.quantity) : undefined
-      });
-      setShowAddItem(false);
-      setNewItemForm({
-        ingredient_name: '',
-        quantity: '',
-        unit: '',
-        estimated_expiry_days: 7,
-        source_type: 'store'
-      });
-      loadBoxDetails(selectedBox.id);
-      loadBoxes();
-    } catch (error) {
-      console.error('Error adding item:', error);
-    }
+    // No-op: backend endpoint does not exist
+    setShowAddItem(false);
   };
 
-  const addSeasonalItem = async (produceName: string) => {
-    const shelfLife = getShelfLife(produceName);
-
-    try {
-      // Use the quick-add endpoint - it auto-creates a box if needed
-      await axios.post('/api/csa/produce/quick-add', {
-        ingredient_name: produceName,
-        estimated_expiry_days: shelfLife,
-        source: 'Store' // or 'Seasonal' - defaults to Store
-      });
-
-      // Refresh data
-      loadAllProduce();
-      loadBoxes();
-
-      // Remove from selected seasonal items
-      setSelectedSeasonalItems(prev => {
-        const next = new Set(prev);
-        next.delete(produceName);
-        return next;
-      });
-    } catch (error) {
-      console.error('Error adding seasonal item:', error);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const addSeasonalItem = async (_produceName: string) => {
+    // No-op: backend endpoint does not exist
   };
 
   const addBulkItems = async () => {
-    if (!bulkItems.trim()) return;
-
-    const lines = bulkItems.trim().split('\n');
-    try {
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        const parts = trimmed.split(',').map(p => p.trim());
-        const ingredient_name = parts[0];
-        const quantityPart = parts[1] || '';
-        const quantityMatch = quantityPart.match(/^([\d.]+)\s*(.*)$/);
-        const quantity = quantityMatch ? parseFloat(quantityMatch[1]) : undefined;
-        const unit = quantityMatch ? quantityMatch[2].trim() : '';
-        const shelfLife = getShelfLife(ingredient_name);
-
-        // Use quick-add endpoint which auto-creates boxes as needed
-        await axios.post('/api/csa/produce/quick-add', {
-          ingredient_name,
-          quantity,
-          unit,
-          estimated_expiry_days: shelfLife,
-          source: 'Store'
-        });
-      }
-
-      setBulkItems('');
-      loadAllProduce();
-      loadBoxes();
-    } catch (error) {
-      console.error('Error adding bulk items:', error);
-    }
+    // No-op: backend endpoint does not exist
+    setBulkItems('');
   };
 
-  const toggleItemUsed = async (itemId: number, isUsed: boolean) => {
-    try {
-      if (!isUsed) {
-        // Use unified produce endpoint
-        await axios.post(`/api/csa/produce/${itemId}/use`, {});
-      } else {
-        // Need to use box endpoint for un-marking (updating to is_used = false)
-        // Find the item to get its box_id
-        const item = allItems.find(i => i.id === itemId);
-        if (item?.box_id) {
-          await axios.put(`/api/csa/boxes/${item.box_id}/items/${itemId}`, {
-            is_used: false
-          });
-        }
-      }
-      loadAllProduce();
-      loadBoxes();
-    } catch (error) {
-      console.error('Error toggling item:', error);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const toggleItemUsed = async (_itemId: number, _isUsed: boolean) => {
+    // No-op: backend endpoint does not exist
   };
 
-  const deleteItem = async (itemId: number) => {
-    try {
-      // Use unified produce endpoint
-      await axios.delete(`/api/csa/produce/${itemId}`);
-      loadAllProduce();
-      loadBoxes();
-    } catch (error) {
-      console.error('Error deleting item:', error);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const deleteItem = async (_itemId: number) => {
+    // No-op: backend endpoint does not exist
   };
 
-  const deleteBox = async (boxId: number) => {
-    if (!window.confirm('Delete this produce list and all its items?')) return;
-
-    try {
-      await axios.delete(`/api/csa/boxes/${boxId}`);
-      setSelectedBox(null);
-      setAllItems([]);
-      loadBoxes();
-    } catch (error) {
-      console.error('Error deleting box:', error);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const deleteBox = async (_boxId: number) => {
+    // No-op: backend endpoint does not exist
   };
 
   const toggleSeasonalItem = (itemName: string) => {
@@ -518,109 +321,14 @@ const SeasonalCookingPage: React.FC = () => {
   };
 
   const handleParseText = async () => {
-    if (!aiParseText.trim()) {
-      setAIParseError('Please enter text to parse');
-      return;
-    }
-
-    setAIParsing(true);
-    setAIParseError('');
-    setParsedResult(null);
-
-    try {
-      const response = await axios.post('/api/csa/parse/text', {
-        text: aiParseText,
-        source: aiParseSource
-      });
-
-      if (response.data.success) {
-        const result = response.data.parsed;
-        setParsedResult(result);
-        // Mark all items as selected by default
-        setParsedItems(result.items.map((item: ParsedProduceItem) => ({ ...item, selected: true })));
-      } else {
-        setAIParseError('Failed to parse text');
-      }
-    } catch (error: unknown) {
-      // Extract error message from various error formats
-      let message = 'Failed to parse text';
-      if (error instanceof Error) {
-        message = error.message;
-      } else if (error && typeof error === 'object') {
-        const errObj = error as Record<string, unknown>;
-        const responseData = errObj.response as Record<string, unknown> | undefined;
-        if (responseData?.data && typeof responseData.data === 'object') {
-          const data = responseData.data as Record<string, unknown>;
-          if (typeof data.error === 'string') message = data.error;
-        }
-      }
-      setAIParseError(message);
-    } finally {
-      setAIParsing(false);
-    }
+    // No-op: backend endpoint /api/csa/parse/text does not exist
+    setAIParseError('AI parsing is coming soon. The backend for this feature is not yet available.');
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!validTypes.includes(file.type)) {
-      setAIParseError('Please upload a JPEG, PNG, WebP, or GIF image');
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setAIParseError('Image must be less than 10MB');
-      return;
-    }
-
-    // Read and preview image
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64Data = event.target?.result as string;
-      setImagePreview(base64Data);
-
-      // Parse with AI
-      setAIParsing(true);
-      setAIParseError('');
-      setParsedResult(null);
-
-      try {
-        const response = await axios.post('/api/csa/parse/image', {
-          image_data: base64Data,
-          media_type: file.type,
-          source: aiParseSource
-        });
-
-        if (response.data.success) {
-          const result = response.data.parsed;
-          setParsedResult(result);
-          setParsedItems(result.items.map((item: ParsedProduceItem) => ({ ...item, selected: true })));
-        } else {
-          setAIParseError('Failed to parse image');
-        }
-      } catch (error: unknown) {
-        // Extract error message from various error formats
-        let message = 'Failed to parse image';
-        if (error instanceof Error) {
-          message = error.message;
-        } else if (error && typeof error === 'object') {
-          const errObj = error as Record<string, unknown>;
-          const responseData = errObj.response as Record<string, unknown> | undefined;
-          if (responseData?.data && typeof responseData.data === 'object') {
-            const data = responseData.data as Record<string, unknown>;
-            if (typeof data.error === 'string') message = data.error;
-          }
-        }
-        setAIParseError(message);
-      } finally {
-        setAIParsing(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    // No-op: backend endpoint /api/csa/parse/image does not exist
+    setAIParseError('AI image parsing is coming soon. The backend for this feature is not yet available.');
   };
 
   const toggleItemSelection = (index: number) => {
@@ -640,53 +348,25 @@ const SeasonalCookingPage: React.FC = () => {
   };
 
   const addParsedItems = async () => {
-    const selectedItems = parsedItems.filter(item => item.selected);
-    if (selectedItems.length === 0) {
-      setAIParseError('Please select at least one item to add');
-      return;
-    }
-
-    setAIParsing(true);
-    setAIParseError('');
-
-    try {
-      const response = await axios.post('/api/csa/parse/add-all', {
-        items: selectedItems,
-        source: parsedResult?.source || aiParseSource,
-        delivery_date: parsedResult?.delivery_date || new Date().toISOString().split('T')[0],
-        box_name: `${parsedResult?.source || aiParseSource} - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-      });
-
-      if (response.data.success) {
-        // Refresh data and close modal
-        loadAllProduce();
-        loadBoxes();
-        setShowAIParser(false);
-        resetAIParser();
-      } else {
-        setAIParseError('Failed to add items');
-      }
-    } catch (error: unknown) {
-      // Extract error message from various error formats
-      let message = 'Failed to add items';
-      if (error instanceof Error) {
-        message = error.message;
-      } else if (error && typeof error === 'object') {
-        const errObj = error as Record<string, unknown>;
-        const responseData = errObj.response as Record<string, unknown> | undefined;
-        if (responseData?.data && typeof responseData.data === 'object') {
-          const data = responseData.data as Record<string, unknown>;
-          if (typeof data.error === 'string') message = data.error;
-        }
-      }
-      setAIParseError(message);
-    } finally {
-      setAIParsing(false);
-    }
+    // No-op: backend endpoint /api/csa/parse/add-all does not exist
+    setAIParseError('Adding parsed items is coming soon. The backend for this feature is not yet available.');
   };
 
   return (
     <div className="space-y-6 pb-8">
+      {/* Coming Soon Banner */}
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
+        <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+        <div>
+          <h3 className="font-semibold text-blue-900">This feature is coming soon</h3>
+          <p className="text-sm text-blue-700 mt-1">
+            Produce tracking, recipe matching, and AI import are under development.
+            The seasonal produce guide below is fully functional -- browse what's in season
+            and use it as inspiration for your meal planning.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

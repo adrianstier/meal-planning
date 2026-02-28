@@ -7,50 +7,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-
-// ============================================
-// CORS Utilities (inline)
-// ============================================
-// Get allowed origins from environment variable, with fallback to defaults
-const ENV_ALLOWED_ORIGINS = Deno.env.get('ALLOWED_ORIGINS');
-const ALLOWED_ORIGINS = ENV_ALLOWED_ORIGINS
-  ? ENV_ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5173',
-      'https://meal-planning-virid.vercel.app',
-      'https://meal-planning-adrianstiers-projects.vercel.app',
-      'https://meal-planning-git-main-adrianstiers-projects.vercel.app',
-      'https://client-six-inky.vercel.app',
-    ];
-
-const VERCEL_PREVIEW_PATTERN = /^https:\/\/(meal-planning|client)-[a-z0-9]+-adrian-stiers-projects(-807dad27)?\.vercel\.app$/;
-
-function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
-  if (VERCEL_PREVIEW_PATTERN.test(origin)) return true;
-  return false;
-}
-
-function getCorsHeaders(requestOrigin: string | null): Record<string, string> {
-  const origin = isAllowedOrigin(requestOrigin) ? requestOrigin! : ALLOWED_ORIGINS[0];
-  return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Max-Age': '3600',
-  };
-}
-
-function handleCorsPrelight(req: Request): Response | null {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: getCorsHeaders(req.headers.get('origin')) });
-  }
-  return null;
-}
+import { getCorsHeaders, handleCorsPrelight } from '../_shared/cors.ts'
 
 // ============================================
 // Rate Limiting (Database-backed)

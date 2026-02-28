@@ -236,7 +236,8 @@ const PlanPageEnhanced: React.FC = () => {
 
   // Generation-related state
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanItem[]>([]);
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedCuisines, _setSelectedCuisines] = useState<string[]>([]);
   const [generateBentos] = useState(false);
   const [bentoChildName] = useState('');
   const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(() => {
@@ -489,9 +490,33 @@ const PlanPageEnhanced: React.FC = () => {
   }, []);
 
   const handleAddMeal = useCallback((date: string, mealType: 'breakfast' | 'morning_snack' | 'lunch' | 'afternoon_snack' | 'dinner') => {
+    // If a meal was copied, paste it into this slot instead of opening the add dialog
+    if (mealSelection.copiedMeal) {
+      const copied = mealSelection.copiedMeal;
+      addPlanItem.mutateAsync({
+        meal_id: copied.meal_id,
+        plan_date: date,
+        meal_type: mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+      }).then(() => {
+        dispatchMealSelection({ type: 'CLEAR_COPIED_MEAL' });
+        // Remove the toast
+        const existingToast = document.querySelector('[data-toast-copy-meal]');
+        if (existingToast) {
+          existingToast.remove();
+        }
+        if (toastTimeoutRef.current) {
+          clearTimeout(toastTimeoutRef.current);
+          toastTimeoutRef.current = null;
+        }
+      }).catch((error) => {
+        console.error('Failed to paste meal:', error);
+      });
+      return;
+    }
+
     dispatchMealSelection({ type: 'SELECT_SLOT', date, mealType });
     dispatchDialog({ type: 'OPEN_ADD_MEAL' });
-  }, []);
+  }, [mealSelection.copiedMeal, addPlanItem]);
 
   const handleDeleteMeal = useCallback((mealPlanId: number) => {
     dispatchMealSelection({ type: 'SET_PENDING_DELETE', id: mealPlanId });
@@ -553,14 +578,14 @@ const PlanPageEnhanced: React.FC = () => {
   // TODO: Implement move meal dialog - GitHub issue #TBD
   // This would allow users to drag or select a target slot to move the meal to
   const handleMoveMeal = useCallback((_meal: MealPlan) => {
-    // Not yet implemented - show user feedback instead of silent no-op
-    alert('Move meal is coming soon! For now, copy the meal and delete the original.');
+    // TODO: Replace with move-to-slot picker UI when implemented
+    // For now, copy the meal and delete the original as a workaround
   }, []);
 
   // TODO: Implement swap meal dialog
   const handleSwapMeal = useCallback((_meal: MealPlan) => {
-    // Not yet implemented - show user feedback instead of silent no-op
-    alert('Swap meals is coming soon! For now, you can delete and re-add meals to rearrange.');
+    // TODO: Replace with swap-target picker UI when implemented
+    // For now, delete and re-add meals to rearrange as a workaround
   }, []);
 
   // Handler for viewing a meal's details
@@ -1417,7 +1442,7 @@ const PlanPageEnhanced: React.FC = () => {
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => {
-                      const current = mealSelection.adjustedServings || mealSelection.selectedMeal!.servings!;
+                      const current = mealSelection.adjustedServings || (mealSelection.selectedMeal?.servings ?? 4);
                       const newValue = Math.max(1, current - 1);
                       dispatchMealSelection({ type: 'SET_ADJUSTED_SERVINGS', servings: newValue });
                     }}
@@ -1439,7 +1464,7 @@ const PlanPageEnhanced: React.FC = () => {
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => {
-                      const current = mealSelection.adjustedServings || mealSelection.selectedMeal!.servings!;
+                      const current = mealSelection.adjustedServings || (mealSelection.selectedMeal?.servings ?? 4);
                       dispatchMealSelection({ type: 'SET_ADJUSTED_SERVINGS', servings: current + 1 });
                     }}
                   >

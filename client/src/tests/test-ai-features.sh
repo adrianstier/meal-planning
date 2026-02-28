@@ -1,8 +1,8 @@
 #!/bin/bash
 # Comprehensive AI Feature Tests
 
-SUPABASE_URL="https://ppeltiyvdigahereijha.supabase.co"
-ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZWx0aXl2ZGlnYWhlcmVpamhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwNjcyOTcsImV4cCI6MjA4MTY0MzI5N30.jen78DEurTIUDhiiWzr_zh1izI6OFQaYQprINyiTOkc"
+SUPABASE_URL="${SUPABASE_URL:-https://your-project.supabase.co}"
+ANON_KEY="${ANON_KEY:-your-anon-key}"
 
 echo "========================================="
 echo "AI Feature Comprehensive Tests"
@@ -14,7 +14,7 @@ echo "1. Authenticating..."
 TOKEN=$(curl -s -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
   -H "apikey: $ANON_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"email":"claudetest@mealplanner.dev","password":"ClaudeTest2024"}' | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
+  -d "{\"email\":\"${TEST_EMAIL:?Set TEST_EMAIL env var}\",\"password\":\"${TEST_PASSWORD:?Set TEST_PASSWORD env var}\"}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
 
 if [ -z "$TOKEN" ]; then
   echo "ERROR: Failed to get auth token"

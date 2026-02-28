@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import axios from 'axios';
+import { bentoApi } from '../lib/api';
 import type { BentoItem, BentoPlan } from '../types/api';
 
 const BentoPage: React.FC = () => {
@@ -101,8 +101,8 @@ const BentoPage: React.FC = () => {
 
   const fetchItems = async () => {
     try {
-      const response = await axios.get('/api/bento-items');
-      setItems(response.data.items);
+      const response = await bentoApi.getItems();
+      setItems(response.data as BentoItem[]);
     } catch (error) {
       console.error('Error fetching bento items:', error);
     }
@@ -111,8 +111,8 @@ const BentoPage: React.FC = () => {
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/bento-plans');
-      setPlans(response.data.plans);
+      const response = await bentoApi.getPlans();
+      setPlans(response.data as BentoPlan[]);
     } catch (error) {
       console.error('Error fetching bento plans:', error);
     } finally {
@@ -122,16 +122,14 @@ const BentoPage: React.FC = () => {
 
   const handleSaveItem = async () => {
     try {
+      const payload = {
+        ...itemFormData,
+        prep_time_minutes: itemFormData.prep_time_minutes ? parseInt(itemFormData.prep_time_minutes) : undefined
+      };
       if (editingItem) {
-        await axios.put(`/api/bento-items/${editingItem.id}`, {
-          ...itemFormData,
-          prep_time_minutes: itemFormData.prep_time_minutes ? parseInt(itemFormData.prep_time_minutes) : null
-        });
+        await bentoApi.updateItem(editingItem.id, payload);
       } else {
-        await axios.post('/api/bento-items', {
-          ...itemFormData,
-          prep_time_minutes: itemFormData.prep_time_minutes ? parseInt(itemFormData.prep_time_minutes) : null
-        });
+        await bentoApi.createItem(payload);
       }
       setItemDialogOpen(false);
       setEditingItem(null);
@@ -154,7 +152,7 @@ const BentoPage: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
 
     try {
-      await axios.delete(`/api/bento-items/${id}`);
+      await bentoApi.deleteItem(id);
       fetchItems();
     } catch (error) {
       console.error('Error deleting bento item:', error);
@@ -168,11 +166,42 @@ const BentoPage: React.FC = () => {
       return;
     }
 
+    // Group items by category for varied selection
+    const itemsByCat: Record<string, BentoItem[]> = {};
+    items.forEach(item => {
+      if (!itemsByCat[item.category]) itemsByCat[item.category] = [];
+      itemsByCat[item.category].push(item);
+    });
+
+    const catKeys = Object.keys(itemsByCat);
+    if (catKeys.length < 2) {
+      alert('Please add items from at least 2 different categories to generate plans.');
+      return;
+    }
+
     try {
-      await axios.post('/api/bento-plans/generate-week', {
-        start_date: weekStart,
-        child_name: ''
-      });
+      // Generate plans for 5 weekdays (Mon-Fri)
+      for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
+        const date = new Date(weekStart + 'T00:00:00');
+        date.setDate(date.getDate() + dayOffset);
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+        // Pick one random item from up to 4 different categories
+        const shuffledCats = [...catKeys].sort(() => Math.random() - 0.5).slice(0, 4);
+        const compartments: (BentoItem | undefined)[] = shuffledCats.map(cat => {
+          const catItems = itemsByCat[cat];
+          return catItems[Math.floor(Math.random() * catItems.length)];
+        });
+
+        await bentoApi.createPlan({
+          date: dateStr,
+          child_name: '',
+          compartment1: compartments[0] ? { id: compartments[0].id, name: compartments[0].name, category: compartments[0].category } : undefined,
+          compartment2: compartments[1] ? { id: compartments[1].id, name: compartments[1].name, category: compartments[1].category } : undefined,
+          compartment3: compartments[2] ? { id: compartments[2].id, name: compartments[2].name, category: compartments[2].category } : undefined,
+          compartment4: compartments[3] ? { id: compartments[3].id, name: compartments[3].name, category: compartments[3].category } : undefined,
+        });
+      }
       fetchPlans();
       alert('Week of bento boxes generated successfully!');
     } catch (error) {
@@ -209,13 +238,10 @@ const BentoPage: React.FC = () => {
 
   const handleQuickAdd = async (itemName: string, category: string) => {
     try {
-      await axios.post('/api/bento-items', {
+      await bentoApi.createItem({
         name: itemName,
         category: category,
         is_favorite: false,
-        allergens: '',
-        notes: '',
-        prep_time_minutes: null
       });
       fetchItems();
     } catch (error) {

@@ -35,7 +35,7 @@ export class TestRunner {
   private bugs: BugReport[] = [];
   private currentUser: TestUser | null = null;
 
-  constructor(private baseUrl: string = 'http://localhost:3000') {}
+  constructor(private baseUrl: string = 'http://localhost:3001') {}
 
   /**
    * Run all tests for all users

@@ -185,9 +185,9 @@ const RestaurantsPage: React.FC = () => {
       }
     }
 
-    const toInsert = sbRestaurants.filter((r) => !seenNames[r.name!.toLowerCase()]);
+    const toInsert = sbRestaurants.filter((r) => !seenNames[(r.name || '').toLowerCase()]);
     const toUpdate = sbRestaurants.filter((r) => {
-      const existing = seenNames[r.name!.toLowerCase()];
+      const existing = seenNames[(r.name || '').toLowerCase()];
       return existing && (!existing.image_url || existing.image_url !== r.image_url);
     });
 
@@ -209,14 +209,12 @@ const RestaurantsPage: React.FC = () => {
     }
 
     setImportStatus({ importing: true, progress: 0, total: totalWork });
-    let completed = 0;
 
     // 1. Delete duplicates first
     for (const id of duplicateIds) {
       try {
         await deleteRestaurant.mutateAsync(id);
-        completed++;
-        setImportStatus((prev) => ({ ...prev, progress: completed }));
+        setImportStatus((prev) => ({ ...prev, progress: prev.progress + 1 }));
       } catch (error) {
         console.error(`Failed to delete duplicate id ${id}:`, error);
       }
@@ -226,8 +224,7 @@ const RestaurantsPage: React.FC = () => {
     for (const restaurant of toInsert) {
       try {
         await createRestaurant.mutateAsync(restaurant);
-        completed++;
-        setImportStatus((prev) => ({ ...prev, progress: completed }));
+        setImportStatus((prev) => ({ ...prev, progress: prev.progress + 1 }));
       } catch (error) {
         console.error(`Failed to import ${restaurant.name}:`, error);
       }
@@ -235,15 +232,14 @@ const RestaurantsPage: React.FC = () => {
 
     // 3. Update existing restaurants with photos
     for (const restaurant of toUpdate) {
-      const existing = seenNames[restaurant.name!.toLowerCase()];
+      const existing = seenNames[(restaurant.name || '').toLowerCase()];
       if (existing) {
         try {
           await updateRestaurant.mutateAsync({
             id: existing.id,
             restaurant: { image_url: restaurant.image_url },
           });
-          completed++;
-          setImportStatus((prev) => ({ ...prev, progress: completed }));
+          setImportStatus((prev) => ({ ...prev, progress: prev.progress + 1 }));
         } catch (error) {
           console.error(`Failed to update ${restaurant.name}:`, error);
         }

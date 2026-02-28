@@ -13,6 +13,7 @@ import {
   ToolResult,
   Recipe,
 } from './types.ts'
+import { isPublicUrl } from '../cors.ts'
 
 export class RecipeAgent extends BaseAgent {
   constructor() {
@@ -434,6 +435,14 @@ If the user is trying to add a recipe, ask them to:
     _context: AgentContext
   ): Promise<ToolResult> {
     const url = params.url as string
+
+    // SSRF protection - block private/internal URLs
+    if (!isPublicUrl(url)) {
+      return {
+        success: false,
+        error: 'URL must point to a public website',
+      }
+    }
 
     try {
       const controller = new AbortController()

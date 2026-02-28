@@ -272,8 +272,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      // getUser() validates JWT server-side; reconstruct session for handleSession
       const { data: { session: currentSession } } = await supabase.auth.getSession();
-      await handleSession(currentSession);
+      if (currentUser && currentSession) {
+        await handleSession(currentSession);
+      } else {
+        await handleSession(null);
+      }
     } catch (error) {
       console.error('[Auth] checkAuth failed:', error);
       setUser(null);
@@ -307,8 +313,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Please confirm your email before logging in.');
       }
 
-      // Fetch profile
-      const profile = await fetchProfile(data.user.id);
+      // Fetch or create profile (handles first-time login where profile may not exist yet)
+      const profile = await createProfileIfNeeded(data.user);
 
       setUser(profile);
       setSupabaseUser(data.user);

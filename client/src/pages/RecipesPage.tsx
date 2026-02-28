@@ -564,7 +564,7 @@ const RecipesPage: React.FC = () => {
 
       await updateMeal.mutateAsync({
         id: selectedMeal.id,
-        meal: { ...selectedMeal, tags: combinedTags }
+        meal: { tags: combinedTags }
       });
 
       setBulkTagDialogOpen(false);

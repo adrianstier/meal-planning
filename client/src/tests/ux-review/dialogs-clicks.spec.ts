@@ -15,7 +15,7 @@ import { test, expect, Page } from '@playwright/test';
 // Do NOT hardcode credentials in source files
 const TEST_EMAIL = process.env.PLAYWRIGHT_TEST_EMAIL || '';
 const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD || '';
-const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
 
 // Validate credentials are provided
 if (!TEST_EMAIL || !TEST_PASSWORD) {

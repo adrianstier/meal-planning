@@ -6,7 +6,7 @@
  * and handling streaming responses.
  */
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query'
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 
@@ -105,6 +105,12 @@ export function useAgent(options: UseAgentOptions = {}) {
     options.conversationId
   )
   const [isProcessing, setIsProcessing] = useState(false)
+
+  // Sync internal conversationId when prop changes
+  useEffect(() => {
+    setConversationId(options.conversationId)
+  }, [options.conversationId])
+
   const abortControllerRef = useRef<AbortController | null>(null)
   const isUserCancelledRef = useRef(false)
   const isTimeoutRef = useRef(false)

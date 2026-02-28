@@ -196,12 +196,22 @@ const DiagnosticsPage: React.FC = () => {
     if (!selectedError) return;
 
     try {
+      const updatePayload: Record<string, unknown> = {
+        resolved: true,
+        resolved_at: new Date().toISOString(),
+      };
+
+      // Persist resolve notes in metadata if provided
+      if (resolveNotes.trim()) {
+        updatePayload.metadata = {
+          ...(selectedError.metadata || {}),
+          resolve_notes: resolveNotes.trim(),
+        };
+      }
+
       const { error } = await supabase
         .from('error_logs')
-        .update({
-          resolved: true,
-          resolved_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', selectedError.id);
 
       if (error) throw error;

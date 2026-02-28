@@ -42,17 +42,44 @@ interface ParsedRecipe {
   top_comments: any;
 }
 
-async function fetchPage(url: string): Promise<string> {
+interface FetchResult {
+  html: string | null;
+  text: string | null;
+  usedFallback: boolean;
+}
+
+async function fetchPage(url: string): Promise<FetchResult> {
+  // Try direct fetch first
+  try {
+    const html = await directFetch(url);
+    return { html, text: null, usedFallback: false };
+  } catch (directError) {
+    const msg = directError instanceof Error ? directError.message : "";
+    console.log(`Direct fetch failed (${msg}), trying Jina Reader fallback...`);
+  }
+
+  // Fallback: use Jina Reader API for sites with bot protection
+  try {
+    const text = await jinaReaderFetch(url);
+    return { html: null, text, usedFallback: true };
+  } catch (fallbackError) {
+    const msg = fallbackError instanceof Error ? fallbackError.message : "Unknown";
+    throw new Error(`Could not access recipe page: ${msg}`);
+  }
+}
+
+async function directFetch(url: string): Promise<string> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
     const response = await fetch(url, {
       signal: controller.signal,
       redirect: 'manual',
       headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
       },
     });
 
@@ -66,10 +93,10 @@ async function fetchPage(url: string): Promise<string> {
       }
       const redirectResponse = await fetch(redirectUrl, {
         signal: controller.signal,
-        redirect: 'manual',
+        redirect: 'follow',
         headers: {
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-          "Accept": "text/html,application/xhtml+xml",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
       });
       if (!redirectResponse.ok) {
@@ -83,6 +110,33 @@ async function fetchPage(url: string): Promise<string> {
     }
 
     return await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function jinaReaderFetch(url: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+
+  try {
+    const response = await fetch(`https://r.jina.ai/${url}`, {
+      signal: controller.signal,
+      headers: {
+        "Accept": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Jina Reader returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data?.data?.text) {
+      throw new Error("No content returned from Jina Reader");
+    }
+
+    return data.data.text;
   } finally {
     clearTimeout(timeout);
   }
@@ -266,27 +320,36 @@ Deno.serve(async (req: Request) => {
       return errorResponse("AI service not configured", corsHeaders, 500);
     }
 
-    let html: string;
+    let fetchResult: FetchResult;
     try {
-      html = await fetchPage(url);
+      fetchResult = await fetchPage(url);
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unknown";
       return errorResponse(`Failed to fetch URL: ${msg}`, corsHeaders, 422);
     }
 
-    const imageUrl = extractImageUrl(html);
-    const jsonLd = extractJsonLd(html);
-    const mainContent = extractMainContent(html);
-
+    let imageUrl: string | null = null;
     let context = "";
-    if (jsonLd) {
-      context = `STRUCTURED DATA:\n${JSON.stringify(jsonLd, null, 2)}\n\n`;
-    }
-    context += `PAGE CONTENT:\n${mainContent}`;
 
-    const commentSection = extractCommentSection(html);
-    if (commentSection) {
-      context += `\n\nUSER COMMENTS/REVIEWS:\n${commentSection}`;
+    if (fetchResult.html) {
+      // Direct fetch succeeded - extract structured data from HTML
+      imageUrl = extractImageUrl(fetchResult.html);
+      const jsonLd = extractJsonLd(fetchResult.html);
+      const mainContent = extractMainContent(fetchResult.html);
+
+      if (jsonLd) {
+        context = `STRUCTURED DATA:\n${JSON.stringify(jsonLd, null, 2)}\n\n`;
+      }
+      context += `PAGE CONTENT:\n${mainContent}`;
+
+      const commentSection = extractCommentSection(fetchResult.html);
+      if (commentSection) {
+        context += `\n\nUSER COMMENTS/REVIEWS:\n${commentSection}`;
+      }
+    } else if (fetchResult.text) {
+      // Jina Reader fallback - content is already extracted text
+      context = `PAGE CONTENT:\n${fetchResult.text.substring(0, 12000)}`;
+      log({ requestId, event: "using_jina_fallback" });
     }
 
     const systemPrompt = `You are a recipe parser. Extract recipe data and return ONLY valid JSON, no other text.

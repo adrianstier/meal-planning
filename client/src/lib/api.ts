@@ -532,10 +532,12 @@ export const mealsApi = {
   getAll: async (options?: { limit?: number; offset?: number }) => {
     const limit = Math.min(options?.limit || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = options?.offset || 0;
+    const userId = await getCurrentUserId();
 
     const { data, error, count } = await supabase
       .from('meals')
       .select('*', { count: 'exact' })
+      .eq('user_id', userId)
       .order('name')
       .range(offset, offset + limit - 1);
 
@@ -557,10 +559,13 @@ export const mealsApi = {
   },
 
   getById: async (id: number) => {
+    const userId = await getCurrentUserId();
+
     const { data, error } = await supabase
       .from('meals')
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single();
 
     if (error) {
@@ -911,6 +916,7 @@ export const mealsApi = {
 
 export const planApi = {
   getWeek: async (startDate: string) => {
+    const userId = await getCurrentUserId();
     // Use parseISO instead of new Date() to avoid UTC parsing of YYYY-MM-DD strings
     // new Date("2025-01-15") = UTC midnight, which is previous day in US timezones
     const endDate = parseISO(startDate);
@@ -922,6 +928,7 @@ export const planApi = {
         *,
         meal:meals(*)
       `)
+      .eq('user_id', userId)
       .gte('meal_date', startDate)
       .lte('meal_date', toLocalDateString(endDate))
       .order('meal_date');
@@ -1179,9 +1186,12 @@ export const planApi = {
 
 export const leftoversApi = {
   getActive: async () => {
+    const userId = await getCurrentUserId();
+
     const { data, error } = await supabase
       .from('leftovers_inventory')
       .select('*, meal:meals(name)')
+      .eq('user_id', userId)
       .is('consumed_at', null)
       .order('expires_date');
 
@@ -1269,10 +1279,13 @@ export const leftoversApi = {
   },
 
   getSuggestions: async () => {
+    const userId = await getCurrentUserId();
+
     // First fetch active leftovers to pass to the AI
     const { data: leftovers, error: leftoverError } = await supabase
       .from('leftovers_inventory')
       .select('*, meal:meals(name)')
+      .eq('user_id', userId)
       .is('consumed_at', null)
       .order('expires_date');
 
@@ -1310,13 +1323,21 @@ export const leftoversApi = {
     }
 
     // Map edge function response to LeftoverSuggestion format the UI expects
+    // Suggestions are creative recipe ideas for using ALL available leftovers,
+    // not a 1:1 mapping of suggestion[i] to leftover[i].
     const rawSuggestions = data?.suggestions || [];
-    const suggestions: LeftoverSuggestion[] = rawSuggestions.map((s, index) => ({
-      meal_id: leftovers[index]?.meal_id || 0,
+    const soonestExpiry = Math.min(
+      ...leftovers.map(l => differenceInDays(parseISO(l.expires_date || new Date().toISOString()), new Date()))
+    );
+    const totalServings = leftovers.reduce((sum, l) => sum + (l.servings_remaining || 0), 0);
+    // Use the first (soonest-expiring) leftover's meal_id as primary context
+    const primaryLeftover = leftovers[0];
+    const suggestions: LeftoverSuggestion[] = rawSuggestions.map((s) => ({
+      meal_id: primaryLeftover?.meal_id || 0,
       meal_name: s.name,
       suggestion: `${s.description} (${s.transformationType}). ${s.instructions}. Additional ingredients: ${s.additionalIngredients?.join(', ') || 'none'}. Time: ${s.estimatedTime}`,
-      servings_remaining: leftovers[index]?.servings_remaining || 0,
-      days_until_expiry: differenceInDays(parseISO(leftovers[index]?.expires_date || new Date().toISOString()), new Date()),
+      servings_remaining: totalServings,
+      days_until_expiry: soonestExpiry,
     }));
     return wrapResponse(suggestions);
   },
@@ -1330,10 +1351,12 @@ export const schoolMenuApi = {
   getAll: async (options?: { limit?: number; offset?: number }) => {
     const limit = Math.min(options?.limit || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = options?.offset || 0;
+    const userId = await getCurrentUserId();
 
     const { data, error, count } = await supabase
       .from('school_menu_items')
       .select('*', { count: 'exact' })
+      .eq('user_id', userId)
       .order('menu_date', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -1354,9 +1377,12 @@ export const schoolMenuApi = {
   },
 
   getByDate: async (date: string) => {
+    const userId = await getCurrentUserId();
+
     const { data, error } = await supabase
       .from('school_menu_items')
       .select('*')
+      .eq('user_id', userId)
       .eq('menu_date', date);
 
     if (error) {
@@ -1367,9 +1393,12 @@ export const schoolMenuApi = {
   },
 
   getRange: async (startDate: string, endDate: string) => {
+    const userId = await getCurrentUserId();
+
     const { data, error } = await supabase
       .from('school_menu_items')
       .select('*')
+      .eq('user_id', userId)
       .gte('menu_date', startDate)
       .lte('menu_date', endDate)
       .order('menu_date');
@@ -1454,10 +1483,13 @@ export const schoolMenuApi = {
   },
 
   getLunchAlternatives: async (date: string) => {
+    const userId = await getCurrentUserId();
+
     // First, fetch the school menu for this date to get the meal name
     const { data: menuItems, error: menuError } = await supabase
       .from('school_menu_items')
       .select('*')
+      .eq('user_id', userId)
       .eq('menu_date', date)
       .eq('meal_type', 'lunch')
       .limit(1);
@@ -1583,7 +1615,8 @@ export const schoolMenuApi = {
   },
 
   getCalendar: async (startDate?: string, endDate?: string) => {
-    let query = supabase.from('school_menu_items').select('*');
+    const userId = await getCurrentUserId();
+    let query = supabase.from('school_menu_items').select('*').eq('user_id', userId);
 
     if (startDate) query = query.gte('menu_date', startDate);
     if (endDate) query = query.lte('menu_date', endDate);
@@ -1639,10 +1672,12 @@ export const shoppingApi = {
   getAll: async (options?: { limit?: number; offset?: number }) => {
     const limit = Math.min(options?.limit || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = options?.offset || 0;
+    const userId = await getCurrentUserId();
 
     const { data, error, count } = await supabase
       .from('shopping_items')
       .select('*', { count: 'exact' })
+      .eq('user_id', userId)
       .order('is_purchased')
       .order('category')
       .order('item_name')
@@ -1906,10 +1941,12 @@ export const historyApi = {
   getAll: async (options?: { limit?: number; offset?: number }) => {
     const limit = Math.min(options?.limit || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = options?.offset || 0;
+    const userId = await getCurrentUserId();
 
     const { data, error, count } = await supabase
       .from('meal_history')
       .select('*, meal:meals(name)', { count: 'exact' })
+      .eq('user_id', userId)
       .order('cooked_date', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -1991,9 +2028,12 @@ export const historyApi = {
   },
 
   getByMeal: async (mealId: number) => {
+    const userId = await getCurrentUserId();
+
     const { data, error } = await supabase
       .from('meal_history')
       .select('*')
+      .eq('user_id', userId)
       .eq('meal_id', mealId)
       .order('cooked_date', { ascending: false });
 
@@ -2013,8 +2053,9 @@ export const restaurantsApi = {
   getAll: async (filters?: RestaurantFilters, options?: { limit?: number; offset?: number }) => {
     const limit = Math.min(options?.limit || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = options?.offset || 0;
+    const userId = await getCurrentUserId();
 
-    let query = supabase.from('restaurants').select('*', { count: 'exact' });
+    let query = supabase.from('restaurants').select('*', { count: 'exact' }).eq('user_id', userId);
 
     if (filters?.cuisine_type) {
       query = query.eq('cuisine_type', filters.cuisine_type);
@@ -2052,10 +2093,13 @@ export const restaurantsApi = {
   },
 
   getById: async (id: number) => {
+    const userId = await getCurrentUserId();
+
     const { data, error } = await supabase
       .from('restaurants')
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single();
 
     if (error) {
@@ -2183,10 +2227,12 @@ export const bentoApi = {
   getItems: async (options?: { limit?: number; offset?: number }) => {
     const limit = Math.min(options?.limit || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = options?.offset || 0;
+    const userId = await getCurrentUserId();
 
     const { data, error, count } = await supabase
       .from('bento_items')
       .select('*', { count: 'exact' })
+      .eq('user_id', userId)
       .order('category')
       .order('name')
       .range(offset, offset + limit - 1);
@@ -2257,6 +2303,7 @@ export const bentoApi = {
   },
 
   getPlans: async (startDate?: string, endDate?: string) => {
+    const userId = await getCurrentUserId();
     let query = supabase
       .from('bento_plans')
       .select(`
@@ -2265,7 +2312,8 @@ export const bentoApi = {
         compartment2:bento_items!compartment2_id(*),
         compartment3:bento_items!compartment3_id(*),
         compartment4:bento_items!compartment4_id(*)
-      `);
+      `)
+      .eq('user_id', userId);
 
     if (startDate) query = query.gte('plan_date', startDate);
     if (endDate) query = query.lte('plan_date', endDate);

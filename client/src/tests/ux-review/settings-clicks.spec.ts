@@ -7,7 +7,7 @@
  *
  * PREREQUISITES:
  * 1. Start the development server: cd client && npm start
- * 2. Ensure the server is running on http://localhost:3000
+ * 2. Ensure the server is running on http://localhost:3001
  * 3. Test credentials must be valid (see TEST_CREDENTIALS.md)
  *
  * Run with: npx playwright test client/src/tests/ux-review/settings-clicks.spec.ts
@@ -26,7 +26,7 @@ import { test, expect, Page } from '@playwright/test';
 // Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD in your environment
 const TEST_EMAIL = process.env.PLAYWRIGHT_TEST_EMAIL || '';
 const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD || '';
-const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
 
 if (!TEST_EMAIL || !TEST_PASSWORD) {
   console.warn('[WARNING] Test credentials not set. Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD environment variables.');

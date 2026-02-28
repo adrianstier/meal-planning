@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
 import {
   Plus, Users, Clock, ChefHat, Trash2,
   CalendarDays, Sparkles, CheckCircle,
-  PartyPopper, Gift, Egg, GripVertical, Copy
+  PartyPopper, Gift, Egg, GripVertical, Copy, Info
 } from 'lucide-react';
 import { useDragDrop } from '../contexts/DragDropContext';
 import { Button } from '../components/ui/button';
@@ -87,19 +86,25 @@ interface TimelineItem {
 }
 
 const HolidayPlannerPage: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [events, setEvents] = useState<HolidayEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<HolidayEvent | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [dishes, setDishes] = useState<Dish[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [guests, setGuests] = useState<Guest[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [timeline, setTimeline] = useState<{
     make_ahead_items: TimelineItem[];
     day_of_schedule: TimelineItem[];
   } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(false);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({ show: false, type: 'info', message: '' });
 
-  // Drag and drop context
+  // Drag and drop context - reserved for future use when backend is implemented
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { draggedRecipe, setDraggedRecipe } = useDragDrop();
 
   // Helper to show toast
@@ -143,230 +148,63 @@ const HolidayPlannerPage: React.FC = () => {
     rsvp_status: 'pending'
   });
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
-  useEffect(() => {
-    if (selectedEvent) {
-      loadEventDetails(selectedEvent.id);
-    }
-  }, [selectedEvent]);
-
-  const loadEvents = async () => {
-    try {
-      const response = await axios.get('/api/holiday/events');
-      setEvents(response.data.events);
-    } catch (error) {
-      console.error('Error loading events:', error);
-    }
-  };
-
-  const loadEventDetails = async (eventId: number) => {
-    try {
-      const [detailsRes, timelineRes] = await Promise.all([
-        axios.get(`/api/holiday/events/${eventId}`),
-        axios.get(`/api/holiday/events/${eventId}/timeline`)
-      ]);
-
-      setDishes(detailsRes.data.dishes);
-      setGuests(detailsRes.data.guests);
-      setTimeline({
-        make_ahead_items: timelineRes.data.make_ahead_items,
-        day_of_schedule: timelineRes.data.day_of_schedule
-      });
-    } catch (error) {
-      console.error('Error loading event details:', error);
-    }
-  };
+  // NOTE: All data operations are disabled - the backend endpoints
+  // (/api/holiday/events, etc.) do not exist.
+  // The app uses Supabase directly. This feature needs a holidayApi layer in api.ts.
 
   const createEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await axios.post('/api/holiday/events', newEvent);
-      setShowCreateEvent(false);
-      setNewEvent({
-        name: '',
-        event_type: 'thanksgiving',
-        event_date: '',
-        serving_time: '17:00',
-        guest_count: 8,
-        notes: ''
-      });
-      loadEvents();
-    } catch (error) {
-      console.error('Error creating event:', error);
-    }
+    // No-op: backend endpoint does not exist
+    setShowCreateEvent(false);
   };
 
-  const deleteEvent = async (eventId: number) => {
-    if (!window.confirm('Delete this holiday event and all its dishes?')) return;
-    try {
-      await axios.delete(`/api/holiday/events/${eventId}`);
-      setSelectedEvent(null);
-      loadEvents();
-    } catch (error) {
-      console.error('Error deleting event:', error);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const deleteEvent = async (_eventId: number) => {
+    // No-op: backend endpoint does not exist
   };
 
   const addDish = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedEvent) return;
-    try {
-      await axios.post(`/api/holiday/events/${selectedEvent.id}/dishes`, newDish);
-      setShowAddDish(false);
-      setNewDish({
-        custom_name: '',
-        category: 'main',
-        servings: 8,
-        prep_time_minutes: 30,
-        cook_time_minutes: 60,
-        can_make_ahead: false,
-        make_ahead_days: 0,
-        assigned_to: '',
-        notes: ''
-      });
-      loadEventDetails(selectedEvent.id);
-      loadEvents();
-    } catch (error) {
-      console.error('Error adding dish:', error);
-    }
+    // No-op: backend endpoint does not exist
+    setShowAddDish(false);
   };
 
-  const deleteDish = async (dishId: number) => {
-    if (!selectedEvent) return;
-    try {
-      await axios.delete(`/api/holiday/dishes/${dishId}`);
-      loadEventDetails(selectedEvent.id);
-      loadEvents();
-    } catch (error) {
-      console.error('Error deleting dish:', error);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const deleteDish = async (_dishId: number) => {
+    // No-op: backend endpoint does not exist
   };
 
   const addGuest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedEvent) return;
-    try {
-      await axios.post(`/api/holiday/events/${selectedEvent.id}/guests`, newGuest);
-      setShowAddGuest(false);
-      setNewGuest({
-        name: '',
-        email: '',
-        dietary_restrictions: '',
-        bringing_dish: false,
-        rsvp_status: 'pending'
-      });
-      loadEventDetails(selectedEvent.id);
-    } catch (error) {
-      console.error('Error adding guest:', error);
-    }
+    // No-op: backend endpoint does not exist
+    setShowAddGuest(false);
   };
 
-  const deleteGuest = async (guestId: number) => {
-    if (!selectedEvent) return;
-    try {
-      await axios.delete(`/api/holiday/guests/${guestId}`);
-      loadEventDetails(selectedEvent.id);
-    } catch (error) {
-      console.error('Error deleting guest:', error);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const deleteGuest = async (_guestId: number) => {
+    // No-op: backend endpoint does not exist
   };
 
-  const applyTemplate = async (templateName: string) => {
-    if (!selectedEvent) return;
-    try {
-      setLoading(true);
-      await axios.post(`/api/holiday/events/${selectedEvent.id}/apply-template`, {
-        template: templateName
-      });
-      setShowTemplates(false);
-      loadEventDetails(selectedEvent.id);
-      loadEvents();
-    } catch (error) {
-      console.error('Error applying template:', error);
-    } finally {
-      setLoading(false);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const applyTemplate = async (_templateName: string) => {
+    // No-op: backend endpoint does not exist
+    setShowTemplates(false);
   };
 
-  const duplicateEvent = async (eventId: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent selecting the event
-    try {
-      const response = await axios.post(`/api/holiday/events/${eventId}/duplicate`);
-      showToast('success', 'Event duplicated', 'All dishes and guests have been copied');
-      loadEvents();
-      // Select the new event
-      if (response.data.event_id) {
-        const newEventResponse = await axios.get(`/api/holiday/events/${response.data.event_id}`);
-        setSelectedEvent(newEventResponse.data.event);
-      }
-    } catch (error) {
-      console.error('Error duplicating event:', error);
-      showToast('error', 'Failed to duplicate event', 'Please try again');
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const duplicateEvent = async (_eventId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // No-op: backend endpoint does not exist
+    showToast('info', 'Coming soon', 'Holiday event duplication is under development');
   };
 
   // Handle dropping a recipe from the Recipes page
-  const handleDropRecipe = async (category: string, e: React.DragEvent) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleDropRecipe = async (_category: string, e: React.DragEvent) => {
     e.preventDefault();
     setDragOverCategory(null);
-
-    if (!selectedEvent) return;
-
-    try {
-      // Get recipe data from drag event or context
-      let recipeData;
-      const jsonData = e.dataTransfer.getData('application/json');
-      if (jsonData) {
-        recipeData = JSON.parse(jsonData);
-      } else if (draggedRecipe) {
-        recipeData = draggedRecipe.meal;
-      }
-
-      if (!recipeData) return;
-
-      // Map meal_type to holiday category
-      let dishCategory = category;
-      if (category === 'drop-zone') {
-        // Map from meal type to holiday dish category
-        const mealTypeToCategory: Record<string, string> = {
-          breakfast: 'appetizer',
-          snack: 'appetizer',
-          lunch: 'main',
-          dinner: 'main',
-        };
-        dishCategory = mealTypeToCategory[recipeData.meal_type] ?? 'main';
-      }
-
-      // Add the recipe as a dish to the holiday event
-      await axios.post(`/api/holiday/events/${selectedEvent.id}/dishes`, {
-        meal_id: recipeData.id,
-        custom_name: recipeData.name,
-        category: dishCategory,
-        servings: recipeData.servings || selectedEvent.guest_count,
-        prep_time_minutes: Math.floor((recipeData.cook_time_minutes || 60) * 0.3),
-        cook_time_minutes: Math.floor((recipeData.cook_time_minutes || 60) * 0.7),
-        can_make_ahead: false,
-        make_ahead_days: 0,
-        notes: recipeData.ingredients ? `From recipe: ${recipeData.name}` : ''
-      });
-
-      // Clear the dragged recipe
-      setDraggedRecipe(null);
-
-      // Show success toast
-      showToast('success', `Added "${recipeData.name}"`, `Added to ${dishCategory}s in your holiday menu`);
-
-      // Reload event details
-      loadEventDetails(selectedEvent.id);
-      loadEvents();
-
-    } catch (error) {
-      console.error('Error adding dropped recipe:', error);
-      showToast('error', 'Failed to add recipe', 'Please try again');
-    }
+    // No-op: backend endpoint does not exist
+    showToast('info', 'Coming soon', 'Adding recipes to holiday events is under development');
   };
 
   const handleDragOver = (category: string, e: React.DragEvent) => {
@@ -401,6 +239,19 @@ const HolidayPlannerPage: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      {/* Coming Soon Banner */}
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
+        <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+        <div>
+          <h3 className="font-semibold text-blue-900">This feature is coming soon</h3>
+          <p className="text-sm text-blue-700 mt-1">
+            The Holiday Meal Planner is currently under development. Data operations
+            (creating events, adding dishes, managing guests) are not yet functional.
+            You can explore the interface to see what's planned.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

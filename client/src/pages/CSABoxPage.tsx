@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Plus, Calendar, Package, TrendingUp, CheckCircle, XCircle, Trash2, Edit, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Calendar, Package, TrendingUp, CheckCircle, XCircle, Trash2, Edit, Sparkles, Info } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -78,158 +77,44 @@ const CSABoxPage: React.FC = () => {
   // Bulk add items
   const [bulkItems, setBulkItems] = useState('');
 
-  useEffect(() => {
-    loadBoxes();
-  }, []);
+  // NOTE: All data operations are disabled - this page's backend endpoints
+  // (/api/csa/boxes, etc.) do not exist. The app uses Supabase directly.
+  // Use the Seasonal Cooking page (/seasonal) instead.
 
-  useEffect(() => {
-    if (selectedBox) {
-      loadBoxDetails(selectedBox.id);
-    }
-  }, [selectedBox]);
-
-  const loadBoxes = async () => {
-    try {
-      const response = await axios.get('/api/csa/boxes');
-      setBoxes(response.data.boxes);
-    } catch (error) {
-      console.error('Error loading CSA boxes:', error);
-    }
-  };
-
-  const loadBoxDetails = async (boxId: number) => {
-    try {
-      const response = await axios.get(`/api/csa/boxes/${boxId}`);
-      setBoxItems(response.data.box.items);
-    } catch (error) {
-      console.error('Error loading box details:', error);
-    }
-  };
-
-  const loadRecipeMatches = async (boxId: number) => {
+  const loadRecipeMatches = async (_boxId: number) => {
     setLoading(true);
     setShowRecipeMatches(true);
-    try {
-      const response = await axios.get(`/api/csa/boxes/${boxId}/recipe-matches`);
-      setRecipeMatches(response.data.matches);
-    } catch (error) {
-      console.error('Error loading recipe matches:', error);
-    } finally {
-      setLoading(false);
-    }
+    // No-op: backend endpoint does not exist
+    setLoading(false);
   };
 
   const createBox = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await axios.post('/api/csa/boxes', newBoxForm);
-      setShowAddBox(false);
-      setNewBoxForm({
-        name: '',
-        delivery_date: new Date().toISOString().split('T')[0],
-        source: '',
-        notes: ''
-      });
-      loadBoxes();
-    } catch (error) {
-      console.error('Error creating box:', error);
-    }
+    // No-op: backend endpoint does not exist
+    setShowAddBox(false);
   };
 
   const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedBox) return;
-
-    try {
-      await axios.post(`/api/csa/boxes/${selectedBox.id}/items`, newItemForm);
-      setShowAddItem(false);
-      setNewItemForm({
-        ingredient_name: '',
-        quantity: '',
-        unit: '',
-        estimated_expiry_days: 7,
-        notes: ''
-      });
-      loadBoxDetails(selectedBox.id);
-      loadBoxes(); // Refresh stats
-    } catch (error) {
-      console.error('Error adding item:', error);
-    }
+    // No-op: backend endpoint does not exist
+    setShowAddItem(false);
   };
 
   const addBulkItems = async () => {
-    if (!selectedBox || !bulkItems.trim()) return;
-
-    const lines = bulkItems.trim().split('\n');
-    try {
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        // Parse line (format: "ingredient" or "ingredient, quantity unit")
-        const parts = trimmed.split(',').map(p => p.trim());
-        const ingredient_name = parts[0];
-        const quantityPart = parts[1] || '';
-        const [quantity, unit] = quantityPart.split(' ').map(p => p.trim());
-
-        await axios.post(`/api/csa/boxes/${selectedBox.id}/items`, {
-          ingredient_name,
-          quantity: quantity ? parseFloat(quantity) : undefined,
-          unit: unit || '',
-          estimated_expiry_days: 7,
-          notes: ''
-        });
-      }
-
-      setBulkItems('');
-      loadBoxDetails(selectedBox.id);
-      loadBoxes();
-    } catch (error) {
-      console.error('Error adding bulk items:', error);
-    }
+    // No-op: backend endpoint does not exist
+    setBulkItems('');
   };
 
-  const toggleItemUsed = async (itemId: number, isUsed: boolean) => {
-    if (!selectedBox) return;
-
-    try {
-      if (!isUsed) {
-        await axios.post(`/api/csa/boxes/${selectedBox.id}/items/${itemId}/mark-used`, {});
-      } else {
-        // Unmark as used
-        await axios.put(`/api/csa/boxes/${selectedBox.id}/items/${itemId}`, {
-          is_used: false
-        });
-      }
-      loadBoxDetails(selectedBox.id);
-      loadBoxes();
-    } catch (error) {
-      console.error('Error toggling item:', error);
-    }
+  const toggleItemUsed = async (_itemId: number, _isUsed: boolean) => {
+    // No-op: backend endpoint does not exist
   };
 
-  const deleteBox = async (boxId: number) => {
-    if (!window.confirm('Delete this CSA box and all its items?')) return;
-
-    try {
-      await axios.delete(`/api/csa/boxes/${boxId}`);
-      setSelectedBox(null);
-      loadBoxes();
-    } catch (error) {
-      console.error('Error deleting box:', error);
-    }
+  const deleteBox = async (_boxId: number) => {
+    // No-op: backend endpoint does not exist
   };
 
-  const deleteItem = async (itemId: number) => {
-    if (!selectedBox) return;
-
-    try {
-      await axios.delete(`/api/csa/boxes/${selectedBox.id}/items/${itemId}`);
-      loadBoxDetails(selectedBox.id);
-      loadBoxes();
-    } catch (error) {
-      console.error('Error deleting item:', error);
-    }
+  const deleteItem = async (_itemId: number) => {
+    // No-op: backend endpoint does not exist
   };
 
   const unusedItems = boxItems.filter(item => !item.is_used);
@@ -237,6 +122,19 @@ const CSABoxPage: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      {/* Coming Soon Banner */}
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
+        <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+        <div>
+          <h3 className="font-semibold text-blue-900">This feature is coming soon</h3>
+          <p className="text-sm text-blue-700 mt-1">
+            The CSA Box Manager is currently under development. Please use the{' '}
+            <a href="/seasonal" className="underline font-medium">Seasonal Cooking</a>{' '}
+            page in the meantime.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

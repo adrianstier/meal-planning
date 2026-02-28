@@ -208,28 +208,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // BroadcastChannel not supported in this browser
     }
 
-    // Initialize auth: get initial session FIRST, then set up listener for future changes
-    // This order prevents double-processing of the initial session
+    // Detect OAuth callback - tokens arrive in URL hash fragment after redirect
+    const isOAuthCallback = window.location.hash.includes('access_token');
+
+    // Initialize auth using onAuthStateChange as the single source of truth.
+    // In Supabase JS v2.39+, INITIAL_SESSION fires synchronously during setup,
+    // eliminating the need for a separate getSession() call.
     const initializeAuth = async () => {
       try {
-        // 1. Get the initial session first
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        console.log('[Auth] Initial session:', !!initialSession?.user);
-
-        if (mounted) {
-          await handleSession(initialSession);
-          setLoading(false);
-        }
-
-        // 2. Set up auth state listener AFTER initial session is handled
-        // This ensures future auth changes (login, logout, token refresh) are captured
         const { data } = supabase.auth.onAuthStateChange(
           async (event, newSession) => {
-            console.log('[Auth] Auth state change:', event);
-            if (mounted) {
-              await handleSession(newSession);
-              setLoading(false);
+            console.log('[Auth] Auth state change:', event, !!newSession);
+            if (!mounted) return;
+
+            // For OAuth callbacks, INITIAL_SESSION fires with null before
+            // Supabase exchanges the hash tokens. Skip it to prevent the
+            // ProtectedRoute from redirecting to /login prematurely.
+            // The SIGNED_IN event will fire once the token exchange completes.
+            if (event === 'INITIAL_SESSION' && isOAuthCallback && !newSession) {
+              console.log('[Auth] OAuth callback detected, waiting for token exchange...');
+              return;
             }
+
+            await handleSession(newSession);
+            setLoading(false);
           }
         );
         subscription = data.subscription;

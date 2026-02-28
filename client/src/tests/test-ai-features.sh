@@ -31,6 +31,7 @@ echo "URL: https://www.allrecipes.com/recipe/23891/grilled-cheese-sandwich/"
 RESULT1=$(curl -s -X POST "$SUPABASE_URL/functions/v1/parse-recipe-url-ai" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-Requested-With: XMLHttpRequest" \
   -H "Origin: http://localhost:3001" \
   -d '{"url":"https://www.allrecipes.com/recipe/23891/grilled-cheese-sandwich/"}' \
   --max-time 90)
@@ -63,6 +64,7 @@ echo "URL: https://www.simplyrecipes.com/recipes/homemade_pizza/"
 RESULT2=$(curl -s -X POST "$SUPABASE_URL/functions/v1/parse-recipe-url-ai" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-Requested-With: XMLHttpRequest" \
   -H "Origin: http://localhost:3001" \
   -d '{"url":"https://www.simplyrecipes.com/recipes/homemade_pizza/"}' \
   --max-time 90)
@@ -92,9 +94,10 @@ echo "Recipe: Classic Beef Tacos"
 RESULT3=$(curl -s -X POST "$SUPABASE_URL/functions/v1/parse-recipe" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-Requested-With: XMLHttpRequest" \
   -H "Origin: http://localhost:3001" \
   -d '{
-    "text": "Classic Beef Tacos\n\nIngredients:\n- 1 lb ground beef\n- 1 packet taco seasoning\n- 8 taco shells\n- 1 cup shredded lettuce\n- 1 cup shredded cheddar cheese\n- 1/2 cup diced tomatoes\n- 1/4 cup sour cream\n- Salsa to taste\n\nInstructions:\n1. Brown the ground beef in a skillet over medium-high heat.\n2. Drain fat and add taco seasoning with 1/2 cup water.\n3. Simmer 5 minutes until sauce thickens.\n4. Fill shells with beef and toppings.\n\nServes: 4\nPrep: 10 min\nCook: 15 min"
+    "recipe_text": "Classic Beef Tacos\n\nIngredients:\n- 1 lb ground beef\n- 1 packet taco seasoning\n- 8 taco shells\n- 1 cup shredded lettuce\n- 1 cup shredded cheddar cheese\n- 1/2 cup diced tomatoes\n- 1/4 cup sour cream\n- Salsa to taste\n\nInstructions:\n1. Brown the ground beef in a skillet over medium-high heat.\n2. Drain fat and add taco seasoning with 1/2 cup water.\n3. Simmer 5 minutes until sauce thickens.\n4. Fill shells with beef and toppings.\n\nServes: 4\nPrep: 10 min\nCook: 15 min"
   }' \
   --max-time 60)
 
@@ -124,9 +127,10 @@ echo "Recipe: Honey Garlic Salmon"
 RESULT4=$(curl -s -X POST "$SUPABASE_URL/functions/v1/parse-recipe" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-Requested-With: XMLHttpRequest" \
   -H "Origin: http://localhost:3001" \
   -d '{
-    "text": "Honey Garlic Glazed Salmon\n\nIngredients:\n4 salmon fillets (6 oz each)\n1/4 cup honey\n3 tablespoons soy sauce\n4 cloves garlic, minced\n1 tablespoon olive oil\n1 tablespoon lemon juice\n\nDirections:\n1. Preheat oven to 400F.\n2. Mix honey, soy sauce, garlic, and lemon juice.\n3. Season salmon with salt and pepper.\n4. Sear salmon 3 minutes, flip, pour sauce over.\n5. Bake 10-12 minutes.\n\nNutrition: 350 calories, 35g protein, 18g carbs, 12g fat\nDifficulty: Easy\nTime: 25 minutes"
+    "recipe_text": "Honey Garlic Glazed Salmon\n\nIngredients:\n4 salmon fillets (6 oz each)\n1/4 cup honey\n3 tablespoons soy sauce\n4 cloves garlic, minced\n1 tablespoon olive oil\n1 tablespoon lemon juice\n\nDirections:\n1. Preheat oven to 400F.\n2. Mix honey, soy sauce, garlic, and lemon juice.\n3. Season salmon with salt and pepper.\n4. Sear salmon 3 minutes, flip, pour sauce over.\n5. Bake 10-12 minutes.\n\nNutrition: 350 calories, 35g protein, 18g carbs, 12g fat\nDifficulty: Easy\nTime: 25 minutes"
   }' \
   --max-time 60)
 
@@ -163,6 +167,7 @@ if [ -f "$IMAGE_PATH" ]; then
   RESULT5=$(curl -s -X POST "$SUPABASE_URL/functions/v1/parse-recipe-image" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
+    -H "X-Requested-With: XMLHttpRequest" \
     -H "Origin: http://localhost:3001" \
     -d "{\"image_data\":\"data:image/jpeg;base64,$IMAGE_BASE64\",\"image_type\":\"image/jpeg\"}" \
     --max-time 90)

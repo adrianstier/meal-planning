@@ -52,7 +52,9 @@ async function callClaude(systemPrompt: string, userPrompt: string, apiKey: stri
     }
 
     const data = await response.json();
-    return data.content?.[0]?.text || "";
+    const text = data.content?.[0]?.text;
+    if (!text) throw new Error('AI returned empty response');
+    return text;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('AI request timed out. Please try again.');

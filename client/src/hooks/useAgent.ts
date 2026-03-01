@@ -93,15 +93,15 @@ async function callAgent(
     try {
       errorData = await response.json()
     } catch {
-      throw new Error('Agent request failed')
+      throw new Error(`Agent request failed (HTTP ${response.status})`)
     }
-    throw new Error(errorData?.error || 'Agent request failed')
+    throw new Error(errorData?.error || `Agent request failed (HTTP ${response.status})`)
   }
 
   try {
     return await response.json()
   } catch {
-    throw new Error('Invalid response from agent')
+    throw new Error(`Invalid response from agent (HTTP ${response.status})`)
   }
 }
 
@@ -369,6 +369,7 @@ export function useConversationHistory(conversationId?: string) {
       })) as AgentMessage[]
     },
     enabled: !!conversationId,
+    retry: 1,
   })
 }
 
@@ -406,6 +407,7 @@ export function useConversations() {
         status: conv.status,
       })) as AgentConversation[]
     },
+    retry: 1,
   })
 }
 

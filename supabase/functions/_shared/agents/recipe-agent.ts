@@ -456,6 +456,7 @@ If the user is trying to add a recipe, ask them to:
 
       const response = await fetch(url, {
         signal: controller.signal,
+        redirect: 'manual',
         headers: {
           'User-Agent':
             'Mozilla/5.0 (compatible; MealPlannerBot/1.0; +https://mealplanner.dev)',
@@ -464,6 +465,42 @@ If the user is trying to add a recipe, ask them to:
       })
 
       clearTimeout(timeout)
+
+      // Handle redirects safely - validate redirect target against SSRF
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location')
+        if (!location) {
+          return { success: false, error: 'Redirect with no location' }
+        }
+        const redirectUrl = new URL(location, url).href
+        if (!isPublicUrl(redirectUrl)) {
+          return { success: false, error: 'Redirect to non-public URL blocked' }
+        }
+        const redirectController = new AbortController()
+        const redirectTimeout = setTimeout(() => redirectController.abort(), 15000)
+        try {
+          const redirectResponse = await fetch(redirectUrl, {
+            signal: redirectController.signal,
+            redirect: 'manual',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; MealPlannerBot/1.0; +https://mealplanner.dev)',
+              Accept: 'text/html,application/xhtml+xml',
+            },
+          })
+          clearTimeout(redirectTimeout)
+          if (!redirectResponse.ok) {
+            return { success: false, error: `HTTP ${redirectResponse.status} after redirect` }
+          }
+          const html = await redirectResponse.text()
+          return { success: true, data: html }
+        } catch (error) {
+          clearTimeout(redirectTimeout)
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to follow redirect',
+          }
+        }
+      }
 
       if (!response.ok) {
         return {

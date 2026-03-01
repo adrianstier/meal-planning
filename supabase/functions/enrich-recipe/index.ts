@@ -117,9 +117,16 @@ Deno.serve(async (req: Request) => {
     return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
   }
 
+  // Check Content-Length before reading body to prevent memory exhaustion
+  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+  const MAX_BODY_SIZE = 100000;
+  if (contentLength > MAX_BODY_SIZE) {
+    return errorResponse('Request body too large', corsHeaders, 413);
+  }
+
   try {
     const bodyText = await req.text();
-    if (bodyText.length > 100000) {
+    if (bodyText.length > MAX_BODY_SIZE) {
       return errorResponse("Request body too large", corsHeaders, 413);
     }
     if (!bodyText) {
@@ -170,11 +177,12 @@ Deno.serve(async (req: Request) => {
       return errorResponse("AI service not configured", corsHeaders, 500);
     }
 
-    // Build context from known data
+    // Sanitize inputs before prompt interpolation to prevent prompt injection
+    const safeName = sanitizeStr(String(recipeName)).substring(0, 200);
     const knownData: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(recipe)) {
       if (val !== null && val !== undefined && val !== "") {
-        knownData[key] = val;
+        knownData[key] = typeof val === 'string' ? sanitizeStr(val).substring(0, 500) : val;
       }
     }
 
@@ -190,7 +198,7 @@ Rules:
 - leftover_days: how many days leftovers stay good (1-7 typically)
 - Return ONLY valid JSON with the missing fields filled in, no other text`;
 
-    const userPrompt = `Recipe: "${recipeName}"
+    const userPrompt = `Recipe: "${safeName}"
 Known data: ${JSON.stringify(knownData)}
 
 Fill in ONLY these missing fields: ${missingFields.join(", ")}
@@ -212,7 +220,10 @@ Return JSON with just these fields:
     return jsonResponse(enriched, corsHeaders);
   } catch (error) {
     logError({ requestId, event: "enrich_error", error });
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return errorResponse(`Failed to enrich recipe: ${message}`, corsHeaders, 500);
+    // Use user-friendly messages from callClaude; don't leak raw errors for unexpected exceptions
+    const message = error instanceof Error && (
+      error.message.includes('timed out') || error.message.includes('unavailable') || error.message.includes('busy')
+    ) ? error.message : "Failed to enrich recipe. Please try again.";
+    return errorResponse(message, corsHeaders, 500);
   }
 });

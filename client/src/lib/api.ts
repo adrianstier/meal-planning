@@ -828,6 +828,24 @@ export const mealsApi = {
     return wrapResponse(data as Meal);
   },
 
+  enrichRecipe: async (recipe: Partial<Meal>) => {
+    if (!recipe.name || typeof recipe.name !== 'string') {
+      throw new Error('Recipe must have a name to enrich');
+    }
+
+    checkRateLimit(rateLimiters.aiParsing, 'enrichRecipe', 'AI enrichment limit reached.');
+
+    const { data, error } = await invokeWithTimeout<Partial<Meal>>('enrich-recipe', { recipe });
+
+    if (error) {
+      errorLogger.logApiError(error, '/functions/enrich-recipe', 'POST');
+      const edgeError = error as EdgeFunctionError;
+      const errorMessage = getEdgeErrorMessage(edgeError, 'Failed to enrich recipe. Please try again.');
+      throw new Error(errorMessage);
+    }
+    return wrapResponse(data as Partial<Meal>);
+  },
+
   search: async (query: string) => {
     // Validate and sanitize search query to prevent injection
     if (!query || typeof query !== 'string') {

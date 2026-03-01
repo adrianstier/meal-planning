@@ -167,3 +167,21 @@ export const useParseRecipeFromUrlAI = () => {
     },
   });
 };
+
+export const useEnrichRecipe = () => {
+  return useMutation({
+    mutationFn: async (recipe: Partial<Meal>) => {
+      try {
+        const response = await mealsApi.enrichRecipe(recipe);
+        return response;
+      } catch (error) {
+        console.error('Enrich recipe mutation error:', error);
+        throw error;
+      }
+    },
+    retry: false,
+    onError: (error) => {
+      console.error('Recipe enrichment failed:', error);
+    },
+  });
+};

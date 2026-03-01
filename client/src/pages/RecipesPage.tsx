@@ -28,7 +28,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { RecipeParsingProgress } from '../components/features/recipes/RecipeParsingProgress';
-import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage, useBulkDeleteMeals, useParseRecipeFromUrl, useParseRecipeFromUrlAI } from '../hooks/useMeals';
+import { useMeals, useCreateMeal, useUpdateMeal, useToggleFavorite, useDeleteMeal, useParseRecipe, useParseRecipeFromImage, useBulkDeleteMeals, useParseRecipeFromUrl, useParseRecipeFromUrlAI, useEnrichRecipe } from '../hooks/useMeals';
 import type { Meal } from '../types/api';
 import StarRating from '../components/StarRating';
 import { useDragDrop } from '../contexts/DragDropContext';
@@ -93,7 +93,7 @@ const RecipesPage: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [parsedRecipe, setParsedRecipe] = useState<Partial<Meal> | null>(null);
   const [bulkTagInput, setBulkTagInput] = useState('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [enrichingMealId, setEnrichingMealId] = useState<number | null>(null);
 
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -135,6 +135,7 @@ const RecipesPage: React.FC = () => {
   const parseRecipeFromImage = useParseRecipeFromImage();
   const parseRecipeFromUrl = useParseRecipeFromUrl();
   const parseRecipeFromUrlAI = useParseRecipeFromUrlAI();
+  const enrichRecipe = useEnrichRecipe();
   const { setDraggedRecipe } = useDragDrop();
   const { showUndoToast } = useUndoToast();
 
@@ -426,7 +427,6 @@ const RecipesPage: React.FC = () => {
   const handleRefreshRecipe = async (meal: Meal) => {
     if (!meal.source_url) return;
 
-    setIsRefreshing(true);
     try {
       const result = await parseRecipeFromUrlAI.mutateAsync(meal.source_url);
       const parsedData = result.data;
@@ -476,8 +476,68 @@ const RecipesPage: React.FC = () => {
       console.error('Failed to refresh recipe:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to refresh recipe: ${errorMessage}`);
+    }
+  };
+
+  const handleEnrichRecipe = async (meal: Meal) => {
+    setEnrichingMealId(meal.id);
+    try {
+      if (meal.source_url) {
+        await handleRefreshRecipe(meal);
+      } else {
+        const result = await enrichRecipe.mutateAsync({
+          name: meal.name,
+          meal_type: meal.meal_type,
+          ingredients: meal.ingredients,
+          instructions: meal.instructions,
+          servings: meal.servings,
+          cook_time_minutes: meal.cook_time_minutes,
+          prep_time_minutes: meal.prep_time_minutes,
+          difficulty: meal.difficulty,
+          cuisine: meal.cuisine,
+          tags: meal.tags,
+          calories: meal.calories,
+          protein_g: meal.protein_g,
+          carbs_g: meal.carbs_g,
+          fat_g: meal.fat_g,
+          fiber_g: meal.fiber_g,
+          kid_friendly_level: meal.kid_friendly_level,
+          makes_leftovers: meal.makes_leftovers,
+          leftover_days: meal.leftover_days,
+        });
+
+        const enrichedFields = result.data;
+        if (!enrichedFields || Object.keys(enrichedFields).length === 0) {
+          alert(`"${meal.name}" already has complete data. Nothing to enrich.`);
+          return;
+        }
+
+        // Only update fields that were actually missing on the original meal
+        const updatePayload: Partial<Meal> = {};
+        for (const [key, value] of Object.entries(enrichedFields)) {
+          const currentValue = (meal as any)[key];
+          if ((currentValue === null || currentValue === undefined || currentValue === '') && value != null) {
+            (updatePayload as any)[key] = value;
+          }
+        }
+
+        if (Object.keys(updatePayload).length === 0) {
+          alert(`"${meal.name}" already has complete data. Nothing to enrich.`);
+          return;
+        }
+
+        await updateMeal.mutateAsync({ id: meal.id, meal: updatePayload });
+        setSelectedMeal(prev => prev?.id === meal.id ? { ...prev, ...updatePayload } : prev);
+
+        const fieldCount = Object.keys(updatePayload).length;
+        alert(`"${meal.name}" enriched with ${fieldCount} new field${fieldCount > 1 ? 's' : ''}.`);
+      }
+    } catch (error) {
+      console.error('Failed to enrich recipe:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to enrich recipe: ${errorMessage}`);
     } finally {
-      setIsRefreshing(false);
+      setEnrichingMealId(null);
     }
   };
 
@@ -1134,6 +1194,22 @@ const RecipesPage: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        disabled={enrichingMealId !== null}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEnrichRecipe(meal);
+                        }}
+                        title={meal.source_url ? "Refresh from source" : "Enrich with AI"}
+                      >
+                        {enrichingMealId === meal.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedMeal(meal);
@@ -1633,9 +1709,9 @@ const RecipesPage: React.FC = () => {
               </div>
             )}
 
-            {/* Source URL */}
-            {selectedMeal?.source_url && (
-              <div className="flex items-center gap-3">
+            {/* Source URL & Enrich/Refresh */}
+            <div className="flex items-center gap-3">
+              {selectedMeal?.source_url && (
                 <a
                   href={selectedMeal.source_url}
                   target="_blank"
@@ -1645,17 +1721,32 @@ const RecipesPage: React.FC = () => {
                   <ExternalLink className="w-4 h-4" />
                   View Original Recipe
                 </a>
+              )}
+              {selectedMeal && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleRefreshRecipe(selectedMeal)}
-                  disabled={isRefreshing || parseRecipeFromUrlAI.isPending}
+                  onClick={() => handleEnrichRecipe(selectedMeal)}
+                  disabled={enrichingMealId === selectedMeal.id}
                 >
-                  <RefreshCw className={`w-4 h-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  {isRefreshing ? 'Refreshing...' : 'Refresh from Source'}
+                  {enrichingMealId === selectedMeal.id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      {selectedMeal.source_url ? 'Refreshing...' : 'Enriching...'}
+                    </>
+                  ) : (
+                    <>
+                      {selectedMeal.source_url ? (
+                        <RefreshCw className="w-4 h-4 mr-1.5" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 mr-1.5" />
+                      )}
+                      {selectedMeal.source_url ? 'Refresh from Source' : 'Enrich with AI'}
+                    </>
+                  )}
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Top Comments */}
             {(() => {

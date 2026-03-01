@@ -562,14 +562,17 @@ test.describe('Mobile Navigation', () => {
         await page.goto(`${BASE_URL}/plan`);
         await page.waitForLoadState('networkidle');
       } else {
-        // May need to scroll to see it
+        // May need to scroll to see it — try scrolling if menu is open
         const menuContainer = page.locator('#mobile-menu nav');
-        await menuContainer.evaluate(el => el.scrollTop = el.scrollHeight);
-        await page.waitForTimeout(200);
+        const menuVisible = await menuContainer.isVisible().catch(() => false);
+        if (menuVisible) {
+          await menuContainer.evaluate(el => el.scrollTop = el.scrollHeight).catch(() => {});
+          await page.waitForTimeout(200);
+        }
 
         const linkAfterScroll = mobileNav.locator(`a[href="${navItem.path}"], a:has-text("${navItem.label}")`).first();
 
-        if (await linkAfterScroll.isVisible()) {
+        if (await linkAfterScroll.isVisible().catch(() => false)) {
           await linkAfterScroll.click();
           await verifyNavigation(page, navItem.path, navItem.expectedTitle, `Mobile Secondary Nav: ${navItem.label}`, 'mobile');
           await page.goto(`${BASE_URL}/plan`);

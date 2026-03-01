@@ -171,9 +171,12 @@ function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): Parsed
         .map((step: any, i: number) => {
           if (typeof step === "string") return `${i + 1}. ${step}`;
           if (step.text) return `${i + 1}. ${step.text}`;
-          if (step.itemListElement) {
+          if (step.itemListElement && Array.isArray(step.itemListElement)) {
             // deno-lint-ignore no-explicit-any
             return step.itemListElement.map((s: any, j: number) => `${i + 1}.${j + 1}. ${s.text || ""}`).join("\n");
+          }
+          if (step.itemListElement && typeof step.itemListElement === 'object') {
+            return `${i + 1}. ${step.itemListElement.text || step.name || ""}`;
           }
           return "";
         })

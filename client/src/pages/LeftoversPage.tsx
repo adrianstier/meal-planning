@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AlertCircle, Calendar, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { Toast } from '../components/ui/toast';
 import { useLeftovers, useConsumeLeftover, useLeftoverSuggestions } from '../hooks/useLeftovers';
 import { cn } from '../lib/utils';
 
@@ -9,9 +10,15 @@ const LeftoversPage: React.FC = () => {
   const { data: leftovers, isLoading } = useLeftovers();
   const { data: suggestions } = useLeftoverSuggestions();
   const consumeLeftover = useConsumeLeftover();
+  const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error' | 'info' | 'warning'; message: string; description?: string }>({ show: false, type: 'info', message: '' });
 
   const handleConsume = async (id: number) => {
-    await consumeLeftover.mutateAsync(id);
+    try {
+      await consumeLeftover.mutateAsync(id);
+    } catch (error) {
+      console.error('Failed to mark leftover as consumed:', error);
+      setToast({ show: true, type: 'error', message: 'Failed to update', description: 'Could not mark leftover as consumed. Please try again.' });
+    }
   };
 
   const getExpiryColor = (daysUntilExpiry: number) => {
@@ -193,6 +200,17 @@ const LeftoversPage: React.FC = () => {
           </p>
         </CardContent>
       </Card>
+
+      {/* Toast notification */}
+      {toast.show && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          description={toast.description}
+          duration={5000}
+          onDismiss={() => setToast({ ...toast, show: false })}
+        />
+      )}
     </div>
   );
 };

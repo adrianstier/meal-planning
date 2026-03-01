@@ -410,6 +410,7 @@ const BentoPage: React.FC = () => {
                                 size="icon"
                                 className="h-8 w-8"
                                 onClick={() => openEditDialog(item)}
+                                aria-label={`Edit ${item.name}`}
                               >
                                 <Pencil className="h-3 w-3" />
                               </Button>
@@ -418,6 +419,7 @@ const BentoPage: React.FC = () => {
                                 size="icon"
                                 className="h-8 w-8 text-destructive"
                                 onClick={() => handleDeleteItem(item.id)}
+                                aria-label={`Delete ${item.name}`}
                               >
                                 <Trash2 className="h-3 w-3" />
                               </Button>

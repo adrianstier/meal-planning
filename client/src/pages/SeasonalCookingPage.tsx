@@ -12,6 +12,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
+import { Toast } from '../components/ui/toast';
 import { cn } from '../lib/utils';
 import {
   getSeasonalProduceByMonth,
@@ -131,6 +132,12 @@ const SeasonalCookingPage: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loadingRecipes, setLoadingRecipes] = useState(false);
 
+  // Toast state
+  const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error' | 'info' | 'warning'; message: string; description?: string }>({ show: false, type: 'info', message: '' });
+  const showToast = (type: 'success' | 'error' | 'info' | 'warning', message: string, description?: string) => {
+    setToast({ show: true, type, message, description });
+  };
+
   // UI state
   const [showAddBox, setShowAddBox] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
@@ -155,7 +162,7 @@ const SeasonalCookingPage: React.FC = () => {
   // Form states
   const [newBoxForm, setNewBoxForm] = useState({
     name: '',
-    delivery_date: new Date().toISOString().split('T')[0],
+    delivery_date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })(),
     source: '',
     notes: ''
   });
@@ -213,12 +220,14 @@ const SeasonalCookingPage: React.FC = () => {
   const createBox = async (e: React.FormEvent) => {
     e.preventDefault();
     // No-op: backend endpoint does not exist
+    showToast('info', 'Coming soon', 'Creating CSA boxes is under development.');
     setShowAddBox(false);
   };
 
   const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
     // No-op: backend endpoint does not exist
+    showToast('info', 'Coming soon', 'Adding produce items is under development.');
     setShowAddItem(false);
   };
 
@@ -1184,6 +1193,17 @@ Example:
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Toast notification */}
+      {toast.show && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          description={toast.description}
+          duration={3000}
+          onDismiss={() => setToast({ ...toast, show: false })}
+        />
       )}
     </div>
   );

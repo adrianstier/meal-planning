@@ -587,7 +587,7 @@ const RecipesPage: React.FC = () => {
 
       // Prep time filter
       const matchesPrepTime = prepTimeFilter === 'all' ||
-        (meal.cook_time_minutes && meal.cook_time_minutes <= parseInt(prepTimeFilter));
+        (meal.cook_time_minutes != null && meal.cook_time_minutes <= parseInt(prepTimeFilter));
 
       // Difficulty filter
       const matchesDifficulty = difficultyFilter === 'all' ||
@@ -635,8 +635,8 @@ const RecipesPage: React.FC = () => {
         case 'name':
           return a.name.localeCompare(b.name);
         case 'prepTime':
-          const timeA = a.cook_time_minutes || 999;
-          const timeB = b.cook_time_minutes || 999;
+          const timeA = a.cook_time_minutes ?? 999;
+          const timeB = b.cook_time_minutes ?? 999;
           return timeA - timeB;
         case 'lastCooked':
           const dateA = a.last_cooked ? new Date(a.last_cooked).getTime() : 0;
@@ -1453,7 +1453,7 @@ const RecipesPage: React.FC = () => {
                   type="number"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  value={formData.cook_time_minutes || ''}
+                  value={formData.cook_time_minutes ?? ''}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -1472,7 +1472,7 @@ const RecipesPage: React.FC = () => {
                   pattern="[0-9]*"
                   min={1}
                   max={50}
-                  value={formData.servings || ''}
+                  value={formData.servings ?? ''}
                   onChange={(e) => {
                     const value = e.target.value ? parseInt(e.target.value) : undefined;
                     // Clamp value between 1 and 50

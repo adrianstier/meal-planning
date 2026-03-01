@@ -564,8 +564,8 @@ const RestaurantsPage: React.FC = () => {
                   id="latitude"
                   type="number"
                   step="any"
-                  value={formData.latitude || ''}
-                  onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) || undefined })}
+                  value={formData.latitude ?? ''}
+                  onChange={(e) => setFormData({ ...formData, latitude: isNaN(parseFloat(e.target.value)) ? undefined : parseFloat(e.target.value) })}
                   placeholder="Auto-filled"
                   readOnly
                 />
@@ -576,8 +576,8 @@ const RestaurantsPage: React.FC = () => {
                   id="longitude"
                   type="number"
                   step="any"
-                  value={formData.longitude || ''}
-                  onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) || undefined })}
+                  value={formData.longitude ?? ''}
+                  onChange={(e) => setFormData({ ...formData, longitude: isNaN(parseFloat(e.target.value)) ? undefined : parseFloat(e.target.value) })}
                   placeholder="Auto-filled"
                   readOnly
                 />
@@ -634,8 +634,8 @@ const RestaurantsPage: React.FC = () => {
                   min="1"
                   max="5"
                   step="0.1"
-                  value={formData.rating || ''}
-                  onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || undefined })}
+                  value={formData.rating ?? ''}
+                  onChange={(e) => setFormData({ ...formData, rating: isNaN(parseFloat(e.target.value)) ? undefined : parseFloat(e.target.value) })}
                   placeholder="4.5"
                 />
               </div>
@@ -715,8 +715,9 @@ const RestaurantsPage: React.FC = () => {
             </Button>
             <Button
               onClick={editDialogOpen ? handleSubmitEdit : handleSubmitAdd}
+              disabled={!formData.name?.trim() || createRestaurant.isPending || updateRestaurant.isPending}
             >
-              {editDialogOpen ? 'Save Changes' : 'Add Restaurant'}
+              {(createRestaurant.isPending || updateRestaurant.isPending) ? 'Saving...' : (editDialogOpen ? 'Save Changes' : 'Add Restaurant')}
             </Button>
           </DialogFooter>
         </DialogContent>

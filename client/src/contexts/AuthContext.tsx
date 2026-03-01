@@ -455,9 +455,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!supabaseUser) throw new Error('Not authenticated');
 
+    // Only allow updating safe fields — prevent privilege escalation via is_admin
+    const { is_admin: _isAdmin, id: _id, created_at: _created, ...safeUpdates } = updates;
+
     const { data, error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update(safeUpdates)
       .eq('id', supabaseUser.id)
       .select()
       .single();

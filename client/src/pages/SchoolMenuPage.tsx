@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Sparkles, Trash2, ThumbsDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { Toast } from '../components/ui/toast';
 import { useSchoolMenu, useDeleteSchoolMenuItem, useParseMenuPhoto, useAddMenuFeedback } from '../hooks/useSchoolMenu';
 import { format, parseISO, isPast, startOfDay } from 'date-fns';
 
@@ -11,6 +12,18 @@ const SchoolMenuPage: React.FC = () => {
   const [parseError, setParseError] = useState<string | null>(null);
   const [parseSuccess, setParseSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const successTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup success timer on unmount
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+    };
+  }, []);
+
+  const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error' | 'info' | 'warning'; message: string; description?: string }>({ show: false, type: 'info', message: '' });
 
   const { data: menuItems, isLoading, refetch } = useSchoolMenu();
   const deleteMenuItem = useDeleteSchoolMenuItem();
@@ -66,7 +79,10 @@ const SchoolMenuPage: React.FC = () => {
       setParseSuccess(`Successfully added ${count} menu item${count !== 1 ? 's' : ''}!`);
 
       // Clear success message after 5 seconds
-      setTimeout(() => setParseSuccess(null), 5000);
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+      successTimerRef.current = setTimeout(() => setParseSuccess(null), 5000);
     } catch (err) {
       console.error('Failed to parse menu photo:', err);
       const error = err as { response?: { data?: { error?: string } }; message?: string };
@@ -78,14 +94,24 @@ const SchoolMenuPage: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    await deleteMenuItem.mutateAsync(id);
+    try {
+      await deleteMenuItem.mutateAsync(id);
+    } catch (error) {
+      console.error('Failed to delete menu item:', error);
+      setToast({ show: true, type: 'error', message: 'Failed to delete', description: 'Could not delete the menu item. Please try again.' });
+    }
   };
 
   const handleDislike = async (menuItemId: number) => {
-    await addFeedback.mutateAsync({
-      menuItemId,
-      feedbackType: 'disliked',
-    });
+    try {
+      await addFeedback.mutateAsync({
+        menuItemId,
+        feedbackType: 'disliked',
+      });
+    } catch (error) {
+      console.error('Failed to record feedback:', error);
+      setToast({ show: true, type: 'error', message: 'Failed to save feedback', description: 'Could not record your dislike. Please try again.' });
+    }
   };
 
   // Group menu items by date
@@ -246,6 +272,7 @@ const SchoolMenuPage: React.FC = () => {
                             size="icon"
                             className="h-9 w-9 min-h-[36px]"
                             onClick={() => handleDislike(item.id)}
+                            aria-label={`Dislike ${item.meal_name}`}
                           >
                             <ThumbsDown className="h-4 w-4" />
                           </Button>
@@ -254,6 +281,7 @@ const SchoolMenuPage: React.FC = () => {
                             size="icon"
                             className="h-9 w-9 min-h-[36px]"
                             onClick={() => handleDelete(item.id)}
+                            aria-label={`Delete ${item.meal_name}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -290,6 +318,17 @@ const SchoolMenuPage: React.FC = () => {
           </p>
         </CardContent>
       </Card>
+
+      {/* Toast notification */}
+      {toast.show && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          description={toast.description}
+          duration={5000}
+          onDismiss={() => setToast({ ...toast, show: false })}
+        />
+      )}
     </div>
   );
 };

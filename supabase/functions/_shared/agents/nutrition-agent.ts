@@ -764,11 +764,11 @@ Respond with JSON:
     // Aggregate daily totals
     const dailyTotals = meals.reduce(
       (acc, meal) => {
-        acc.calories += meal.nutrition.calories || 0
-        acc.protein += meal.nutrition.protein_g || 0
-        acc.carbs += meal.nutrition.carbs_g || 0
-        acc.fat += meal.nutrition.fat_g || 0
-        acc.fiber += meal.nutrition.fiber_g || 0
+        acc.calories += meal.nutrition.calories ?? 0
+        acc.protein += meal.nutrition.protein_g ?? 0
+        acc.carbs += meal.nutrition.carbs_g ?? 0
+        acc.fat += meal.nutrition.fat_g ?? 0
+        acc.fiber += meal.nutrition.fiber_g ?? 0
         return acc
       },
       { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }

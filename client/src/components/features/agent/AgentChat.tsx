@@ -74,6 +74,7 @@ export function AgentChat({
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const copyTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const {
     messages,
@@ -99,6 +100,15 @@ export function AgentChat({
       inputRef.current.focus()
     }
   }, [isOpen])
+
+  // Cleanup copy timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current)
+      }
+    }
+  }, [])
 
   // Handle send
   const handleSend = useCallback(() => {
@@ -129,7 +139,10 @@ export function AgentChat({
   const handleCopy = async (message: AgentMessage) => {
     await navigator.clipboard.writeText(message.content)
     setCopiedId(message.id)
-    setTimeout(() => setCopiedId(null), 2000)
+    if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current)
+    }
+    copyTimerRef.current = setTimeout(() => setCopiedId(null), 2000)
   }
 
   // Custom components for ReactMarkdown to maintain existing styling
@@ -155,16 +168,19 @@ export function AgentChat({
     li: ({ children }: { children?: React.ReactNode }) => (
       <li className="ml-1">{children}</li>
     ),
-    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-violet-600 dark:text-violet-400 hover:underline"
-      >
-        {children}
-      </a>
-    ),
+    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
+      const safeHref = href && /^https?:\/\//i.test(href) ? href : undefined;
+      return safeHref ? (
+        <a
+          href={safeHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-violet-600 dark:text-violet-400 hover:underline"
+        >
+          {children}
+        </a>
+      ) : <span>{children}</span>;
+    },
     code: ({ className, children }: { className?: string; children?: React.ReactNode }) => {
       // Check if this is a code block (has language class) or inline code
       const isCodeBlock = className?.includes('language-')

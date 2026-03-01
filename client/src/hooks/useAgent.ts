@@ -60,6 +60,8 @@ async function callAgent(
   metadata?: Record<string, unknown>,
   signal?: AbortSignal
 ): Promise<AgentResponse> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session?.access_token) {
@@ -337,10 +339,14 @@ export function useConversationHistory(conversationId?: string) {
     queryFn: async () => {
       if (!conversationId) return null
 
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
       const { data, error } = await supabase
         .from('agent_messages')
         .select('*')
         .eq('conversation_id', conversationId)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: true })
 
       if (error) throw error
@@ -364,6 +370,9 @@ export function useConversations() {
   return useQuery({
     queryKey: ['agentConversations'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
       const { data, error } = await supabase
         .from('agent_conversations')
         .select(`
@@ -373,6 +382,7 @@ export function useConversations() {
           status,
           agent_messages!inner(content)
         `)
+        .eq('user_id', user.id)
         .eq('status', 'active')
         .order('last_message_at', { ascending: false })
         .limit(20)

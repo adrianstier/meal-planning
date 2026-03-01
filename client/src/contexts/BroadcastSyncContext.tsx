@@ -68,9 +68,14 @@ export function BroadcastSyncProvider({ children }: { children: React.ReactNode 
     // Handle visibility change to refetch stale queries when tab becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // Refetch active (mounted) queries when tab becomes visible
+        // Only refetch active queries that haven't been updated in the last 60 seconds
         queryClient.invalidateQueries({
           refetchType: 'active',
+          predicate: (query) => {
+            const now = Date.now();
+            const lastUpdated = query.state.dataUpdatedAt;
+            return now - lastUpdated > 60_000;
+          },
         });
       }
     };

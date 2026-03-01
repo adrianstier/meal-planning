@@ -91,6 +91,13 @@ Deno.serve(async (req: Request) => {
     return rateLimitExceededResponse(corsHeaders, rateLimitResult.resetIn);
   }
 
+  // Check Content-Length before parsing to prevent memory exhaustion
+  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+  const MAX_BODY_SIZE = 15_000_000; // 15MB limit for image uploads
+  if (contentLength > MAX_BODY_SIZE) {
+    return errorResponse('Request body too large', corsHeaders, 413);
+  }
+
   try {
     const { image_data, image_type } = await req.json();
 
@@ -122,6 +129,12 @@ Deno.serve(async (req: Request) => {
         mediaType = matches[1];
         base64Data = matches[2];
       }
+    }
+
+    // Validate image MIME type
+    const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!ALLOWED_IMAGE_TYPES.includes(mediaType)) {
+      return errorResponse('Unsupported image type. Use JPEG, PNG, GIF, or WebP.', corsHeaders, 400);
     }
 
     const systemPrompt = `Extract recipe data from image. Be concise.

@@ -46,6 +46,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   const [validSteps, setValidSteps] = useState<number[]>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const completeTourRef = useRef<() => void>(() => {});
 
   // Find all valid steps (those with existing target elements)
   const findValidSteps = useCallback(() => {
@@ -184,12 +185,10 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
           setCurrentStep(nextValidIndex);
         } else {
           // No more valid steps, complete the tour
-          completeTour();
+          completeTourRef.current();
         }
       }
     }
-  // Note: completeTour is stable (useCallback with [tourKey, onComplete]) so this is safe
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive, currentStep, steps, validSteps, calculateTooltipPosition]);
 
   // Handle window resize - recalculate position
@@ -238,9 +237,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
         setTimeout(() => setTooltipVisible(true), 50);
       }, 200);
     } else {
-      completeTour();
+      completeTourRef.current();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, validSteps]);
 
   const handlePrevious = useCallback(() => {
@@ -259,8 +257,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
   const handleSkip = useCallback(() => {
     setTooltipVisible(false);
-    setTimeout(() => completeTour(), 200);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setTimeout(() => completeTourRef.current(), 200);
   }, []);
 
   const completeTour = useCallback(() => {
@@ -271,6 +268,11 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       onComplete();
     }
   }, [tourKey, onComplete]);
+
+  // Keep completeTourRef synced with latest completeTour
+  useEffect(() => {
+    completeTourRef.current = completeTour;
+  }, [completeTour]);
 
   // Go to specific step via dot navigation
   const goToStep = useCallback((stepIndex: number) => {

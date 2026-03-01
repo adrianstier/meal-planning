@@ -159,6 +159,12 @@ async function callClaudeWithImage(
   // imageData should be base64 encoded, imageType should be like "image/jpeg" or "image/png"
   const mediaType = imageType.startsWith("image/") ? imageType : `image/${imageType}`;
 
+  // Validate image MIME type
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (!ALLOWED_IMAGE_TYPES.includes(mediaType)) {
+    throw new Error('Unsupported image type. Use JPEG, PNG, GIF, or WebP.');
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -256,6 +262,13 @@ Deno.serve(async (req: Request) => {
     return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
   }
 
+  // Check Content-Length before parsing to prevent memory exhaustion
+  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+  const MAX_BODY_SIZE = 15_000_000; // 15MB limit for image uploads
+  if (contentLength > MAX_BODY_SIZE) {
+    return errorResponse('Request body too large', corsHeaders, 413);
+  }
+
   try {
     const body = await req.json();
     const { url, menuText, image_data, image_type } = body;
@@ -300,6 +313,13 @@ If dates aren't specified, use the current week starting from Monday. Extract as
       // Handle image input - use vision model
       if (!image_type) {
         return errorResponse("Image type is required when uploading an image", corsHeaders, 400);
+      }
+
+      // Validate image MIME type before sending to AI
+      const resolvedMediaType = image_type.startsWith("image/") ? image_type : `image/${image_type}`;
+      const ALLOWED_IMAGE_TYPES_CHECK = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!ALLOWED_IMAGE_TYPES_CHECK.includes(resolvedMediaType)) {
+        return errorResponse('Unsupported image type. Use JPEG, PNG, GIF, or WebP.', corsHeaders, 400);
       }
 
       const userPrompt = `Look at this school lunch menu image and extract the meals for each day.${jsonFormatPrompt}`;

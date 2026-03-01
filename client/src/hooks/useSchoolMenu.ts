@@ -91,9 +91,14 @@ export const useLunchAlternatives = (date: string) => {
 };
 
 export const useParseMenuPhoto = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ imageData, imageType, autoAdd }: { imageData: string; imageType: string; autoAdd?: boolean }) =>
       schoolMenuApi.parsePhoto(imageData, imageType, autoAdd),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['school-menu'] });
+    },
   });
 };
 
@@ -104,5 +109,6 @@ export const useSchoolMenuCalendar = (startDate?: string, endDate?: string) => {
       const response = await schoolMenuApi.getCalendar(startDate, endDate);
       return response.data.calendar_data;
     },
+    enabled: !!startDate && !!endDate,
   });
 };

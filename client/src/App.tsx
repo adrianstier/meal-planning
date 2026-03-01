@@ -73,28 +73,36 @@ function AppContent() {
         <Route path="/plan" element={
           <ProtectedRoute>
             <Layout>
-              <PlanPageEnhanced />
+              <ErrorBoundary>
+                <PlanPageEnhanced />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/recipes" element={
           <ProtectedRoute>
             <Layout>
-              <RecipesPage />
+              <ErrorBoundary>
+                <RecipesPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/bento" element={
           <ProtectedRoute>
             <Layout>
-              <BentoPage />
+              <ErrorBoundary>
+                <BentoPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/seasonal" element={
           <ProtectedRoute>
             <Layout>
-              <SeasonalCookingPage />
+              <ErrorBoundary>
+                <SeasonalCookingPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
@@ -104,56 +112,72 @@ function AppContent() {
         <Route path="/leftovers" element={
           <ProtectedRoute>
             <Layout>
-              <LeftoversPage />
+              <ErrorBoundary>
+                <LeftoversPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/school-menu" element={
           <ProtectedRoute>
             <Layout>
-              <SchoolMenuPage />
+              <ErrorBoundary>
+                <SchoolMenuPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/lists" element={
           <ProtectedRoute>
             <Layout>
-              <ListsPage />
+              <ErrorBoundary>
+                <ListsPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/restaurants" element={
           <ProtectedRoute>
             <Layout>
-              <RestaurantsPage />
+              <ErrorBoundary>
+                <RestaurantsPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/profile" element={
           <ProtectedRoute>
             <Layout>
-              <ProfilePage />
+              <ErrorBoundary>
+                <ProfilePage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/pricing" element={
           <ProtectedRoute>
             <Layout>
-              <PricingPage />
+              <ErrorBoundary>
+                <PricingPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/diagnostics" element={
           <ProtectedRoute>
             <Layout>
-              <DiagnosticsPage />
+              <ErrorBoundary>
+                <DiagnosticsPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/holiday" element={
           <ProtectedRoute>
             <Layout>
-              <HolidayPlannerPage />
+              <ErrorBoundary>
+                <HolidayPlannerPage />
+              </ErrorBoundary>
             </Layout>
           </ProtectedRoute>
         } />

@@ -296,6 +296,13 @@ Deno.serve(async (req: Request) => {
     return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
   }
 
+  // Check Content-Length before parsing to prevent memory exhaustion
+  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+  const MAX_BODY_SIZE = 100_000; // 100KB limit
+  if (contentLength > MAX_BODY_SIZE) {
+    return errorResponse('Request body too large', corsHeaders, 413);
+  }
+
   try {
     const body = await req.json();
     const url = body.url;

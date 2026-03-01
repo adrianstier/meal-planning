@@ -79,6 +79,9 @@ class AITimeoutError extends Error {
 
 async function callAI(systemPrompt: string, userMessage: string): Promise<{ content: string; usage: { input: number; output: number } }> {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+  if (!apiKey) {
+    throw new Error('AI service not configured')
+  }
 
   // Create AbortController for timeout
   const controller = new AbortController()
@@ -89,7 +92,7 @@ async function callAI(systemPrompt: string, userMessage: string): Promise<{ cont
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey || '',
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({

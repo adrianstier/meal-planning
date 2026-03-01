@@ -850,7 +850,8 @@ export const mealsApi = {
       .select('*')
       .eq('user_id', userId)
       .or(`name.ilike.%${sanitizedQuery}%,ingredients.ilike.%${sanitizedQuery}%,tags.ilike.%${sanitizedQuery}%`)
-      .order('name');
+      .order('name')
+      .limit(50);
 
     if (error) {
       errorLogger.logApiError(error, '/meals/search', 'GET');
@@ -956,7 +957,7 @@ export const planApi = {
         meal_type: plan.meal_type,
         day_of_week: parseISO(planDate).toLocaleDateString('en-US', { weekday: 'long' }),
         notes: plan.notes,
-        servings: plan.servings || 4,
+        servings: plan.servings ?? 4,
       })
       .select(`
         *,
@@ -1126,9 +1127,7 @@ export const planApi = {
 
     let mealIndex = 0;
     for (let i = 0; i < numDays; i++) {
-      const currentDate = new Date(startDateObj);
-      currentDate.setDate(startDateObj.getDate() + i);
-      const dateStr = toLocalDateString(currentDate);
+      const dateStr = toLocalDateString(addDays(startDateObj, i));
 
       for (const mealType of mealTypes) {
         // Pick a different meal for each meal type slot (cycle through if needed)
@@ -1213,10 +1212,11 @@ export const leftoversApi = {
       .from('meals')
       .select('name, leftover_days')
       .eq('id', leftover.meal_id)
+      .eq('user_id', userId)
       .single();
 
     const cookedDate = leftover.cooked_date || getTodayString();
-    const daysGood = leftover.days_good || meal?.leftover_days || 3;
+    const daysGood = leftover.days_good ?? meal?.leftover_days ?? 3;
     const expiresDate = addDays(parseISO(cookedDate), daysGood);
 
     const { data, error } = await supabase
@@ -1225,7 +1225,7 @@ export const leftoversApi = {
         user_id: userId,
         meal_id: leftover.meal_id,
         meal_name: meal?.name || 'Unknown',
-        servings_remaining: leftover.servings || 4,
+        servings_remaining: leftover.servings ?? 4,
         cooked_date: cookedDate,
         expires_date: formatDate(expiresDate, 'yyyy-MM-dd'),
         notes: leftover.notes,
@@ -1302,7 +1302,7 @@ export const leftoversApi = {
     // Build a list of leftover ingredients/meals
     const leftoverIngredients = leftovers.map(item => {
       const mealName = item.meal?.name || item.meal_name || 'Unknown';
-      const servings = item.servings_remaining || 1;
+      const servings = item.servings_remaining ?? 1;
       return `${mealName} (${servings} servings)`;
     });
 
@@ -1327,7 +1327,7 @@ export const leftoversApi = {
     // not a 1:1 mapping of suggestion[i] to leftover[i].
     const rawSuggestions = data?.suggestions || [];
     const soonestExpiry = Math.min(
-      ...leftovers.map(l => differenceInDays(parseISO(l.expires_date || new Date().toISOString()), new Date()))
+      ...leftovers.map(l => differenceInDays(parseISO(l.expires_date || getTodayString()), new Date()))
     );
     const totalServings = leftovers.reduce((sum, l) => sum + (l.servings_remaining || 0), 0);
     // Use the first (soonest-expiring) leftover's meal_id as primary context
@@ -1401,7 +1401,8 @@ export const schoolMenuApi = {
       .eq('user_id', userId)
       .gte('menu_date', startDate)
       .lte('menu_date', endDate)
-      .order('menu_date');
+      .order('menu_date')
+      .limit(200);
 
     if (error) {
       errorLogger.logApiError(error, '/school-menu/range', 'GET');
@@ -1621,7 +1622,7 @@ export const schoolMenuApi = {
     if (startDate) query = query.gte('menu_date', startDate);
     if (endDate) query = query.lte('menu_date', endDate);
 
-    const { data, error } = await query.order('menu_date');
+    const { data, error } = await query.order('menu_date').limit(200);
 
     if (error) {
       errorLogger.logApiError(error, '/school-menu/calendar', 'GET');
@@ -2035,7 +2036,8 @@ export const historyApi = {
       .select('*')
       .eq('user_id', userId)
       .eq('meal_id', mealId)
-      .order('cooked_date', { ascending: false });
+      .order('cooked_date', { ascending: false })
+      .limit(50);
 
     if (error) {
       errorLogger.logApiError(error, `/history/meal/${mealId}`, 'GET');
@@ -2352,7 +2354,7 @@ export const bentoApi = {
       errorLogger.logApiError(error, '/bento/plans', 'POST');
       throw error;
     }
-    return wrapResponse(data as BentoPlan);
+    return wrapResponse(transformBentoPlan(data));
   },
 
   updatePlan: async (id: number, plan: Partial<BentoPlan>) => {
@@ -2378,7 +2380,7 @@ export const bentoApi = {
       errorLogger.logApiError(error, `/bento/plans/${id}`, 'PUT');
       throw error;
     }
-    return wrapResponse(data as BentoPlan);
+    return wrapResponse(transformBentoPlan(data));
   },
 
   deletePlan: async (id: number) => {

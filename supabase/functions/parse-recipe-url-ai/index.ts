@@ -120,7 +120,7 @@ async function jinaReaderFetch(url: string): Promise<string> {
   const timeout = setTimeout(() => controller.abort(), 25000);
 
   try {
-    const response = await fetch(`https://r.jina.ai/${url}`, {
+    const response = await fetch(`https://r.jina.ai/${encodeURIComponent(url)}`, {
       signal: controller.signal,
       headers: {
         "Accept": "application/json",
@@ -298,6 +298,13 @@ Deno.serve(async (req: Request) => {
   const rateLimit = checkRateLimitSync(auth.userId!);
   if (!rateLimit.allowed) {
     return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
+  }
+
+  // Check Content-Length before parsing to prevent memory exhaustion
+  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+  const MAX_BODY_SIZE = 100_000; // 100KB limit
+  if (contentLength > MAX_BODY_SIZE) {
+    return errorResponse('Request body too large', corsHeaders, 413);
   }
 
   try {

@@ -155,6 +155,7 @@ const HolidayPlannerPage: React.FC = () => {
   const createEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     // No-op: backend endpoint does not exist
+    showToast('info', 'Coming soon', 'Creating holiday events is under development.');
     setShowCreateEvent(false);
   };
 
@@ -166,6 +167,7 @@ const HolidayPlannerPage: React.FC = () => {
   const addDish = async (e: React.FormEvent) => {
     e.preventDefault();
     // No-op: backend endpoint does not exist
+    showToast('info', 'Coming soon', 'Adding dishes is under development.');
     setShowAddDish(false);
   };
 
@@ -177,6 +179,7 @@ const HolidayPlannerPage: React.FC = () => {
   const addGuest = async (e: React.FormEvent) => {
     e.preventDefault();
     // No-op: backend endpoint does not exist
+    showToast('info', 'Coming soon', 'Adding guests is under development.');
     setShowAddGuest(false);
   };
 
@@ -339,7 +342,7 @@ const HolidayPlannerPage: React.FC = () => {
                   min="1"
                   max="100"
                   value={newEvent.guest_count}
-                  onChange={e => setNewEvent({ ...newEvent, guest_count: parseInt(e.target.value) || 1 })}
+                  onChange={e => { const val = parseInt(e.target.value); setNewEvent({ ...newEvent, guest_count: Number.isNaN(val) ? 1 : val }); }}
                   required
                 />
               </div>
@@ -792,7 +795,7 @@ const HolidayPlannerPage: React.FC = () => {
                   type="number"
                   min="1"
                   value={newDish.servings}
-                  onChange={e => setNewDish({ ...newDish, servings: parseInt(e.target.value) || 1 })}
+                  onChange={e => { const val = parseInt(e.target.value); setNewDish({ ...newDish, servings: Number.isNaN(val) ? 1 : val }); }}
                 />
               </div>
             </div>
@@ -803,7 +806,7 @@ const HolidayPlannerPage: React.FC = () => {
                   type="number"
                   min="0"
                   value={newDish.prep_time_minutes}
-                  onChange={e => setNewDish({ ...newDish, prep_time_minutes: parseInt(e.target.value) || 0 })}
+                  onChange={e => { const val = parseInt(e.target.value); setNewDish({ ...newDish, prep_time_minutes: Number.isNaN(val) ? 0 : val }); }}
                 />
               </div>
               <div className="space-y-2">
@@ -812,7 +815,7 @@ const HolidayPlannerPage: React.FC = () => {
                   type="number"
                   min="0"
                   value={newDish.cook_time_minutes}
-                  onChange={e => setNewDish({ ...newDish, cook_time_minutes: parseInt(e.target.value) || 0 })}
+                  onChange={e => { const val = parseInt(e.target.value); setNewDish({ ...newDish, cook_time_minutes: Number.isNaN(val) ? 0 : val }); }}
                 />
               </div>
             </div>

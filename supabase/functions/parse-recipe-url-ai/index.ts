@@ -117,13 +117,15 @@ async function directFetch(url: string): Promise<string> {
 
 async function jinaReaderFetch(url: string): Promise<string> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
+  const timeout = setTimeout(() => controller.abort(), 40000);
 
   try {
-    const response = await fetch(`https://r.jina.ai/${encodeURIComponent(url)}`, {
+    // URL is already validated as public by isPublicUrl() in the main handler
+    // Use text/plain mode — JSON mode returns empty content for many sites
+    const response = await fetch(`https://r.jina.ai/${url}`, {
       signal: controller.signal,
       headers: {
-        "Accept": "application/json",
+        "Accept": "text/plain",
       },
     });
 
@@ -131,12 +133,12 @@ async function jinaReaderFetch(url: string): Promise<string> {
       throw new Error(`Jina Reader returned ${response.status}`);
     }
 
-    const data = await response.json();
-    if (!data?.data?.text) {
+    const text = await response.text();
+    if (!text || text.length < 100) {
       throw new Error("No content returned from Jina Reader");
     }
 
-    return data.data.text;
+    return text;
   } finally {
     clearTimeout(timeout);
   }
@@ -245,19 +247,26 @@ function extractJsonLd(html: string): any | null {
   return null;
 }
 
+// Strip control characters (except \n \r \t) that can break JSON parsing in clients
+function sanitizeStr(s: string | undefined | null): string {
+  if (!s) return "";
+  // deno-lint-ignore no-control-regex
+  return s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+}
+
 function validateRecipe(parsed: Partial<ParsedRecipe>, url: string, imageUrl: string | null): ParsedRecipe {
   return {
-    name: parsed.name?.trim() || "Untitled Recipe",
+    name: sanitizeStr(parsed.name?.trim()) || "Untitled Recipe",
     meal_type: ["breakfast", "lunch", "dinner", "snack"].includes(parsed.meal_type || "") ? parsed.meal_type! : "dinner",
-    ingredients: parsed.ingredients || "",
-    instructions: parsed.instructions || "",
+    ingredients: sanitizeStr(parsed.ingredients),
+    instructions: sanitizeStr(parsed.instructions),
     prep_time_minutes: typeof parsed.prep_time_minutes === "number" ? parsed.prep_time_minutes : null,
     cook_time_minutes: typeof parsed.cook_time_minutes === "number" ? parsed.cook_time_minutes : null,
     servings: typeof parsed.servings === "number" && parsed.servings > 0 ? parsed.servings : 4,
     difficulty: ["easy", "medium", "hard"].includes(parsed.difficulty || "") ? parsed.difficulty! : "medium",
-    cuisine: parsed.cuisine || null,
-    tags: parsed.tags || "",
-    notes: parsed.notes || null,
+    cuisine: sanitizeStr(parsed.cuisine) || null,
+    tags: sanitizeStr(parsed.tags),
+    notes: sanitizeStr(parsed.notes) || null,
     calories: typeof parsed.calories === "number" ? parsed.calories : null,
     protein_g: typeof parsed.protein_g === "number" ? parsed.protein_g : null,
     carbs_g: typeof parsed.carbs_g === "number" ? parsed.carbs_g : null,
@@ -354,9 +363,32 @@ Deno.serve(async (req: Request) => {
         context += `\n\nUSER COMMENTS/REVIEWS:\n${commentSection}`;
       }
     } else if (fetchResult.text) {
-      // Jina Reader fallback - content is already extracted text
-      context = `PAGE CONTENT:\n${fetchResult.text.substring(0, 12000)}`;
-      log({ requestId, event: "using_jina_fallback" });
+      // Jina Reader fallback - content is already extracted text/markdown
+      // Smart extraction: skip navigation boilerplate, find recipe content
+      const jinaText = fetchResult.text;
+      let recipeContent = jinaText;
+
+      // Try to find where recipe content starts by looking for common recipe markers
+      const markers = [
+        /(?:^|\n)#+\s*(?:ingredients|recipe)/im,
+        /(?:^|\n)(?:ingredients|directions|instructions|recipe)\s*\n/im,
+        /(?:^|\n)\*\*(?:ingredients|directions|instructions)\*\*/im,
+        /(?:^|\n)(?:prep time|cook time|total time|servings|yield)/im,
+        /(?:^|\n)(?:\d+\s+(?:cup|tbsp|tsp|oz|lb|pound|clove|can)\b)/im,
+      ];
+
+      for (const marker of markers) {
+        const match = jinaText.search(marker);
+        if (match > 0) {
+          // Include some context before the match (up to 500 chars)
+          const start = Math.max(0, match - 500);
+          recipeContent = jinaText.substring(start);
+          break;
+        }
+      }
+
+      context = `PAGE CONTENT:\n${recipeContent.substring(0, 15000)}`;
+      log({ requestId, event: "using_jina_fallback", contentLength: recipeContent.length });
     }
 
     const systemPrompt = `You are a recipe parser. Extract recipe data and return ONLY valid JSON, no other text.

@@ -149,7 +149,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [fetchProfile, waitForProfile]);
 
   // Handle session updates
-  const handleSession = useCallback(async (newSession: Session | null) => {
+  // handleSession sets auth state synchronously and defers profile fetch.
+  // The profile fetch MUST run outside the onAuthStateChange callback because
+  // Supabase JS v2.39+ holds a navigator.locks lock during that callback.
+  // Any Supabase REST call inside the callback deadlocks waiting for that lock.
+  const handleSession = useCallback((newSession: Session | null) => {
     console.log('[Auth] handleSession:', !!newSession?.user);
 
     setSession(newSession);
@@ -170,14 +174,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
-    // Fetch or create profile
-    try {
-      const profile = await createProfileIfNeeded(newSession.user);
-      setUser(profile);
-    } catch (err) {
-      console.error('[Auth] Profile handling failed');
-      setUser(null);
-    }
+    // Defer profile fetch to break out of the auth lock
+    const authUser = newSession.user;
+    setTimeout(async () => {
+      try {
+        const profile = await createProfileIfNeeded(authUser);
+        setUser(profile);
+      } catch (err) {
+        console.error('[Auth] Profile handling failed');
+        setUser(null);
+      }
+    }, 0);
   }, [createProfileIfNeeded]);
 
   // Initialize auth state
@@ -230,7 +237,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               return;
             }
 
-            await handleSession(newSession);
+            handleSession(newSession);
             setLoading(false);
           }
         );

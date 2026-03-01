@@ -305,10 +305,12 @@ async function invokeWithTimeout<T>(
 }
 
 // Helper to get current user ID
+// Uses getSession() (local storage read) instead of getUser() (HTTP call)
+// for fast, non-blocking access. JWT is still validated server-side by RLS.
 const getCurrentUserId = async (): Promise<string> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-  return user.id;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Not authenticated');
+  return session.user.id;
 };
 
 // Helper to wrap responses in expected format

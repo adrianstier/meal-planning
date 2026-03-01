@@ -14,10 +14,7 @@ import {
   isValidUrl,
   isPublicUrl,
 } from "../_shared/cors.ts";
-
-// Use Sonnet for vision capabilities (Haiku doesn't support images well)
-const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
-const ANTHROPIC_MODEL_TEXT = "claude-haiku-4-5-20251001";
+import { callClaude, callClaudeVision, extractJSON, CLAUDE_VISION_MODEL } from "../_shared/ai.ts";
 
 interface SchoolMenuItem {
   date: string;
@@ -119,140 +116,6 @@ function extractMainContent(html: string): string {
   return content.substring(0, 10000);
 }
 
-async function callClaude(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL_TEXT, // Use Haiku for text-only
-        max_tokens: 3000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[parse-school-menu] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
-      throw new Error('AI service temporarily unavailable');
-    }
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text;
-    if (!text) throw new Error('AI returned empty response');
-    return text;
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('AI request timed out. Please try again.');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// Call Claude with image content (uses Sonnet for vision)
-async function callClaudeWithImage(
-  systemPrompt: string,
-  userPrompt: string,
-  imageData: string,
-  imageType: string,
-  apiKey: string
-): Promise<string> {
-  // imageData should be base64 encoded, imageType should be like "image/jpeg" or "image/png"
-  const mediaType = imageType.startsWith("image/") ? imageType : `image/${imageType}`;
-
-  // Validate image MIME type
-  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (!ALLOWED_IMAGE_TYPES.includes(mediaType)) {
-    throw new Error('Unsupported image type. Use JPEG, PNG, GIF, or WebP.');
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL, // Use Sonnet for vision
-        max_tokens: 3000,
-        system: systemPrompt,
-        messages: [{
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaType,
-                data: imageData,
-              },
-            },
-            {
-              type: "text",
-              text: userPrompt,
-            },
-          ],
-        }],
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[parse-school-menu] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
-      throw new Error('AI service temporarily unavailable');
-    }
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text;
-    if (!text) throw new Error('AI returned empty response');
-    return text;
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('AI request timed out. Please try again.');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-function extractJSON(text: string): ParsedSchoolMenu | null {
-  const patterns = [
-    /```json\s*([\s\S]*?)\s*```/,
-    /```\s*([\s\S]*?)\s*```/,
-    /(\{[\s\S]*\})/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      try {
-        return JSON.parse(match[1].trim());
-      } catch {
-        continue;
-      }
-    }
-  }
-  return null;
-}
-
 Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID().substring(0, 8);
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
@@ -343,7 +206,11 @@ If dates aren't specified, use the current week starting from Monday. Extract as
 
       const userPrompt = `Look at this school lunch menu image and extract the meals for each day.${jsonFormatPrompt}`;
 
-      aiResponse = await callClaudeWithImage(systemPrompt, userPrompt, image_data, image_type, apiKey);
+      const visionResult = await callClaudeVision(
+        systemPrompt, userPrompt, image_data, resolvedMediaType, apiKey,
+        { model: CLAUDE_VISION_MODEL, maxTokens: 3000 }
+      );
+      aiResponse = visionResult.text;
     } else if (url) {
       // Handle URL input
       if (!isValidUrl(url) || url.length > MAX_URL_LENGTH) {
@@ -369,7 +236,7 @@ If dates aren't specified, use the current week starting from Monday. Extract as
 ${contentToProcess}
 ${jsonFormatPrompt}`;
 
-      aiResponse = await callClaude(systemPrompt, userPrompt, apiKey);
+      aiResponse = await callClaude(systemPrompt, userPrompt, apiKey, { maxTokens: 3000 });
     } else {
       // Handle text input
       const contentToProcess = menuText.substring(0, 10000);
@@ -379,10 +246,10 @@ ${jsonFormatPrompt}`;
 ${contentToProcess}
 ${jsonFormatPrompt}`;
 
-      aiResponse = await callClaude(systemPrompt, userPrompt, apiKey);
+      aiResponse = await callClaude(systemPrompt, userPrompt, apiKey, { maxTokens: 3000 });
     }
 
-    const parsed = extractJSON(aiResponse);
+    const parsed = extractJSON<ParsedSchoolMenu>(aiResponse);
 
     if (!parsed || !parsed.items || parsed.items.length === 0) {
       logError({ requestId, event: "parse_school_menu_failed", reason: "no_items" });

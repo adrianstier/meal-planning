@@ -11,8 +11,7 @@ import {
   log,
   logError,
 } from "../_shared/cors.ts";
-
-const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
+import { callClaude, extractJSON } from "../_shared/ai.ts";
 
 interface LeftoverIdea {
   name: string;
@@ -21,68 +20,6 @@ interface LeftoverIdea {
   additionalIngredients: string[];
   instructions: string;
   estimatedTime: string;
-}
-
-async function callClaude(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
-  // 30-second timeout to prevent hanging requests
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 2000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[leftover-suggestions] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
-      throw new Error('AI service temporarily unavailable');
-    }
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text;
-    if (!text) throw new Error('AI returned empty response');
-    return text;
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('AI request timed out. Please try again.');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-function extractJSON(text: string): LeftoverIdea[] | null {
-  const patterns = [
-    /```json\s*([\s\S]*?)\s*```/,
-    /```\s*([\s\S]*?)\s*```/,
-    /(\[[\s\S]*\])/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      try {
-        return JSON.parse(match[1].trim());
-      } catch {
-        continue;
-      }
-    }
-  }
-  return null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -162,8 +99,8 @@ Transformation types:
 - upgrade: Elevate with new ingredients (e.g., pasta bake from leftover pasta)
 - fusion: Creative mashup (e.g., taco filling from leftover roast)`;
 
-    const aiResponse = await callClaude(systemPrompt, userPrompt, apiKey);
-    const suggestions = extractJSON(aiResponse);
+    const aiResponse = await callClaude(systemPrompt, userPrompt, apiKey, { maxTokens: 2000 });
+    const suggestions = extractJSON<LeftoverIdea[]>(aiResponse);
 
     if (!suggestions || suggestions.length === 0) {
       logError({ requestId, event: "leftover_suggestions_failed", reason: "no_suggestions" });

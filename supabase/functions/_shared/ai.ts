@@ -176,9 +176,15 @@ export function extractJSON<T>(text: string): T | null {
     }
   }
 
-  // Find first { and match to balanced closing }
-  const start = text.indexOf('{');
+  // Find first { or [ and match to balanced closing } or ]
+  const objStart = text.indexOf('{');
+  const arrStart = text.indexOf('[');
+  // Pick whichever comes first; -1 means not found
+  const start = objStart === -1 ? arrStart : arrStart === -1 ? objStart : Math.min(objStart, arrStart);
   if (start === -1) return null;
+
+  const openChar = text[start];
+  const closeChar = openChar === '{' ? '}' : ']';
 
   let depth = 0;
   let inString = false;
@@ -203,15 +209,15 @@ export function extractJSON<T>(text: string): T | null {
     }
 
     if (!inString) {
-      if (ch === '{') depth++;
-      else if (ch === '}') {
+      if (ch === openChar) depth++;
+      else if (ch === closeChar) {
         depth--;
         if (depth === 0) {
           try {
             return JSON.parse(text.substring(start, i + 1)) as T;
           } catch {
-            // Try finding next { after current position
-            const nextStart = text.indexOf('{', i + 1);
+            // Try finding next open char after current position
+            const nextStart = text.indexOf(openChar, i + 1);
             if (nextStart === -1) return null;
             i = nextStart - 1;
             depth = 0;

@@ -11,8 +11,7 @@ import {
   log,
   logError,
 } from "../_shared/cors.ts";
-
-const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
+import { callClaude, extractJSON } from "../_shared/ai.ts";
 
 interface MealSuggestion {
   name: string;
@@ -20,68 +19,6 @@ interface MealSuggestion {
   reason: string;
   estimated_time: string;
   difficulty: string;
-}
-
-async function callClaude(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
-  // 30-second timeout to prevent hanging requests
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 2000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[suggest-meal] Claude API error (${response.status}): ${errorText.substring(0, 200)}`);
-      throw new Error('AI service temporarily unavailable');
-    }
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text;
-    if (!text) throw new Error('AI returned empty response');
-    return text;
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('AI request timed out. Please try again.');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-function extractJSON(text: string): MealSuggestion[] | null {
-  const patterns = [
-    /```json\s*([\s\S]*?)\s*```/,
-    /```\s*([\s\S]*?)\s*```/,
-    /(\[[\s\S]*\])/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      try {
-        return JSON.parse(match[1].trim());
-      } catch {
-        continue;
-      }
-    }
-  }
-  return null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -174,8 +111,8 @@ Deno.serve(async (req: Request) => {
 Return a JSON array with exactly 5 suggestions in this format:
 [{"name":"Meal Name","description":"Brief description","reason":"Why this is a good choice","estimated_time":"30 minutes","difficulty":"easy|medium|hard"}]`;
 
-    const aiResponse = await callClaude(systemPrompt, userPrompt, apiKey);
-    const suggestions = extractJSON(aiResponse);
+    const aiResponse = await callClaude(systemPrompt, userPrompt, apiKey, { maxTokens: 2000 });
+    const suggestions = extractJSON<MealSuggestion[]>(aiResponse);
 
     if (!suggestions || suggestions.length === 0) {
       logError({ requestId, event: "suggest_meal_failed", reason: "no_suggestions" });

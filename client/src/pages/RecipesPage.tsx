@@ -40,6 +40,7 @@ interface ParsedRecipeData {
   name?: string;
   meal_type?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   cook_time_minutes?: number;
+  prep_time_minutes?: number | null;
   servings?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
   tags?: string;
@@ -48,6 +49,10 @@ interface ParsedRecipeData {
   image_url?: string;
   source_url?: string;
   cuisine?: string;
+  notes?: string | null;
+  kid_friendly_level?: number;
+  makes_leftovers?: boolean;
+  leftover_days?: number | null;
   calories?: number;
   protein_g?: number;
   carbs_g?: number;
@@ -186,50 +191,7 @@ const RecipesPage: React.FC = () => {
 
       setParsedRecipe(parsedData);
       setParseDialogOpen(false);
-
-      // Pre-fill form with parsed data
-      // Convert ingredients array to formatted string
-      let ingredientsText = '';
-      if (parsedData.ingredients && Array.isArray(parsedData.ingredients)) {
-        ingredientsText = parsedData.ingredients
-          .map((ing: { quantity?: string; name: string }) => {
-            const quantity = ing.quantity ? `${ing.quantity} ` : '';
-            const name = ing.name || '';
-            return `${quantity}${name}`.trim();
-          })
-          .filter(line => line.length > 0)
-          .join('\n');
-      } else if (typeof parsedData.ingredients === 'string') {
-        ingredientsText = parsedData.ingredients;
-      }
-
-      // Convert instructions if it's an array
-      let instructionsText = '';
-      if (parsedData.instructions && Array.isArray(parsedData.instructions)) {
-        instructionsText = parsedData.instructions.join('\n');
-      } else if (typeof parsedData.instructions === 'string') {
-        instructionsText = parsedData.instructions;
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        name: parsedData.name || '',
-        meal_type: parsedData.meal_type || 'dinner',
-        cook_time_minutes: parsedData.cook_time_minutes,
-        servings: parsedData.servings,
-        difficulty: parsedData.difficulty || 'medium',
-        tags: parsedData.tags || '',
-        ingredients: ingredientsText,
-        instructions: instructionsText,
-        image_url: parsedData.image_url,
-        source_url: parsedData.source_url,
-        cuisine: parsedData.cuisine,
-        calories: parsedData.calories ?? undefined,
-        protein_g: parsedData.protein_g ?? undefined,
-        carbs_g: parsedData.carbs_g ?? undefined,
-        fat_g: parsedData.fat_g ?? undefined,
-        fiber_g: parsedData.fiber_g ?? undefined,
-      }));
+      processParseResult(parsedData);
       setAddDialogOpen(true);
       setRecipeText('');
     } catch (error) {
@@ -267,6 +229,7 @@ const RecipesPage: React.FC = () => {
       name: parsedData.name || '',
       meal_type: parsedData.meal_type || 'dinner',
       cook_time_minutes: parsedData.cook_time_minutes,
+      prep_time_minutes: parsedData.prep_time_minutes ?? prev.prep_time_minutes,
       servings: parsedData.servings,
       difficulty: parsedData.difficulty || 'medium',
       tags: parsedData.tags || '',
@@ -275,6 +238,10 @@ const RecipesPage: React.FC = () => {
       image_url: parsedData.image_url,
       source_url: parsedData.source_url,
       cuisine: parsedData.cuisine,
+      notes: parsedData.notes ?? prev.notes ?? '',
+      kid_friendly_level: parsedData.kid_friendly_level ?? prev.kid_friendly_level,
+      makes_leftovers: parsedData.makes_leftovers ?? prev.makes_leftovers,
+      leftover_days: parsedData.leftover_days ?? prev.leftover_days,
       calories: parsedData.calories ?? undefined,
       protein_g: parsedData.protein_g ?? undefined,
       carbs_g: parsedData.carbs_g ?? undefined,
@@ -286,19 +253,21 @@ const RecipesPage: React.FC = () => {
 
   // URL import - tries non-AI JSON-LD extraction first, falls back to AI parsing
   const handleParseFromUrlAI = async () => {
-    if (!recipeUrl.trim()) {
+    const trimmedUrl = recipeUrl.trim();
+    if (!trimmedUrl) {
       alert('Please enter a recipe URL');
       return;
     }
 
     try {
       // Try non-AI parser first (fast JSON-LD extraction)
-      const result = await parseRecipeFromUrl.mutateAsync(recipeUrl);
+      const result = await parseRecipeFromUrl.mutateAsync(trimmedUrl);
       const parsedData = result.data;
 
       setParsedRecipe(parsedData);
       setUrlDialogOpen(false);
       processParseResult(parsedData);
+      setFormData(prev => ({ ...prev, source_url: trimmedUrl }));
       setAddDialogOpen(true);
       setRecipeUrl('');
     } catch (nonAiError) {
@@ -307,12 +276,13 @@ const RecipesPage: React.FC = () => {
       if (edgeError.responseBody?.needsAI) {
         // Auto-fallback to AI parser
         try {
-          const result = await parseRecipeFromUrlAI.mutateAsync(recipeUrl);
+          const result = await parseRecipeFromUrlAI.mutateAsync(trimmedUrl);
           const parsedData = result.data;
 
           setParsedRecipe(parsedData);
           setUrlDialogOpen(false);
           processParseResult(parsedData);
+          setFormData(prev => ({ ...prev, source_url: trimmedUrl }));
           setAddDialogOpen(true);
           setRecipeUrl('');
         } catch (aiError) {
@@ -462,14 +432,30 @@ const RecipesPage: React.FC = () => {
       const parsedData = result.data;
 
       // Only override recipe content fields, preserve user-specific data
+      let ingredientsText = meal.ingredients;
+      if (typeof parsedData.ingredients === 'string' && parsedData.ingredients) {
+        ingredientsText = parsedData.ingredients;
+      } else if (Array.isArray(parsedData.ingredients)) {
+        ingredientsText = parsedData.ingredients
+          .map((ing: any) => `${ing.quantity ? ing.quantity + ' ' : ''}${ing.name || ''}`.trim())
+          .filter((line: string) => line.length > 0)
+          .join('\n');
+      }
+
+      let instructionsText = meal.instructions;
+      if (typeof parsedData.instructions === 'string' && parsedData.instructions) {
+        instructionsText = parsedData.instructions;
+      } else if (Array.isArray(parsedData.instructions)) {
+        instructionsText = parsedData.instructions
+          .map((step: any, i: number) => typeof step === 'string' ? `${i+1}. ${step}` : `${i+1}. ${step.text || ''}`)
+          .filter((line: string) => line.length > 0)
+          .join('\n');
+      }
+
       const updatePayload: Partial<Meal> = {
         name: parsedData.name || meal.name,
-        ingredients: typeof parsedData.ingredients === 'string'
-          ? parsedData.ingredients
-          : meal.ingredients,
-        instructions: typeof parsedData.instructions === 'string'
-          ? parsedData.instructions
-          : meal.instructions,
+        ingredients: ingredientsText,
+        instructions: instructionsText,
         cook_time_minutes: parsedData.cook_time_minutes ?? meal.cook_time_minutes,
         servings: parsedData.servings ?? meal.servings,
         cuisine: parsedData.cuisine ?? meal.cuisine,
@@ -1128,6 +1114,9 @@ const RecipesPage: React.FC = () => {
                             ingredients: meal.ingredients || '',
                             instructions: meal.instructions || '',
                             image_url: meal.image_url || '',
+                            source_url: meal.source_url || '',
+                            cuisine: meal.cuisine || '',
+                            notes: meal.notes || '',
                             calories: meal.calories,
                             protein_g: meal.protein_g,
                             carbs_g: meal.carbs_g,

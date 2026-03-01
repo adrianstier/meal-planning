@@ -224,6 +224,21 @@ function validateMealInput(meal: Partial<Meal>): ValidationResult {
       return { valid: false, error: 'Kid rating must be between 1 and 10' };
     }
   }
+  if (meal.image_url !== undefined && meal.image_url !== null && meal.image_url !== '') {
+    if (typeof meal.image_url === 'string' && meal.image_url.length > 2048) {
+      return { valid: false, error: 'Image URL too long' };
+    }
+    if (typeof meal.image_url === 'string') {
+      try {
+        const parsed = new URL(meal.image_url);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return { valid: false, error: 'Image URL must use http or https' };
+        }
+      } catch {
+        return { valid: false, error: 'Invalid image URL format' };
+      }
+    }
+  }
   return { valid: true };
 }
 

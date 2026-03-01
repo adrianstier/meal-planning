@@ -22,6 +22,7 @@ export interface Meal {
   image_url?: string;
   cuisine?: string;
   source_url?: string;
+  notes?: string | null;
   top_comments?: string;
   is_leftover?: boolean;
   original_meal_id?: number;

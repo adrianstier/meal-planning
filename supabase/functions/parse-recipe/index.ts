@@ -38,29 +38,36 @@ interface ParsedRecipe {
   source_url: string | null;
 }
 
+// Strip control characters that can break JSON parsing in clients
+function sanitizeStr(s: string | undefined | null): string {
+  if (!s) return "";
+  // deno-lint-ignore no-control-regex
+  return s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+}
+
 function validateRecipe(parsed: Partial<ParsedRecipe>): ParsedRecipe {
   return {
-    name: parsed.name?.trim() || "Untitled Recipe",
+    name: sanitizeStr(parsed.name?.trim()) || "Untitled Recipe",
     meal_type: ["breakfast", "lunch", "dinner", "snack"].includes(parsed.meal_type || "")
       ? parsed.meal_type!
       : "dinner",
-    ingredients: parsed.ingredients || "",
-    instructions: parsed.instructions || "",
-    prep_time_minutes: typeof parsed.prep_time_minutes === "number" ? parsed.prep_time_minutes : null,
-    cook_time_minutes: typeof parsed.cook_time_minutes === "number" ? parsed.cook_time_minutes : null,
-    servings: typeof parsed.servings === "number" && parsed.servings > 0 ? parsed.servings : 4,
+    ingredients: sanitizeStr(parsed.ingredients),
+    instructions: sanitizeStr(parsed.instructions),
+    prep_time_minutes: Number.isFinite(parsed.prep_time_minutes) ? Math.min(1440, Math.max(0, parsed.prep_time_minutes!)) : null,
+    cook_time_minutes: Number.isFinite(parsed.cook_time_minutes) ? Math.min(1440, Math.max(0, parsed.cook_time_minutes!)) : null,
+    servings: Number.isFinite(parsed.servings) && parsed.servings! > 0 ? Math.round(Math.min(100, parsed.servings!)) : 4,
     difficulty: ["easy", "medium", "hard"].includes(parsed.difficulty || "") ? parsed.difficulty! : "medium",
-    cuisine: parsed.cuisine || null,
-    tags: parsed.tags || "",
-    notes: parsed.notes || null,
-    calories: typeof parsed.calories === "number" ? parsed.calories : null,
-    protein_g: typeof parsed.protein_g === "number" ? parsed.protein_g : null,
-    carbs_g: typeof parsed.carbs_g === "number" ? parsed.carbs_g : null,
-    fat_g: typeof parsed.fat_g === "number" ? parsed.fat_g : null,
-    fiber_g: typeof parsed.fiber_g === "number" ? parsed.fiber_g : null,
-    kid_friendly_level: Math.min(10, Math.max(1, typeof parsed.kid_friendly_level === "number" ? parsed.kid_friendly_level : 5)),
+    cuisine: sanitizeStr(parsed.cuisine) || null,
+    tags: sanitizeStr(parsed.tags),
+    notes: sanitizeStr(parsed.notes) || null,
+    calories: Number.isFinite(parsed.calories) ? Math.max(0, parsed.calories!) : null,
+    protein_g: Number.isFinite(parsed.protein_g) ? Math.max(0, parsed.protein_g!) : null,
+    carbs_g: Number.isFinite(parsed.carbs_g) ? Math.max(0, parsed.carbs_g!) : null,
+    fat_g: Number.isFinite(parsed.fat_g) ? Math.max(0, parsed.fat_g!) : null,
+    fiber_g: Number.isFinite(parsed.fiber_g) ? Math.max(0, parsed.fiber_g!) : null,
+    kid_friendly_level: Math.min(10, Math.max(1, Number.isFinite(parsed.kid_friendly_level) ? parsed.kid_friendly_level! : 5)),
     makes_leftovers: typeof parsed.makes_leftovers === "boolean" ? parsed.makes_leftovers : true,
-    leftover_days: typeof parsed.leftover_days === "number" ? parsed.leftover_days : null,
+    leftover_days: Number.isFinite(parsed.leftover_days) ? parsed.leftover_days! : null,
     source_url: parsed.source_url || null,
   };
 }
@@ -72,6 +79,11 @@ Deno.serve(async (req: Request) => {
   // CORS preflight
   const preflight = handleCorsPrelight(req);
   if (preflight) return preflight;
+
+  // Method validation
+  if (req.method !== 'POST') {
+    return errorResponse('Method not allowed', corsHeaders, 405);
+  }
 
   // CSRF protection
   if (!requireCsrfHeader(req)) {
@@ -93,18 +105,23 @@ Deno.serve(async (req: Request) => {
     return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
   }
 
-  // Check Content-Length before parsing to prevent memory exhaustion
-  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+  // Read body as text first to check actual size (Content-Length can be spoofed)
   const MAX_BODY_SIZE = 100000; // 100KB limit
-  if (contentLength > MAX_BODY_SIZE) {
-    return new Response(
-      JSON.stringify({ error: 'Request body too large' }),
-      { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
 
   try {
-    const body = await req.json();
+    const bodyText = await req.text();
+    if (bodyText.length > MAX_BODY_SIZE) {
+      return errorResponse('Request body too large', corsHeaders, 413);
+    }
+    if (!bodyText) {
+      return errorResponse('Request body is empty', corsHeaders, 400);
+    }
+    let body: Record<string, unknown>;
+    try {
+      body = JSON.parse(bodyText);
+    } catch {
+      return errorResponse('Invalid JSON in request body', corsHeaders, 400);
+    }
     const recipeText = body.recipe_text;
     const sourceUrl = body.source_url || null;
 

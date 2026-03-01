@@ -15,6 +15,8 @@ import {
   logError,
 } from "../_shared/cors.ts";
 
+const MAX_HTML_SIZE = 5_000_000;
+
 interface ParsedRecipe {
   name: string;
   meal_type: string;
@@ -55,18 +57,40 @@ async function fetchPage(url: string): Promise<string> {
       if (!isPublicUrl(redirectUrl)) {
         throw new Error('Redirect to non-public URL blocked');
       }
-      const redirectResponse = await fetch(redirectUrl, {
-        signal: controller.signal,
-        redirect: 'follow',
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-      });
-      if (!redirectResponse.ok) {
-        throw new Error(`HTTP error ${redirectResponse.status} after redirect`);
+      let currentUrl = redirectUrl;
+      let hops = 0;
+      const MAX_REDIRECTS = 5;
+      let finalResponse: Response | null = null;
+
+      while (hops < MAX_REDIRECTS) {
+        const hopResponse = await fetch(currentUrl, {
+          signal: controller.signal,
+          redirect: 'manual',
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          },
+        });
+        if (hopResponse.status >= 300 && hopResponse.status < 400) {
+          const loc = hopResponse.headers.get('location');
+          if (!loc) throw new Error('Redirect with no location');
+          currentUrl = new URL(loc, currentUrl).href;
+          if (!isPublicUrl(currentUrl)) throw new Error('Redirect to non-public URL blocked');
+          hops++;
+          continue;
+        }
+        finalResponse = hopResponse;
+        break;
       }
-      return await redirectResponse.text();
+      if (!finalResponse) throw new Error('Too many redirects');
+      if (!finalResponse.ok) throw new Error(`HTTP error ${finalResponse.status} after redirect`);
+      const responseSize = parseInt(finalResponse.headers.get('content-length') || '0', 10);
+      if (responseSize > MAX_HTML_SIZE) throw new Error('Response too large');
+      const contentType = finalResponse.headers.get('content-type') || '';
+      if (!contentType.includes('text/html') && !contentType.includes('application/xhtml') && !contentType.includes('text/plain')) {
+        throw new Error('URL does not point to an HTML page');
+      }
+      return await finalResponse.text();
     }
 
     if (!response.ok) {
@@ -78,6 +102,13 @@ async function fetchPage(url: string): Promise<string> {
         throw new Error(`Recipe site is temporarily unavailable (${response.status})`);
       }
       throw new Error(`HTTP error ${response.status}`);
+    }
+
+    const responseSize = parseInt(response.headers.get('content-length') || '0', 10);
+    if (responseSize > MAX_HTML_SIZE) throw new Error('Response too large');
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html') && !contentType.includes('application/xhtml') && !contentType.includes('text/plain')) {
+      throw new Error('URL does not point to an HTML page');
     }
 
     return await response.text();
@@ -130,12 +161,14 @@ function findRecipeInJsonLd(html: string): any | null {
 }
 
 function extractImageUrl(html: string): string | null {
-  // Try og:image first
-  const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+  // Try og:image (either attribute order)
+  const ogMatch = html.match(/<meta\s(?=[^>]*property=["']og:image["'])(?=[^>]*content=["']([^"']+)["'])[^>]*>/i)
+    || html.match(/<meta\s(?=[^>]*content=["']([^"']+)["'])(?=[^>]*property=["']og:image["'])[^>]*>/i);
   if (ogMatch) return ogMatch[1];
 
-  // Try twitter:image
-  const twitterMatch = html.match(/<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
+  // Try twitter:image (either attribute order)
+  const twitterMatch = html.match(/<meta\s(?=[^>]*name=["']twitter:image["'])(?=[^>]*content=["']([^"']+)["'])[^>]*>/i)
+    || html.match(/<meta\s(?=[^>]*content=["']([^"']+)["'])(?=[^>]*name=["']twitter:image["'])[^>]*>/i);
   if (twitterMatch) return twitterMatch[1];
 
   return null;
@@ -143,13 +176,14 @@ function extractImageUrl(html: string): string | null {
 
 function parseDuration(duration: string | undefined): number | null {
   if (!duration) return null;
-  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
-  if (match) {
-    const hours = parseInt(match[1] || "0", 10);
-    const minutes = parseInt(match[2] || "0", 10);
-    return hours * 60 + minutes;
-  }
-  return null;
+  const match = duration.match(/P(?:(\d+)D)?T?(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?/i);
+  if (!match) return null;
+  const days = parseFloat(match[1] || "0");
+  const hours = parseFloat(match[2] || "0");
+  const minutes = parseFloat(match[3] || "0");
+  const seconds = parseFloat(match[4] || "0");
+  const total = days * 1440 + hours * 60 + minutes + seconds / 60;
+  return total > 0 ? Math.round(total) : null;
 }
 
 // deno-lint-ignore no-explicit-any
@@ -170,14 +204,16 @@ function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): Parsed
         // deno-lint-ignore no-explicit-any
         .map((step: any, i: number) => {
           if (typeof step === "string") return `${i + 1}. ${step}`;
-          if (step.text) return `${i + 1}. ${step.text}`;
+          // HowToSection with sub-steps
           if (step.itemListElement && Array.isArray(step.itemListElement)) {
-            // deno-lint-ignore no-explicit-any
-            return step.itemListElement.map((s: any, j: number) => `${i + 1}.${j + 1}. ${s.text || ""}`).join("\n");
+            const sectionName = step.name && step["@type"] === "HowToSection" ? `${step.name}:\n` : "";
+            return sectionName + step.itemListElement.map((s: any, j: number) => `${i + 1}.${j + 1}. ${s.text || ""}`).join("\n");
           }
+          if (step.text) return `${i + 1}. ${step.text}`;
           if (step.itemListElement && typeof step.itemListElement === 'object') {
             return `${i + 1}. ${step.itemListElement.text || step.name || ""}`;
           }
+          if (step.name) return `${i + 1}. ${step.name}`;
           return "";
         })
         .filter(Boolean)
@@ -192,7 +228,10 @@ function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): Parsed
   if (jsonLd.recipeYield) {
     const yieldStr = Array.isArray(jsonLd.recipeYield) ? jsonLd.recipeYield[0] : jsonLd.recipeYield;
     const match = String(yieldStr).match(/\d+/);
-    if (match) servings = parseInt(match[0], 10);
+    if (match) {
+      const parsed = parseInt(match[0], 10);
+      if (parsed > 0) servings = parsed;
+    }
   }
 
   // Parse tags
@@ -202,7 +241,14 @@ function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): Parsed
     tags.push(...cats);
   }
   if (jsonLd.keywords) {
-    const kw = typeof jsonLd.keywords === "string" ? jsonLd.keywords.split(",").map((k: string) => k.trim()) : jsonLd.keywords;
+    let kw: string[];
+    if (typeof jsonLd.keywords === "string") {
+      kw = jsonLd.keywords.split(",").map((k: string) => k.trim());
+    } else if (Array.isArray(jsonLd.keywords)) {
+      kw = jsonLd.keywords.map(String);
+    } else {
+      kw = [String(jsonLd.keywords)];
+    }
     tags.push(...kw);
   }
 
@@ -226,14 +272,21 @@ function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): Parsed
   let finalImageUrl = imageUrl;
   if (!finalImageUrl && jsonLd.image) {
     if (typeof jsonLd.image === "string") finalImageUrl = jsonLd.image;
-    else if (Array.isArray(jsonLd.image)) finalImageUrl = jsonLd.image[0];
+    else if (Array.isArray(jsonLd.image)) {
+      const firstImg = jsonLd.image[0];
+      if (typeof firstImg === "string") finalImageUrl = firstImg;
+      else if (firstImg?.url) finalImageUrl = firstImg.url;
+    }
     else if (jsonLd.image.url) finalImageUrl = jsonLd.image.url;
   }
 
   // Extract top 3 reviews from JSON-LD
   let topComments: string | null = null;
-  if (jsonLd.review && Array.isArray(jsonLd.review)) {
-    const reviews = jsonLd.review
+  const reviewArray = jsonLd.review
+    ? (Array.isArray(jsonLd.review) ? jsonLd.review : [jsonLd.review])
+    : [];
+  if (reviewArray.length > 0) {
+    const reviews = reviewArray
       // deno-lint-ignore no-explicit-any
       .filter((r: any) => r.reviewBody)
       // deno-lint-ignore no-explicit-any
@@ -254,7 +307,7 @@ function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): Parsed
   }
 
   return {
-    name: jsonLd.name || "Untitled Recipe",
+    name: typeof jsonLd.name === 'string' ? jsonLd.name : (Array.isArray(jsonLd.name) ? String(jsonLd.name[0]) : "Untitled Recipe"),
     meal_type: mealType,
     ingredients,
     instructions,
@@ -262,9 +315,11 @@ function formatRecipe(jsonLd: any, url: string, imageUrl: string | null): Parsed
     cook_time_minutes: cookTime,
     servings,
     difficulty,
-    cuisine: jsonLd.recipeCuisine || null,
-    tags: tags.slice(0, 10).join(", "),
-    notes: jsonLd.description || null,
+    cuisine: Array.isArray(jsonLd.recipeCuisine)
+      ? jsonLd.recipeCuisine.join(", ")
+      : (typeof jsonLd.recipeCuisine === 'string' ? jsonLd.recipeCuisine : null),
+    tags: tags.filter(Boolean).slice(0, 10).join(", "),
+    notes: typeof jsonLd.description === 'string' ? jsonLd.description : null,
     source_url: url,
     image_url: finalImageUrl,
     top_comments: topComments,
@@ -278,6 +333,11 @@ Deno.serve(async (req: Request) => {
   // CORS preflight
   const preflight = handleCorsPrelight(req);
   if (preflight) return preflight;
+
+  // Method validation
+  if (req.method !== 'POST') {
+    return errorResponse('Method not allowed', corsHeaders, 405);
+  }
 
   // CSRF protection
   if (!requireCsrfHeader(req)) {
@@ -299,15 +359,26 @@ Deno.serve(async (req: Request) => {
     return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
   }
 
-  // Check Content-Length before parsing to prevent memory exhaustion
-  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
   const MAX_BODY_SIZE = 100_000; // 100KB limit
-  if (contentLength > MAX_BODY_SIZE) {
+
+  // Read body with size limit
+  let bodyText: string;
+  try {
+    bodyText = await req.text();
+  } catch {
+    return errorResponse('Failed to read request body', corsHeaders, 400);
+  }
+  if (bodyText.length > MAX_BODY_SIZE) {
     return errorResponse('Request body too large', corsHeaders, 413);
+  }
+  let body;
+  try {
+    body = JSON.parse(bodyText);
+  } catch {
+    return errorResponse('Invalid JSON in request body', corsHeaders, 400);
   }
 
   try {
-    const body = await req.json();
     const url = body.url;
 
     if (!url || !isValidUrl(url) || url.length > MAX_URL_LENGTH) {

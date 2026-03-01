@@ -69,11 +69,12 @@ async function fetchPage(url: string): Promise<FetchResult> {
 }
 
 async function directFetch(url: string): Promise<string> {
+  const MAX_HTML_SIZE = 5_000_000;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       signal: controller.signal,
       redirect: 'manual',
       headers: {
@@ -83,33 +84,52 @@ async function directFetch(url: string): Promise<string> {
       },
     });
 
-    // Handle redirects safely - validate redirect target against SSRF
-    if (response.status >= 300 && response.status < 400) {
+    // Handle redirects safely - validate each hop against SSRF
+    let hops = 0;
+    const MAX_REDIRECTS = 5;
+    while (response.status >= 300 && response.status < 400 && hops < MAX_REDIRECTS) {
       const location = response.headers.get('location');
       if (!location) throw new Error('Redirect with no location');
       const redirectUrl = new URL(location, url).href;
       if (!isPublicUrl(redirectUrl)) {
         throw new Error('Redirect to non-public URL blocked');
       }
-      const redirectResponse = await fetch(redirectUrl, {
+      response = await fetch(redirectUrl, {
         signal: controller.signal,
-        redirect: 'follow',
+        redirect: 'manual',
         headers: {
           "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
       });
-      if (!redirectResponse.ok) {
-        throw new Error(`HTTP ${redirectResponse.status} after redirect`);
-      }
-      return await redirectResponse.text();
+      hops++;
+    }
+    if (response.status >= 300 && response.status < 400) {
+      throw new Error('Too many redirects');
     }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    return await response.text();
+    // Validate content-type
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/') && !contentType.includes('application/xhtml') && !contentType.includes('application/xml')) {
+      throw new Error(`Unexpected content type: ${contentType}`);
+    }
+
+    // Check response size before reading body
+    const clHeader = response.headers.get('content-length');
+    if (clHeader && parseInt(clHeader, 10) > MAX_HTML_SIZE) {
+      throw new Error('Response too large');
+    }
+
+    const text = await response.text();
+    if (text.length > MAX_HTML_SIZE) {
+      throw new Error('Response too large');
+    }
+
+    return text;
   } finally {
     clearTimeout(timeout);
   }
@@ -145,10 +165,11 @@ async function jinaReaderFetch(url: string): Promise<string> {
 }
 
 function extractImageUrl(html: string): string | null {
-  const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+  // Use lookahead patterns to handle attributes in any order
+  const ogMatch = html.match(/<meta(?=[^>]*property=["']og:image["'])(?=[^>]*content=["']([^"']+)["'])[^>]*>/i);
   if (ogMatch) return ogMatch[1];
 
-  const twitterMatch = html.match(/<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
+  const twitterMatch = html.match(/<meta(?=[^>]*name=["']twitter:image["'])(?=[^>]*content=["']([^"']+)["'])[^>]*>/i);
   if (twitterMatch) return twitterMatch[1];
 
   return null;
@@ -159,7 +180,6 @@ function extractMainContent(html: string): string {
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
     .replace(/<nav[\s\S]*?<\/nav>/gi, "")
-    .replace(/<header[\s\S]*?<\/header>/gi, "")
     .replace(/<footer[\s\S]*?<\/footer>/gi, "")
     .replace(/<aside[\s\S]*?<\/aside>/gi, "")
     .replace(/<!--[\s\S]*?-->/g, "");
@@ -184,6 +204,8 @@ function extractMainContent(html: string): string {
     .replace(/<\/li>/gi, "\n")
     .replace(/<\/h[1-6]>/gi, "\n\n")
     .replace(/<[^>]+>/g, " ")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)))
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -230,15 +252,18 @@ function extractJsonLd(html: string): any | null {
   while ((match = regex.exec(html)) !== null) {
     try {
       const data = JSON.parse(match[1]);
-      if (data["@type"] === "Recipe" || (Array.isArray(data["@type"]) && data["@type"].includes("Recipe"))) {
-        return data;
-      }
-      if (data["@graph"]) {
-        // deno-lint-ignore no-explicit-any
-        const recipe = data["@graph"].find((item: any) =>
-          item["@type"] === "Recipe" || (Array.isArray(item["@type"]) && item["@type"].includes("Recipe"))
-        );
-        if (recipe) return recipe;
+      const items = Array.isArray(data) ? data : [data];
+      for (const item of items) {
+        if (item["@type"] === "Recipe" || (Array.isArray(item["@type"]) && item["@type"].includes("Recipe"))) {
+          return item;
+        }
+        if (item["@graph"]) {
+          // deno-lint-ignore no-explicit-any
+          const recipe = item["@graph"].find((g: any) =>
+            g["@type"] === "Recipe" || (Array.isArray(g["@type"]) && g["@type"].includes("Recipe"))
+          );
+          if (recipe) return recipe;
+        }
       }
     } catch {
       continue;
@@ -251,7 +276,7 @@ function extractJsonLd(html: string): any | null {
 function sanitizeStr(s: string | undefined | null): string {
   if (!s) return "";
   // deno-lint-ignore no-control-regex
-  return s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+  return s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 }
 
 function validateRecipe(parsed: Partial<ParsedRecipe>, url: string, imageUrl: string | null): ParsedRecipe {
@@ -260,21 +285,30 @@ function validateRecipe(parsed: Partial<ParsedRecipe>, url: string, imageUrl: st
     meal_type: ["breakfast", "lunch", "dinner", "snack"].includes(parsed.meal_type || "") ? parsed.meal_type! : "dinner",
     ingredients: sanitizeStr(parsed.ingredients),
     instructions: sanitizeStr(parsed.instructions),
-    prep_time_minutes: typeof parsed.prep_time_minutes === "number" ? parsed.prep_time_minutes : null,
-    cook_time_minutes: typeof parsed.cook_time_minutes === "number" ? parsed.cook_time_minutes : null,
-    servings: typeof parsed.servings === "number" && parsed.servings > 0 ? parsed.servings : 4,
+    prep_time_minutes: Number.isFinite(parsed.prep_time_minutes) && parsed.prep_time_minutes! >= 0
+      ? Math.min(Math.round(parsed.prep_time_minutes!), 1440) : null,
+    cook_time_minutes: Number.isFinite(parsed.cook_time_minutes) && parsed.cook_time_minutes! >= 0
+      ? Math.min(Math.round(parsed.cook_time_minutes!), 1440) : null,
+    servings: Number.isFinite(parsed.servings) && parsed.servings! > 0
+      ? Math.min(Math.round(parsed.servings!), 100) : 4,
     difficulty: ["easy", "medium", "hard"].includes(parsed.difficulty || "") ? parsed.difficulty! : "medium",
     cuisine: sanitizeStr(parsed.cuisine) || null,
     tags: sanitizeStr(parsed.tags),
     notes: sanitizeStr(parsed.notes) || null,
-    calories: typeof parsed.calories === "number" ? parsed.calories : null,
-    protein_g: typeof parsed.protein_g === "number" ? parsed.protein_g : null,
-    carbs_g: typeof parsed.carbs_g === "number" ? parsed.carbs_g : null,
-    fat_g: typeof parsed.fat_g === "number" ? parsed.fat_g : null,
-    fiber_g: typeof parsed.fiber_g === "number" ? parsed.fiber_g : null,
-    kid_friendly_level: Math.min(10, Math.max(1, typeof parsed.kid_friendly_level === "number" ? parsed.kid_friendly_level : 5)),
+    calories: Number.isFinite(parsed.calories) && parsed.calories! >= 0
+      ? Math.round(parsed.calories!) : null,
+    protein_g: Number.isFinite(parsed.protein_g) && parsed.protein_g! >= 0
+      ? Math.round(parsed.protein_g! * 10) / 10 : null,
+    carbs_g: Number.isFinite(parsed.carbs_g) && parsed.carbs_g! >= 0
+      ? Math.round(parsed.carbs_g! * 10) / 10 : null,
+    fat_g: Number.isFinite(parsed.fat_g) && parsed.fat_g! >= 0
+      ? Math.round(parsed.fat_g! * 10) / 10 : null,
+    fiber_g: Number.isFinite(parsed.fiber_g) && parsed.fiber_g! >= 0
+      ? Math.round(parsed.fiber_g! * 10) / 10 : null,
+    kid_friendly_level: Math.min(10, Math.max(1, Number.isFinite(parsed.kid_friendly_level) ? Math.round(parsed.kid_friendly_level!) : 5)),
     makes_leftovers: typeof parsed.makes_leftovers === "boolean" ? parsed.makes_leftovers : true,
-    leftover_days: typeof parsed.leftover_days === "number" ? parsed.leftover_days : null,
+    leftover_days: Number.isFinite(parsed.leftover_days) && parsed.leftover_days! >= 0
+      ? Math.round(parsed.leftover_days!) : null,
     source_url: url,
     image_url: imageUrl || parsed.image_url || null,
     top_comments: Array.isArray(parsed.top_comments)
@@ -291,6 +325,10 @@ Deno.serve(async (req: Request) => {
 
   const preflight = handleCorsPrelight(req);
   if (preflight) return preflight;
+
+  if (req.method !== 'POST') {
+    return errorResponse('Method not allowed', corsHeaders, 405);
+  }
 
   if (!requireCsrfHeader(req)) {
     return new Response(
@@ -309,18 +347,25 @@ Deno.serve(async (req: Request) => {
     return rateLimitExceededResponse(corsHeaders, rateLimit.resetIn);
   }
 
-  // Check Content-Length before parsing to prevent memory exhaustion
-  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+  // Read body as text first to enforce size limit (Content-Length can be spoofed)
   const MAX_BODY_SIZE = 100_000; // 100KB limit
-  if (contentLength > MAX_BODY_SIZE) {
-    return errorResponse('Request body too large', corsHeaders, 413);
-  }
 
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    if (rawBody.length > MAX_BODY_SIZE) {
+      return errorResponse('Request body too large', corsHeaders, 413);
+    }
+
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return errorResponse('Invalid JSON', corsHeaders, 400);
+    }
+
     const url = body.url;
 
-    if (!url || !isValidUrl(url) || url.length > MAX_URL_LENGTH) {
+    if (!url || typeof url !== 'string' || !isValidUrl(url) || url.length > MAX_URL_LENGTH) {
       return errorResponse("Valid URL is required", corsHeaders, 400);
     }
 
@@ -354,7 +399,8 @@ Deno.serve(async (req: Request) => {
       const mainContent = extractMainContent(fetchResult.html);
 
       if (jsonLd) {
-        context = `STRUCTURED DATA:\n${JSON.stringify(jsonLd, null, 2)}\n\n`;
+        const jsonLdStr = JSON.stringify(jsonLd, null, 2).substring(0, 5000);
+        context = `STRUCTURED DATA:\n${jsonLdStr}\n\n`;
       }
       context += `PAGE CONTENT:\n${mainContent}`;
 

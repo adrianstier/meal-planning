@@ -65,7 +65,11 @@ export function isValidUrl(url: string): boolean {
 
 export function sanitizeText(text: string, maxLength: number): string {
   if (!text) return '';
-  return text.trim().slice(0, maxLength);
+  return text
+    .trim()
+    .replace(/<[^>]*>/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .slice(0, maxLength);
 }
 
 // JWT validation
@@ -81,7 +85,7 @@ export async function validateJWT(req: Request): Promise<AuthResult> {
     return { authenticated: false, error: 'Missing authorization header' };
   }
 
-  const token = authHeader.replace('Bearer ', '');
+  const token = authHeader.replace(/^bearer\s+/i, '').trim();
   if (!token) {
     return { authenticated: false, error: 'Invalid authorization format' };
   }
@@ -220,6 +224,8 @@ export function isPublicUrl(url: string): boolean {
       /^\d+$/,         // Pure numeric hostnames (decimal IP notation)
       /^\[/,           // IPv6 literal in brackets
       /^0\.0\.0\.0$/,  // Wildcard address
+      /^0[0-7]*\./,    // Octal IP notation (e.g., 0177.0.0.1)
+      /^0x[0-9a-f]/i,  // Hex IP notation (e.g., 0x7f000001)
     ];
     return !blockedPatterns.some(pattern => pattern.test(hostname));
   } catch {

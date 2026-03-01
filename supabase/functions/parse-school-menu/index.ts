@@ -75,6 +75,11 @@ async function fetchPage(url: string): Promise<string> {
     }
 
     return await response.text();
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timed out fetching URL');
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -143,6 +148,11 @@ async function callClaude(systemPrompt: string, userPrompt: string, apiKey: stri
 
     const data = await response.json();
     return data.content?.[0]?.text || "";
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('AI request timed out. Please try again.');
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -209,6 +219,11 @@ async function callClaudeWithImage(
 
     const data = await response.json();
     return data.content?.[0]?.text || "";
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('AI request timed out. Please try again.');
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }

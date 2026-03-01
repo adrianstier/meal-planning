@@ -11,7 +11,7 @@ const ListsPage: React.FC = () => {
   const [newQuantity, setNewQuantity] = useState('');
 
   // Shopping hooks
-  const { data: shoppingItems, isLoading } = useShoppingItems();
+  const { data: shoppingItems, isLoading, isError } = useShoppingItems();
   const addShoppingItem = useAddShoppingItem();
   const toggleItem = useToggleShoppingItem();
   const deleteItem = useDeleteShoppingItem();
@@ -169,6 +169,11 @@ const ListsPage: React.FC = () => {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">
           Loading shopping list...
+        </div>
+      ) : isError ? (
+        <div className="text-center py-12 text-destructive">
+          <p className="text-lg font-medium mb-2">Failed to load shopping list</p>
+          <p className="text-sm">Please try refreshing the page. If the problem persists, check your internet connection.</p>
         </div>
       ) : activeItems.length === 0 && purchasedItems.length === 0 ? (
         <Card>

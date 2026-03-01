@@ -25,7 +25,7 @@ const SchoolMenuPage: React.FC = () => {
 
   const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error' | 'info' | 'warning'; message: string; description?: string }>({ show: false, type: 'info', message: '' });
 
-  const { data: menuItems, isLoading, refetch } = useSchoolMenu();
+  const { data: menuItems, isLoading, isError, refetch } = useSchoolMenu();
   const deleteMenuItem = useDeleteSchoolMenuItem();
   const parsePhoto = useParseMenuPhoto();
   const addFeedback = useAddMenuFeedback();
@@ -221,6 +221,11 @@ const SchoolMenuPage: React.FC = () => {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">
           Loading menu items...
+        </div>
+      ) : isError ? (
+        <div className="text-center py-12 text-destructive">
+          <p className="text-lg font-medium mb-2">Failed to load menu items</p>
+          <p className="text-sm">Please try refreshing the page. If the problem persists, check your internet connection.</p>
         </div>
       ) : sortedDates.length === 0 ? (
         <Card>

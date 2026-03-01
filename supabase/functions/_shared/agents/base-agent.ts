@@ -157,6 +157,11 @@ export abstract class BaseAgent {
           cost: inputCost + outputCost,
         },
       }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('AI request timed out. Please try again.')
+      }
+      throw error
     } finally {
       clearTimeout(timeoutId)
     }
@@ -264,6 +269,11 @@ export abstract class BaseAgent {
           cost: inputCost + outputCost,
         },
       }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('AI request timed out. Please try again.')
+      }
+      throw error
     } finally {
       clearTimeout(timeoutId)
     }

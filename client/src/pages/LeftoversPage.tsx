@@ -7,7 +7,7 @@ import { useLeftovers, useConsumeLeftover, useLeftoverSuggestions } from '../hoo
 import { cn } from '../lib/utils';
 
 const LeftoversPage: React.FC = () => {
-  const { data: leftovers, isLoading } = useLeftovers();
+  const { data: leftovers, isLoading, isError } = useLeftovers();
   const { data: suggestions } = useLeftoverSuggestions();
   const consumeLeftover = useConsumeLeftover();
   const [toast, setToast] = useState<{ show: boolean; type: 'success' | 'error' | 'info' | 'warning'; message: string; description?: string }>({ show: false, type: 'info', message: '' });
@@ -84,6 +84,11 @@ const LeftoversPage: React.FC = () => {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">
           Loading leftovers...
+        </div>
+      ) : isError ? (
+        <div className="text-center py-12 text-destructive">
+          <p className="text-lg font-medium mb-2">Failed to load leftovers</p>
+          <p className="text-sm">Please try refreshing the page. If the problem persists, check your internet connection.</p>
         </div>
       ) : !leftovers || leftovers.length === 0 ? (
         <Card>

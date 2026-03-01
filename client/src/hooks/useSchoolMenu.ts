@@ -9,6 +9,7 @@ export const useSchoolMenu = () => {
       const response = await schoolMenuApi.getAll();
       return response.data;
     },
+    retry: 1,
   });
 };
 
@@ -20,6 +21,7 @@ export const useSchoolMenuByDate = (date: string) => {
       return response.data;
     },
     enabled: !!date,
+    retry: 1,
   });
 };
 
@@ -31,6 +33,7 @@ export const useSchoolMenuRange = (startDate: string, endDate: string) => {
       return response.data;
     },
     enabled: !!startDate && !!endDate,
+    retry: 1,
   });
 };
 
@@ -87,6 +90,7 @@ export const useLunchAlternatives = (date: string) => {
       return response.data;
     },
     enabled: !!date,
+    retry: 1,
   });
 };
 
@@ -110,5 +114,6 @@ export const useSchoolMenuCalendar = (startDate?: string, endDate?: string) => {
       return response.data.calendar_data;
     },
     enabled: !!startDate && !!endDate,
+    retry: 1,
   });
 };

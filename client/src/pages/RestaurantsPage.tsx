@@ -70,7 +70,7 @@ const RestaurantsPage: React.FC = () => {
     total: 0,
   });
 
-  const { data: restaurants, isLoading } = useRestaurants(filters);
+  const { data: restaurants, isLoading, isError } = useRestaurants(filters);
   const createRestaurant = useCreateRestaurant();
   const updateRestaurant = useUpdateRestaurant();
   const deleteRestaurant = useDeleteRestaurant();
@@ -390,6 +390,11 @@ const RestaurantsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {isLoading ? (
             <div className="col-span-full text-center py-8 text-muted-foreground">Loading...</div>
+          ) : isError ? (
+            <div className="col-span-full text-center py-8 text-destructive">
+              <p className="text-lg font-medium mb-2">Failed to load restaurants</p>
+              <p className="text-sm">Please try refreshing the page. If the problem persists, check your internet connection.</p>
+            </div>
           ) : filteredRestaurants.length === 0 ? (
             <div className="col-span-full text-center py-8">
               <Utensils className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />

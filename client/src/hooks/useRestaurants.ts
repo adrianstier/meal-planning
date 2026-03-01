@@ -9,6 +9,7 @@ export const useRestaurants = (filters?: RestaurantFilters) => {
       const response = await restaurantsApi.getAll(filters);
       return response.data;
     },
+    retry: 1,
   });
 };
 
@@ -20,6 +21,7 @@ export const useRestaurant = (id: number) => {
       return response.data;
     },
     enabled: !!id,
+    retry: 1,
   });
 };
 

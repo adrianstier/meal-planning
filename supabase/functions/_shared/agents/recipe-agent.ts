@@ -393,6 +393,12 @@ export class RecipeAgent extends BaseAgent {
         ],
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          message: 'Image processing timed out. Please try again.',
+        }
+      }
       console.error('[RecipeAgent] Image processing error:', error)
       return {
         success: false,

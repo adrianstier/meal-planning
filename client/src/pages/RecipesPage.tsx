@@ -125,7 +125,7 @@ const RecipesPage: React.FC = () => {
     fiber_g: undefined,
   });
 
-  const { data: meals, isLoading } = useMeals();
+  const { data: meals, isLoading, isError } = useMeals();
   const createMeal = useCreateMeal();
   const updateMeal = useUpdateMeal();
   const toggleFavorite = useToggleFavorite();
@@ -896,6 +896,11 @@ const RecipesPage: React.FC = () => {
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">
                 Loading recipes...
+              </div>
+            ) : isError ? (
+              <div className="text-center py-12 text-destructive">
+                <p className="text-lg font-medium mb-2">Failed to load recipes</p>
+                <p className="text-sm">Please try refreshing the page. If the problem persists, check your internet connection.</p>
               </div>
             ) : mealsByType[type].length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">

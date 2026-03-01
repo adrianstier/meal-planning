@@ -16,6 +16,7 @@ export const useMeals = () => {
     },
     staleTime: STALE_TIME,
     gcTime: CACHE_TIME, // gcTime replaces cacheTime in TanStack Query v5
+    retry: 1, // Fail fast on auth/network errors instead of retrying 3 times
   });
 };
 

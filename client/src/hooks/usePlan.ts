@@ -27,6 +27,7 @@ export const useWeekPlan = (startDate: string) => {
       const response = await planApi.getWeek(startDate);
       return response.data;
     },
+    retry: 1,
   });
 };
 

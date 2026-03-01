@@ -89,11 +89,20 @@ async function callAgent(
   )
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Agent request failed')
+    let errorData;
+    try {
+      errorData = await response.json()
+    } catch {
+      throw new Error('Agent request failed')
+    }
+    throw new Error(errorData?.error || 'Agent request failed')
   }
 
-  return response.json()
+  try {
+    return await response.json()
+  } catch {
+    throw new Error('Invalid response from agent')
+  }
 }
 
 /**

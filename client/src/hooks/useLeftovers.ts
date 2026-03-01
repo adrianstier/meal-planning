@@ -8,6 +8,7 @@ export const useLeftovers = () => {
       const response = await leftoversApi.getActive();
       return response.data;
     },
+    retry: 1,
   });
 };
 
@@ -53,5 +54,6 @@ export const useLeftoverSuggestions = () => {
       const response = await leftoversApi.getSuggestions();
       return response.data;
     },
+    retry: 1,
   });
 };

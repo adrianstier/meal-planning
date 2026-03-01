@@ -8,6 +8,7 @@ export const useShoppingItems = () => {
       const response = await shoppingApi.getAll();
       return response.data;
     },
+    retry: 1,
   });
 };
 

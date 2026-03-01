@@ -45,7 +45,7 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
     use_leftovers: true,
   });
 
-  const { data: meals, isLoading: mealsLoading } = useMeals();
+  const { data: meals, isLoading: mealsLoading, isError: mealsError } = useMeals();
   const addPlanItem = useAddPlanItem();
   const suggestMeal = useSuggestMeal();
   const [suggestions, setSuggestions] = useState<Meal[]>([]);
@@ -213,6 +213,10 @@ const AddMealDialog: React.FC<AddMealDialogProps> = ({
             {mealsLoading ? (
               <div className="text-center py-8 text-muted-foreground">
                 Loading meals...
+              </div>
+            ) : mealsError ? (
+              <div className="text-center py-8 text-destructive">
+                Failed to load meals. Please try refreshing the page.
               </div>
             ) : displayMeals.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">

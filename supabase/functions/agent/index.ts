@@ -38,9 +38,8 @@ async function checkRateLimit(
 
     if (error) {
       console.error('[Agent] Rate limit check error:', error)
-      // On database error, fail open to avoid blocking legitimate requests
-      // but log for monitoring
-      return { allowed: true }
+      // Fail closed on database errors to prevent abuse during outages
+      return { allowed: false, retryAfter: RATE_WINDOW_SECONDS }
     }
 
     if (data === true) {
@@ -60,8 +59,8 @@ async function checkRateLimit(
     }
   } catch (err) {
     console.error('[Agent] Rate limit check exception:', err)
-    // Fail open on unexpected errors
-    return { allowed: true }
+    // Fail closed on unexpected errors to prevent abuse
+    return { allowed: false, retryAfter: RATE_WINDOW_SECONDS }
   }
 }
 
@@ -386,9 +385,6 @@ When the user wants to:
           executionTimeMs: executionTime,
           data: {
             usage: aiResponse.usage,
-            recipesLoaded: recipes?.length || 0,
-            leftoverCount: leftovers?.length || 0,
-            fallback: true,
           },
         }),
         {

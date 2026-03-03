@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 /**
@@ -110,8 +110,10 @@ export function BroadcastSyncProvider({ children }: { children: React.ReactNode 
     }
   }, []);
 
+  const value = useMemo(() => ({ broadcastInvalidation }), [broadcastInvalidation]);
+
   return (
-    <BroadcastSyncContext.Provider value={{ broadcastInvalidation }}>
+    <BroadcastSyncContext.Provider value={value}>
       {children}
     </BroadcastSyncContext.Provider>
   );

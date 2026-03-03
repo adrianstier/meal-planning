@@ -103,8 +103,13 @@ Deno.serve(async (req: Request) => {
     return rateLimitExceededResponse(corsHeaders, rateLimitResult.resetIn);
   }
 
-  // Read body as text first to check actual size (Content-Length can be spoofed)
+  // Defense-in-depth: check Content-Length header first (fast reject for honest clients),
+  // then verify actual body size after reading (catches spoofed headers)
   const MAX_BODY_SIZE = 15_000_000; // 15MB limit for image uploads
+  const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
+  if (contentLength > MAX_BODY_SIZE) {
+    return errorResponse('Request body too large', corsHeaders, 413);
+  }
 
   try {
     const bodyText = await req.text();

@@ -148,6 +148,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [fetchProfile, waitForProfile]);
 
+  // Track whether the component is mounted to prevent state updates after unmount.
+  // Used by handleSession's deferred profile fetch.
+  const mountedRef = React.useRef(true);
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // Handle session updates
   // handleSession sets auth state synchronously and defers profile fetch.
   // The profile fetch MUST run outside the onAuthStateChange callback because
@@ -177,12 +184,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Defer profile fetch to break out of the auth lock
     const authUser = newSession.user;
     setTimeout(async () => {
+      if (!mountedRef.current) return;
       try {
         const profile = await createProfileIfNeeded(authUser);
-        setUser(profile);
+        if (mountedRef.current) setUser(profile);
       } catch (err) {
         console.error('[Auth] Profile handling failed');
-        setUser(null);
+        if (mountedRef.current) setUser(null);
       }
     }, 0);
   }, [createProfileIfNeeded]);

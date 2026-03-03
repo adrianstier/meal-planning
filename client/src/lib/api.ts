@@ -889,8 +889,7 @@ export const mealsApi = {
       .limit(50);
 
     if (error) {
-      errorLogger.logApiError(error, '/meals/search', 'GET');
-      throw error;
+      throw createSanitizedError(error, '/meals/search', 'GET', 'Failed to search recipes. Please try again.');
     }
     return wrapResponse(data as Meal[]);
   },
@@ -905,8 +904,7 @@ export const mealsApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/meals/${id}/favorite`, 'POST');
-      throw error;
+      throw createSanitizedError(error, `/meals/${id}/favorite`, 'POST', 'Failed to favorite recipe. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -921,8 +919,7 @@ export const mealsApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/meals/${id}/favorite`, 'DELETE');
-      throw error;
+      throw createSanitizedError(error, `/meals/${id}/favorite`, 'DELETE', 'Failed to unfavorite recipe. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -939,8 +936,7 @@ export const mealsApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, `/meals/${id}/leftover-settings`, 'PUT');
-      throw error;
+      throw createSanitizedError(error, `/meals/${id}/leftover-settings`, 'PUT', 'Failed to update leftover settings. Please try again.');
     }
     return wrapResponse(data);
   },
@@ -1050,8 +1046,7 @@ export const planApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/plan/${id}`, 'DELETE');
-      throw error;
+      throw createSanitizedError(error, `/plan/${id}`, 'DELETE', 'Failed to remove meal from plan. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -1070,8 +1065,7 @@ export const planApi = {
       .lte('meal_date', toLocalDateString(endDate));
 
     if (error) {
-      errorLogger.logApiError(error, '/plan/clear-week', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/plan/clear-week', 'POST', 'Failed to clear week plan. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -1084,8 +1078,7 @@ export const planApi = {
     });
 
     if (error) {
-      errorLogger.logApiError(error, '/functions/suggest-meal', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/functions/suggest-meal', 'POST', 'Failed to get meal suggestion. Please try again.');
     }
     // Edge function returns { suggestions: [...] }, extract and map to Meal-like objects
     const suggestions = data?.suggestions || [];
@@ -1128,8 +1121,7 @@ export const planApi = {
     const { data: meals, error } = await query;
 
     if (error) {
-      errorLogger.logApiError(error, '/plan/generate-week', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/plan/generate-week', 'POST', 'Failed to generate week plan. Please try again.');
     }
 
     // Check for empty meals after filtering by criteria
@@ -1199,8 +1191,7 @@ export const planApi = {
       .select(); // Get returned rows to verify count
 
     if (error) {
-      errorLogger.logApiError(error, '/plan/apply-generated', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/plan/apply-generated', 'POST', 'Failed to apply generated plan. Please try again.');
     }
 
     // Verify all items were inserted
@@ -1242,16 +1233,20 @@ export const leftoversApi = {
   add: async (leftover: { meal_id: number; cooked_date?: string; servings?: number; days_good?: number; notes?: string }) => {
     const userId = await getCurrentUserId();
 
-    // Get meal name
-    const { data: meal } = await supabase
+    // Get meal name - verify meal exists and belongs to user
+    const { data: meal, error: mealError } = await supabase
       .from('meals')
       .select('name, leftover_days')
       .eq('id', leftover.meal_id)
       .eq('user_id', userId)
       .single();
 
+    if (mealError || !meal) {
+      throw createSanitizedError(mealError, '/meals', 'GET', 'Meal not found. It may have been deleted.');
+    }
+
     const cookedDate = leftover.cooked_date || getTodayString();
-    const daysGood = leftover.days_good ?? meal?.leftover_days ?? 3;
+    const daysGood = leftover.days_good ?? meal.leftover_days ?? 3;
     const expiresDate = addDays(parseISO(cookedDate), daysGood);
 
     const { data, error } = await supabase
@@ -1259,7 +1254,7 @@ export const leftoversApi = {
       .insert({
         user_id: userId,
         meal_id: leftover.meal_id,
-        meal_name: meal?.name || 'Unknown',
+        meal_name: meal.name,
         servings_remaining: leftover.servings ?? 4,
         cooked_date: cookedDate,
         expires_date: formatDate(expiresDate, 'yyyy-MM-dd'),
@@ -1269,8 +1264,7 @@ export const leftoversApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, '/leftovers', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/leftovers', 'POST', 'Failed to add leftover. Please try again.');
     }
 
     return wrapResponse({
@@ -1289,8 +1283,7 @@ export const leftoversApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/leftovers/${id}/consume`, 'POST');
-      throw error;
+      throw createSanitizedError(error, `/leftovers/${id}/consume`, 'POST', 'Failed to mark leftover as consumed. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -1307,8 +1300,7 @@ export const leftoversApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, `/leftovers/${id}/servings`, 'PUT');
-      throw error;
+      throw createSanitizedError(error, `/leftovers/${id}/servings`, 'PUT', 'Failed to update leftover servings. Please try again.');
     }
     return wrapResponse(data);
   },
@@ -1353,8 +1345,7 @@ export const leftoversApi = {
     });
 
     if (error) {
-      errorLogger.logApiError(error, '/functions/leftover-suggestions', 'GET');
-      throw error;
+      throw createSanitizedError(error, '/functions/leftover-suggestions', 'GET', 'Failed to get leftover suggestions. Please try again.');
     }
 
     // Map edge function response to LeftoverSuggestion format the UI expects
@@ -1396,8 +1387,7 @@ export const schoolMenuApi = {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      errorLogger.logApiError(error, '/school-menu', 'GET');
-      throw error;
+      throw createSanitizedError(error, '/school-menu', 'GET', 'Failed to load school menu. Please try again.');
     }
 
     if (options?.limit !== undefined || options?.offset !== undefined) {
@@ -1421,8 +1411,7 @@ export const schoolMenuApi = {
       .eq('menu_date', date);
 
     if (error) {
-      errorLogger.logApiError(error, `/school-menu?date=${date}`, 'GET');
-      throw error;
+      throw createSanitizedError(error, `/school-menu?date=${date}`, 'GET', 'Failed to load school menu for this date. Please try again.');
     }
     return wrapResponse(data as SchoolMenuItem[]);
   },
@@ -1440,8 +1429,7 @@ export const schoolMenuApi = {
       .limit(200);
 
     if (error) {
-      errorLogger.logApiError(error, '/school-menu/range', 'GET');
-      throw error;
+      throw createSanitizedError(error, '/school-menu/range', 'GET', 'Failed to load school menu range. Please try again.');
     }
     return wrapResponse(data as SchoolMenuItem[]);
   },
@@ -1456,8 +1444,7 @@ export const schoolMenuApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, '/school-menu', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/school-menu', 'POST', 'Failed to add school menu item. Please try again.');
     }
     return wrapResponse(data as SchoolMenuItem);
   },
@@ -1475,8 +1462,7 @@ export const schoolMenuApi = {
       .select();
 
     if (error) {
-      errorLogger.logApiError(error, '/school-menu/bulk', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/school-menu/bulk', 'POST', 'Failed to add school menu items. Please try again.');
     }
     return wrapResponse(data);
   },
@@ -1491,8 +1477,7 @@ export const schoolMenuApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/school-menu/${id}`, 'DELETE');
-      throw error;
+      throw createSanitizedError(error, `/school-menu/${id}`, 'DELETE', 'Failed to delete school menu item. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -1512,8 +1497,7 @@ export const schoolMenuApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, '/school-menu/feedback', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/school-menu/feedback', 'POST', 'Failed to save feedback. Please try again.');
     }
     return wrapResponse(data as MenuFeedback);
   },
@@ -1544,8 +1528,7 @@ export const schoolMenuApi = {
     });
 
     if (error) {
-      errorLogger.logApiError(error, `/school-menu/lunch-alternatives/${date}`, 'GET');
-      throw error;
+      throw createSanitizedError(error, `/school-menu/lunch-alternatives/${date}`, 'GET', 'Failed to get lunch alternatives. Please try again.');
     }
 
     // Transform the edge function response into the LunchAlternative type the UI expects
@@ -1598,8 +1581,7 @@ export const schoolMenuApi = {
     });
 
     if (error) {
-      errorLogger.logApiError(error, '/functions/parse-school-menu', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/functions/parse-school-menu', 'POST', 'Failed to parse school menu photo. Please try again.');
     }
 
     // Transform the Edge Function response to the format expected by the frontend
@@ -1660,8 +1642,7 @@ export const schoolMenuApi = {
     const { data, error } = await query.order('menu_date').limit(200);
 
     if (error) {
-      errorLogger.logApiError(error, '/school-menu/calendar', 'GET');
-      throw error;
+      throw createSanitizedError(error, '/school-menu/calendar', 'GET', 'Failed to load school menu calendar. Please try again.');
     }
 
     // Transform into calendar format
@@ -1693,8 +1674,7 @@ export const schoolMenuApi = {
       .lt('menu_date', toLocalDateString(cutoffDate));
 
     if (error) {
-      errorLogger.logApiError(error, '/school-menu/cleanup', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/school-menu/cleanup', 'POST', 'Failed to clean up old menu items. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -1744,8 +1724,7 @@ export const shoppingApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, '/shopping', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/shopping', 'POST', 'Failed to add shopping item. Please try again.');
     }
     return wrapResponse(data as ShoppingItem);
   },
@@ -1762,8 +1741,7 @@ export const shoppingApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, `/shopping/${id}`, 'PUT');
-      throw error;
+      throw createSanitizedError(error, `/shopping/${id}`, 'PUT', 'Failed to update shopping item. Please try again.');
     }
     return wrapResponse(data as ShoppingItem);
   },
@@ -1778,8 +1756,7 @@ export const shoppingApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/shopping/${id}`, 'DELETE');
-      throw error;
+      throw createSanitizedError(error, `/shopping/${id}`, 'DELETE', 'Failed to delete shopping item. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -1798,8 +1775,7 @@ export const shoppingApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, `/shopping/${id}/toggle`, 'POST');
-      throw error;
+      throw createSanitizedError(error, `/shopping/${id}/toggle`, 'POST', 'Failed to toggle shopping item. Please try again.');
     }
     return wrapResponse(data as ShoppingItem);
   },
@@ -1814,8 +1790,7 @@ export const shoppingApi = {
       .eq('is_purchased', true);
 
     if (error) {
-      errorLogger.logApiError(error, '/shopping/purchased', 'DELETE');
-      throw error;
+      throw createSanitizedError(error, '/shopping/purchased', 'DELETE', 'Failed to clear purchased items. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -1829,8 +1804,7 @@ export const shoppingApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, '/shopping/all', 'DELETE');
-      throw error;
+      throw createSanitizedError(error, '/shopping/all', 'DELETE', 'Failed to clear shopping list. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -1871,8 +1845,7 @@ export const shoppingApi = {
       .select();
 
     if (insertError) {
-      errorLogger.logApiError(insertError, '/shopping/generate', 'POST');
-      throw insertError;
+      throw createSanitizedError(insertError, '/shopping/generate', 'POST', 'Failed to save shopping list. Please try again.');
     }
 
     return wrapResponse(insertedItems as ShoppingItem[]);
@@ -1890,8 +1863,7 @@ export const shoppingApi = {
       .lte('meal_date', endDate);
 
     if (planError) {
-      errorLogger.logApiError(planError, '/shopping/generate', 'GET');
-      throw planError;
+      throw createSanitizedError(planError, '/shopping/generate', 'GET', 'Failed to load meal plan for shopping list. Please try again.');
     }
 
     if (!planItems || planItems.length === 0) {
@@ -1961,8 +1933,7 @@ export const shoppingApi = {
       .select();
 
     if (insertError) {
-      errorLogger.logApiError(insertError, '/shopping/generate', 'POST');
-      throw insertError;
+      throw createSanitizedError(insertError, '/shopping/generate', 'POST', 'Failed to save generated shopping list. Please try again.');
     }
 
     return wrapResponse(insertedItems as ShoppingItem[]);
@@ -2057,8 +2028,7 @@ export const historyApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/history/${id}`, 'DELETE');
-      throw error;
+      throw createSanitizedError(error, `/history/${id}`, 'DELETE', 'Failed to delete history entry. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -2075,8 +2045,7 @@ export const historyApi = {
       .limit(50);
 
     if (error) {
-      errorLogger.logApiError(error, `/history/meal/${mealId}`, 'GET');
-      throw error;
+      throw createSanitizedError(error, `/history/meal/${mealId}`, 'GET', 'Failed to load meal history. Please try again.');
     }
     return wrapResponse(data as MealHistory[]);
   },
@@ -2140,8 +2109,7 @@ export const restaurantsApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, `/restaurants/${id}`, 'GET');
-      throw error;
+      throw createSanitizedError(error, `/restaurants/${id}`, 'GET', 'Failed to load restaurant details. Please try again.');
     }
     return wrapResponse(data as Restaurant);
   },
@@ -2156,8 +2124,7 @@ export const restaurantsApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, '/restaurants', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/restaurants', 'POST', 'Failed to add restaurant. Please try again.');
     }
     return wrapResponse(data as Restaurant);
   },
@@ -2174,8 +2141,7 @@ export const restaurantsApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, `/restaurants/${id}`, 'PUT');
-      throw error;
+      throw createSanitizedError(error, `/restaurants/${id}`, 'PUT', 'Failed to update restaurant. Please try again.');
     }
     return wrapResponse(data as Restaurant);
   },
@@ -2190,8 +2156,7 @@ export const restaurantsApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/restaurants/${id}`, 'DELETE');
-      throw error;
+      throw createSanitizedError(error, `/restaurants/${id}`, 'DELETE', 'Failed to delete restaurant. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -2206,8 +2171,7 @@ export const restaurantsApi = {
     });
 
     if (error) {
-      errorLogger.logApiError(error, '/functions/suggest-restaurant', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/functions/suggest-restaurant', 'POST', 'Failed to get restaurant suggestion. Please try again.');
     }
 
     // Map AI suggestions to Restaurant-like objects
@@ -2237,8 +2201,7 @@ export const restaurantsApi = {
     const { data, error } = await invokeWithTimeout<ScrapedRestaurant>('scrape-restaurant-url', { url });
 
     if (error) {
-      errorLogger.logApiError(error, '/functions/scrape-restaurant-url', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/functions/scrape-restaurant-url', 'POST', 'Failed to scrape restaurant URL. Please try again.');
     }
 
     // Transform the scraped data into Restaurant format
@@ -2299,8 +2262,7 @@ export const bentoApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, '/bento/items', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/bento/items', 'POST', 'Failed to add bento item. Please try again.');
     }
     return wrapResponse(data as BentoItem);
   },
@@ -2317,8 +2279,7 @@ export const bentoApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, `/bento/items/${id}`, 'PUT');
-      throw error;
+      throw createSanitizedError(error, `/bento/items/${id}`, 'PUT', 'Failed to update bento item. Please try again.');
     }
     return wrapResponse(data as BentoItem);
   },
@@ -2333,8 +2294,7 @@ export const bentoApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/bento/items/${id}`, 'DELETE');
-      throw error;
+      throw createSanitizedError(error, `/bento/items/${id}`, 'DELETE', 'Failed to delete bento item. Please try again.');
     }
     return wrapResponse({ success: true });
   },
@@ -2386,8 +2346,7 @@ export const bentoApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, '/bento/plans', 'POST');
-      throw error;
+      throw createSanitizedError(error, '/bento/plans', 'POST', 'Failed to create bento plan. Please try again.');
     }
     return wrapResponse(transformBentoPlan(data));
   },
@@ -2412,8 +2371,7 @@ export const bentoApi = {
       .single();
 
     if (error) {
-      errorLogger.logApiError(error, `/bento/plans/${id}`, 'PUT');
-      throw error;
+      throw createSanitizedError(error, `/bento/plans/${id}`, 'PUT', 'Failed to update bento plan. Please try again.');
     }
     return wrapResponse(transformBentoPlan(data));
   },
@@ -2428,8 +2386,7 @@ export const bentoApi = {
       .eq('user_id', userId);
 
     if (error) {
-      errorLogger.logApiError(error, `/bento/plans/${id}`, 'DELETE');
-      throw error;
+      throw createSanitizedError(error, `/bento/plans/${id}`, 'DELETE', 'Failed to delete bento plan. Please try again.');
     }
     return wrapResponse({ success: true });
   },

@@ -238,8 +238,6 @@ const PlanPageEnhanced: React.FC = () => {
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanItem[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedCuisines, _setSelectedCuisines] = useState<string[]>([]);
-  const [generateBentos] = useState(false);
-  const [bentoChildName] = useState('');
   const [recipeBrowserOpen, setRecipeBrowserOpen] = useState(() => {
     const saved = localStorage.getItem('recipeBrowserOpen');
     return saved === null ? true : saved === 'true';
@@ -633,21 +631,17 @@ const PlanPageEnhanced: React.FC = () => {
         mealTypes: ['dinner'],
         avoidSchoolDuplicates: true,
         cuisines: selectedCuisines.length > 0 ? selectedCuisines : 'all',
-        generateBentos: generateBentos,
-        bentoChildName: bentoChildName
+        generateBentos: false,
+        bentoChildName: ''
       }) as GenerateWeekPlanResponse;
       setGeneratedPlan(result.data);
       dispatchDialog({ type: 'OPEN_GENERATE_PLAN' });
-
-      if (generateBentos && result.bentoMessage) {
-        alert(result.bentoMessage);
-      }
     } catch (error) {
       console.error('Failed to generate week plan:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate meal plan. Please try again.';
       alert(errorMessage);
     }
-  }, [currentWeekStart, selectedCuisines, generateBentos, bentoChildName, generateWeekPlan]);
+  }, [currentWeekStart, selectedCuisines, generateWeekPlan]);
 
   // Ref to hold keyboard shortcut handlers to avoid stale closures
   const keyboardHandlersRef = useRef({

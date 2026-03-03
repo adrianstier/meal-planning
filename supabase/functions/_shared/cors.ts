@@ -1,10 +1,6 @@
 // Shared utilities for Edge Functions
 
-const ALLOWED_ORIGINS = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:3002',
-  'http://localhost:5173',
+const ALLOWED_ORIGINS: string[] = [
   'https://meal-planning-virid.vercel.app',
   'https://meal-planning-adrianstiers-projects.vercel.app',
   'https://meal-planning-git-main-adrianstiers-projects.vercel.app',
@@ -12,7 +8,8 @@ const ALLOWED_ORIGINS = [
   'https://client-six-inky.vercel.app',
 ];
 
-// Also allow origins from environment variable (comma-separated)
+// Allow localhost origins only in development (via environment variable)
+// Never hardcode localhost in production-deployed code
 const envOrigins = Deno.env.get('ALLOWED_ORIGINS');
 if (envOrigins) {
   ALLOWED_ORIGINS.push(...envOrigins.split(',').map(o => o.trim()));

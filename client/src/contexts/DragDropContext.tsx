@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import type { Meal } from '../types/api';
 
 interface DraggedRecipe {
@@ -16,8 +16,10 @@ const DragDropContext = createContext<DragDropContextType | undefined>(undefined
 export function DragDropProvider({ children }: { children: React.ReactNode }) {
   const [draggedRecipe, setDraggedRecipe] = useState<DraggedRecipe | null>(null);
 
+  const value = useMemo(() => ({ draggedRecipe, setDraggedRecipe }), [draggedRecipe]);
+
   return (
-    <DragDropContext.Provider value={{ draggedRecipe, setDraggedRecipe }}>
+    <DragDropContext.Provider value={value}>
       {children}
     </DragDropContext.Provider>
   );

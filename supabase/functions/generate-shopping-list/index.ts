@@ -79,6 +79,20 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Start date and end date are required", corsHeaders, 400);
     }
 
+    // Validate date formats and range
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+      return errorResponse("Invalid date format. Use YYYY-MM-DD.", corsHeaders, 400);
+    }
+    if (startDateObj > endDateObj) {
+      return errorResponse("Start date must be before or equal to end date", corsHeaders, 400);
+    }
+    const dayRange = (endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24);
+    if (dayRange > 90) {
+      return errorResponse("Date range cannot exceed 90 days", corsHeaders, 400);
+    }
+
     log({ requestId, event: "generate_shopping_list_start", startDate, endDate });
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");

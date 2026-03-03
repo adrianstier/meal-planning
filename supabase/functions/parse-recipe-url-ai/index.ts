@@ -87,7 +87,10 @@ async function directFetch(url: string): Promise<string> {
     // Handle redirects safely - validate each hop against SSRF
     let hops = 0;
     const MAX_REDIRECTS = 5;
-    while (response.status >= 300 && response.status < 400 && hops < MAX_REDIRECTS) {
+    while (response.status >= 300 && response.status < 400) {
+      if (hops >= MAX_REDIRECTS) {
+        throw new Error('Too many redirects');
+      }
       const location = response.headers.get('location');
       if (!location) throw new Error('Redirect with no location');
       const redirectUrl = new URL(location, url).href;
@@ -103,9 +106,6 @@ async function directFetch(url: string): Promise<string> {
         },
       });
       hops++;
-    }
-    if (response.status >= 300 && response.status < 400) {
-      throw new Error('Too many redirects');
     }
 
     if (!response.ok) {

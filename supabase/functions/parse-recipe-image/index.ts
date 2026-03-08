@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
 
   // Defense-in-depth: check Content-Length header first (fast reject for honest clients),
   // then verify actual body size after reading (catches spoofed headers)
-  const MAX_BODY_SIZE = 15_000_000; // 15MB limit for image uploads
+  const MAX_BODY_SIZE = 25_000_000; // 25MB limit for dual-image uploads
   const contentLength = parseInt(req.headers.get('content-length') || '0', 10);
   if (contentLength > MAX_BODY_SIZE) {
     return errorResponse('Request body too large', corsHeaders, 413);
@@ -126,7 +126,10 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Invalid JSON in request body', corsHeaders, 400);
     }
 
-    const { image_data, image_type } = body as { image_data: unknown; image_type: unknown };
+    const { image_data, image_type, original_image_data, original_image_type } = body as {
+      image_data: unknown; image_type: unknown;
+      original_image_data?: unknown; original_image_type?: unknown;
+    };
 
     if (!image_data) {
       return errorResponse('Image data is required', corsHeaders, 400);
@@ -142,7 +145,7 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Image too large. Maximum size is 10MB.', corsHeaders, 400);
     }
 
-    log({ requestId, event: 'parse_image_started', imageSize: estimatedBytes });
+    log({ requestId, event: 'parse_image_started', imageSize: estimatedBytes, hasDualImage: !!original_image_data });
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
@@ -150,34 +153,52 @@ Deno.serve(async (req: Request) => {
       return errorResponse('AI service not configured', corsHeaders, 500);
     }
 
-    // Extract base64 data (remove data URL prefix if present)
-    let base64Data = image_data;
-    let mediaType = (typeof image_type === 'string' && image_type) ? image_type : 'image/jpeg';
+    // Helper to extract base64 data and media type from an image field
+    function extractBase64(rawData: string, rawType: unknown): { data: string; type: string } | null {
+      let b64 = rawData;
+      let mtype = (typeof rawType === 'string' && rawType) ? rawType : 'image/jpeg';
+      if (rawData.startsWith('data:')) {
+        const matches = rawData.match(/^data:([^;]+);base64,(.+)$/);
+        if (matches) {
+          mtype = matches[1];
+          b64 = matches[2];
+        }
+      }
+      if (!/^[A-Za-z0-9+/\s]*={0,2}$/.test(b64.substring(0, 100))) return null;
+      const ALLOWED = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!ALLOWED.includes(mtype)) return null;
+      return { data: b64, type: mtype };
+    }
 
-    if (image_data.startsWith('data:')) {
-      const matches = image_data.match(/^data:([^;]+);base64,(.+)$/);
-      if (matches) {
-        mediaType = matches[1];
-        base64Data = matches[2];
+    const enhanced = extractBase64(image_data, image_type);
+    if (!enhanced) {
+      return errorResponse('Invalid image data encoding or unsupported type', corsHeaders, 400);
+    }
+
+    // Parse original color image if provided (for dual-image cross-reference)
+    let original: { data: string; type: string } | null = null;
+    if (typeof original_image_data === 'string' && original_image_data.length > 0) {
+      const origEstimatedBytes = (original_image_data.length * 3) / 4;
+      if (origEstimatedBytes <= MAX_IMAGE_SIZE_BYTES) {
+        original = extractBase64(original_image_data, original_image_type);
       }
     }
 
-    // Validate base64 encoding
-    if (!/^[A-Za-z0-9+/\s]*={0,2}$/.test(base64Data.substring(0, 100))) {
-      return errorResponse('Invalid image data encoding', corsHeaders, 400);
-    }
-
-    // Validate image MIME type
-    const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!ALLOWED_IMAGE_TYPES.includes(mediaType)) {
-      return errorResponse('Unsupported image type. Use JPEG, PNG, GIF, or WebP.', corsHeaders, 400);
-    }
+    const hasDualImages = !!original;
 
     const systemPrompt = `You are a personal recipe digitization assistant. The user is photographing recipes from their own cookbooks to store in their personal meal planning app for home cooking. This is personal, non-commercial use — similar to typing a recipe into a note-taking app.
 
 Your job is to extract the recipe data from the image into a structured JSON format. Read the text in the image carefully and accurately.
 
-CRITICAL RULES:
+${hasDualImages ? `You are provided TWO versions of the same cookbook page:
+1. IMAGE 1 (enhanced): High-contrast grayscale version optimized for text readability
+2. IMAGE 2 (original): Full-color original photo with natural colors and context
+
+CROSS-REFERENCE STRATEGY:
+- Use IMAGE 1 (enhanced) as your PRIMARY source for reading text — it has better contrast for OCR.
+- Use IMAGE 2 (original) to VERIFY ambiguous characters, especially: fractions (½ vs 1½), similar letters (P vs F, l vs 1), and words that seem wrong in context (e.g. "Fork" that should be "Pork").
+- If the two images disagree on a character, prefer the reading that makes semantic sense in a recipe context.
+` : ''}CRITICAL RULES:
 - READ THE ACTUAL PRINTED TEXT in the image. Do NOT guess, invent, or generate a recipe from a food photo. Transcribe what is written. NEVER add ingredients that are not printed on the page.
 - Cookbook pages often have MULTIPLE COLUMNS of ingredients. Scan the ENTIRE page systematically — left to right, top to bottom — to find ALL ingredient sections. Common sections: main protein, sauce, sides (like polenta/rice), and "For Serving" toppings. Do not skip any column.
 - Transcribe ALL ingredient quantities EXACTLY as shown. Pay close attention to fractions like 1½ vs ½ — these are different amounts.
@@ -191,7 +212,7 @@ CRITICAL RULES:
 - For prep_time_minutes, count only hands-on time. For cook_time_minutes, count total cooking time including passive time.
 `;
 
-    const userPrompt = `I'm digitizing this recipe from my cookbook into my meal planning app. Please extract ALL the recipe data from the image into this JSON format. Read the printed text carefully — do not guess or paraphrase.
+    const userPrompt = `I'm digitizing this recipe from my cookbook into my meal planning app. Please extract ALL the recipe data from the image${hasDualImages ? 's' : ''} into this JSON format. Read the printed text carefully — do not guess or paraphrase.
 
 Return ONLY valid JSON:
 {"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"ingredient1\\ningredient2\\n...","instructions":"1. Step one\\n2. Step two\\n...","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"comma,separated,tags","notes":"tips, substitutions, or other useful info from the text","calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null}`;
@@ -199,7 +220,11 @@ Return ONLY valid JSON:
     // Allow env override for model
     const model = Deno.env.get('ANTHROPIC_MODEL') || CLAUDE_VISION_MODEL;
 
-    const result = await callClaudeVision(systemPrompt, userPrompt, base64Data, mediaType, apiKey, { model, timeoutMs: 60000 });
+    // Send both images if original is available, otherwise just the enhanced one
+    const imageDataArr = hasDualImages ? [enhanced.data, original!.data] : enhanced.data;
+    const mediaTypeArr = hasDualImages ? [enhanced.type, original!.type] : enhanced.type;
+
+    const result = await callClaudeVision(systemPrompt, userPrompt, imageDataArr, mediaTypeArr, apiKey, { model, timeoutMs: 60000 });
 
     // Log token usage for cost tracking
     log({
@@ -221,6 +246,39 @@ Return ONLY valid JSON:
     if (!parsed) {
       logError({ requestId, event: 'json_parse_error', content: result.text.substring(0, 500), userId: authResult.userId });
       return errorResponse('Failed to parse AI response. Please try again.', corsHeaders, 500);
+    }
+
+    // Post-processing: fix common OCR errors in recipe text
+    if (parsed.ingredients) {
+      parsed.ingredients = parsed.ingredients
+        // Fix "Fork" → "Pork" (common P/F confusion in scanned text)
+        .replace(/\bFork\b(?=.*(?:shoulder|loin|chop|butt|belly|roast|tenderloin|rib|ground))/gi, 'Pork')
+        .replace(/\b(boneless|bone-in|braised|roasted|ground|pulled)\s+Fork\b/gi, '$1 Pork')
+        // Fix detached page references (e.g. "see page 123" that aren't ingredients)
+        .replace(/^[\s]*(?:see\s+)?page\s+\d+.*$/gim, '')
+        // Normalize fraction characters
+        .replace(/\u00BD/g, '½').replace(/\u00BC/g, '¼').replace(/\u00BE/g, '¾')
+        .replace(/\u2153/g, '⅓').replace(/\u2154/g, '⅔')
+        // Clean up empty lines from removals
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+    if (parsed.instructions) {
+      parsed.instructions = parsed.instructions
+        .replace(/\bFork\b(?=.*(?:shoulder|loin|chop|butt|belly|roast|tenderloin|rib|brais|season|sear))/gi, 'Pork')
+        .replace(/\b(the|braised|roasted|pulled|shredded)\s+Fork\b/gi, '$1 Pork')
+        .trim();
+    }
+    if (parsed.name) {
+      parsed.name = parsed.name.replace(/\bFork\b/g, (match) => {
+        // Only fix if the name likely refers to pork
+        const lowerName = parsed.name!.toLowerCase();
+        if (lowerName.includes('braised') || lowerName.includes('pulled') || lowerName.includes('roast') ||
+            lowerName.includes('tamale') || lowerName.includes('burrito') || lowerName.includes('carnitas')) {
+          return 'Pork';
+        }
+        return match;
+      });
     }
 
     const recipe = validateRecipe(parsed);

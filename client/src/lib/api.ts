@@ -786,17 +786,26 @@ export const mealsApi = {
       return new File([blob], 'enhanced.jpg', { type: 'image/jpeg' });
     })();
 
-    // Send enhanced text image to AI
-    const reader = new FileReader();
-    const base64 = await new Promise<string>((resolve, reject) => {
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(enhanced);
-    });
+    // Read both enhanced and original images as base64
+    const readAsBase64 = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result as string);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    };
+
+    const [enhancedBase64, originalBase64] = await Promise.all([
+      readAsBase64(enhanced),
+      readAsBase64(textFile),
+    ]);
 
     const { data, error } = await invokeWithTimeout<Meal>('parse-recipe-image', {
-      image_data: base64,
+      image_data: enhancedBase64,
       image_type: 'image/jpeg',
+      original_image_data: originalBase64,
+      original_image_type: 'image/jpeg',
     });
 
     if (error) {

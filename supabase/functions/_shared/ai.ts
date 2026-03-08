@@ -80,24 +80,33 @@ interface VisionResult {
 }
 
 /**
- * Call Claude with an image + text prompt (vision). Returns the response text and usage stats.
+ * Call Claude with one or more images + text prompt (vision). Returns the response text and usage stats.
  */
 export async function callClaudeVision(
   system: string,
   user: string,
-  imageData: string,
-  mediaType: string,
+  imageData: string | string[],
+  mediaType: string | string[],
   apiKey: string,
   options: CallClaudeOptions = {},
 ): Promise<VisionResult> {
   const {
     model = CLAUDE_VISION_MODEL,
-    maxTokens = 2048,
+    maxTokens = 4096,
     timeoutMs = 30000,
   } = options;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  // Build content array with one or more images
+  const images = Array.isArray(imageData) ? imageData : [imageData];
+  const types = Array.isArray(mediaType) ? mediaType : [mediaType];
+  const content: Array<Record<string, unknown>> = images.map((data, i) => ({
+    type: "image",
+    source: { type: "base64", media_type: types[i] || types[0], data },
+  }));
+  content.push({ type: "text", text: user });
 
   try {
     const response = await fetch(ANTHROPIC_API_URL, {
@@ -111,18 +120,7 @@ export async function callClaudeVision(
         model,
         max_tokens: maxTokens,
         system,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: { type: "base64", media_type: mediaType, data: imageData },
-              },
-              { type: "text", text: user },
-            ],
-          },
-        ],
+        messages: [{ role: "user", content }],
       }),
       signal: controller.signal,
     });

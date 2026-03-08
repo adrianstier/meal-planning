@@ -807,7 +807,7 @@ export const mealsApi = {
       reader.readAsDataURL(enhanced);
     });
 
-    const { data, error } = await invokeWithTimeout<Meal>('parse-recipe-image', {
+    const { data, error } = await invokeWithTimeout<Meal & { food_photo_bounds?: { x: number; y: number; width: number; height: number } | null }>('parse-recipe-image', {
       image_data: base64,
       image_type: 'image/jpeg',
     });
@@ -820,7 +820,54 @@ export const mealsApi = {
       const errorMessage = getEdgeErrorMessage(edgeError, 'Failed to parse recipe from image. Please try again.');
       throw new Error(errorMessage);
     }
-    return wrapResponse(data as Meal);
+
+    const result = data as Meal & { food_photo_bounds?: { x: number; y: number; width: number; height: number } | null };
+
+    // If AI detected a food photo in the image, crop it and upload to storage
+    if (result?.food_photo_bounds) {
+      try {
+        const bounds = result.food_photo_bounds;
+        const bitmap = await createImageBitmap(fileToSend);
+        const cropX = Math.round((bounds.x / 100) * bitmap.width);
+        const cropY = Math.round((bounds.y / 100) * bitmap.height);
+        const cropW = Math.round((bounds.width / 100) * bitmap.width);
+        const cropH = Math.round((bounds.height / 100) * bitmap.height);
+
+        const canvas = document.createElement('canvas');
+        // Cap at 1200px wide for reasonable file size
+        const scale = Math.min(1, 1200 / cropW);
+        canvas.width = Math.round(cropW * scale);
+        canvas.height = Math.round(cropH * scale);
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(bitmap, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+        bitmap.close();
+
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Crop failed')), 'image/jpeg', 0.85);
+        });
+
+        // Upload to Supabase Storage
+        const userId = await getCurrentUserId();
+        const fileName = `${userId}/${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('recipe-images')
+          .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('recipe-images')
+            .getPublicUrl(fileName);
+          result.image_url = urlData.publicUrl;
+        }
+      } catch (cropErr) {
+        // Non-fatal — recipe still works without the image
+        console.warn('Failed to crop/upload food photo:', cropErr);
+      }
+      // Remove bounds from the returned data (not a DB field)
+      delete result.food_photo_bounds;
+    }
+
+    return wrapResponse(result as Meal);
   },
 
   parseRecipeFromUrl: async (url: string) => {

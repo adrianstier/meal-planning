@@ -173,17 +173,26 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Unsupported image type. Use JPEG, PNG, GIF, or WebP.', corsHeaders, 400);
     }
 
-    const systemPrompt = `Extract recipe data from image. Be concise.
+    const systemPrompt = `You are a personal recipe digitization assistant. The user is photographing recipes from their own cookbooks to store in their personal meal planning app for home cooking. This is personal, non-commercial use — similar to typing a recipe into a note-taking app.
 
-Read: recipe cards, cookbook pages, screenshots, handwritten notes.
-Infer unclear text reasonably.
-Kid-friendliness (1-10): 10=kid favorites, 1=sophisticated.
-Difficulty: easy (<30min), medium (30-60min), hard (>60min).
-Meal type: breakfast/lunch/dinner/snack.
-Estimate nutrition from ingredients if not shown.`;
+Your job is to extract the recipe data from the image into a structured JSON format. Read the text in the image carefully and accurately.
 
-    const userPrompt = `Extract recipe from image. Return JSON only:
-{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"","instructions":"","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"","notes":null,"calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null}`;
+CRITICAL RULES:
+- READ THE ACTUAL PRINTED TEXT in the image. Do NOT guess, invent, or generate a recipe from a food photo. Transcribe what is written.
+- Transcribe ALL ingredient quantities EXACTLY as shown. Pay close attention to fractions like 1½ vs ½ — these are different amounts.
+- List EVERY ingredient, including sub-sections (e.g. "Braised Pork:", "For Serving:"). Format: "quantity unit ingredient (prep notes)" on each line.
+- Number ALL instruction steps. Preserve section headers (e.g. "MAKE THE PORK:").
+- Capture useful tips, substitutions, or personal notes from the recipe text in the "notes" field.
+- Difficulty is about ACTIVE effort, not passive time. A recipe with 15 min prep + 2 hours braising is "easy", not "hard".
+- Kid-friendliness (1-10): Consider familiar ingredients, mild flavors, fun presentation. Bowls with cheese/beans/corn = 7-8. Spicy/bitter/unusual textures = lower.
+- Meal type: breakfast/lunch/dinner/snack — infer from context and ingredients.
+- Estimate nutrition per serving from ingredients if not explicitly shown.
+- For prep_time_minutes, count only hands-on time. For cook_time_minutes, count total cooking time including passive time.`;
+
+    const userPrompt = `I'm digitizing this recipe from my cookbook into my meal planning app. Please extract ALL the recipe data from the image into this JSON format. Read the printed text carefully — do not guess or paraphrase.
+
+Return ONLY valid JSON:
+{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"ingredient1\\ningredient2\\n...","instructions":"1. Step one\\n2. Step two\\n...","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"comma,separated,tags","notes":"tips, substitutions, or other useful info from the text","calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null}`;
 
     // Allow env override for model
     const model = Deno.env.get('ANTHROPIC_MODEL') || CLAUDE_VISION_MODEL;

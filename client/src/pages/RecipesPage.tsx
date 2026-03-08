@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Plus, Heart, Sparkles, Trash2, Pencil, Link, ChevronDown, Search, Clock, Baby, Package, Utensils, ArrowUpDown, ChefHat, Zap, AlertCircle, Tags, ExternalLink, ThumbsUp, Camera, CheckSquare, X, Coffee, Salad, UtensilsCrossed, Apple, Globe, Brain, Loader2, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -82,6 +82,7 @@ const RecipesPage: React.FC = () => {
   const [parseDialogOpen, setParseDialogOpen] = useState(false);
   const [urlDialogOpen, setUrlDialogOpen] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [bulkTagDialogOpen, setBulkTagDialogOpen] = useState(false);
@@ -308,17 +309,22 @@ const RecipesPage: React.FC = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      // Auto-parse immediately — no extra button click needed
+      handleParseFromImage(file);
     }
+    // Reset input so the same file can be re-selected
+    if (e.target) e.target.value = '';
   };
 
-  const handleParseFromImage = async () => {
-    if (!selectedImage) {
-      alert('Please select an image');
-      return;
-    }
+  const handleParseFromImage = async (file?: File) => {
+    const imageFile = file || selectedImage;
+    if (!imageFile) return;
+
+    // Show the progress dialog
+    setImageDialogOpen(true);
 
     try {
-      const result = await parseRecipeFromImage.mutateAsync(selectedImage);
+      const result = await parseRecipeFromImage.mutateAsync(imageFile);
 
       const parsedData = result.data;
 
@@ -385,6 +391,7 @@ const RecipesPage: React.FC = () => {
       setImagePreview(null);
     } catch (error) {
       console.error('Failed to parse recipe from image:', error);
+      setImageDialogOpen(false);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to parse recipe from image: ${errorMessage}`);
     }
@@ -764,12 +771,29 @@ const RecipesPage: React.FC = () => {
                     <Link className="mr-2 h-4 w-4" />
                     Parse from URL
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setImageDialogOpen(true)} className="cursor-pointer transition-colors">
+                  <DropdownMenuItem onClick={() => imageInputRef.current?.click()} className="cursor-pointer transition-colors">
                     <Camera className="mr-2 h-4 w-4" />
                     Parse from Image
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => imageInputRef.current?.click()}
+                title="Snap a recipe photo"
+                disabled={parseRecipeFromImage.isPending}
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
             </div>
           </div>
 
@@ -1373,70 +1397,35 @@ const RecipesPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Parse Recipe from Image Dialog */}
+      {/* Parse Recipe from Image — Progress Dialog */}
       <Dialog open={imageDialogOpen} onOpenChange={(open) => {
-        setImageDialogOpen(open);
-        if (!open) {
+        if (!open && !parseRecipeFromImage.isPending) {
+          setImageDialogOpen(false);
           setSelectedImage(null);
           setImagePreview(null);
         }
       }}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Parse Recipe from Image</DialogTitle>
+            <DialogTitle>Parsing Recipe from Image</DialogTitle>
             <DialogDescription>
-              Upload a photo of a recipe and let AI extract the details for you
+              AI is extracting the recipe details...
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {parseRecipeFromImage.isPending ? (
-              <RecipeParsingProgress
-                isVisible={parseRecipeFromImage.isPending}
-              />
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="recipe-image">Recipe Image</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="recipe-image"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      onChange={handleImageSelect}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                </div>
-                {imagePreview && (
-                  <div className="relative w-full">
-                    <img
-                      src={imagePreview}
-                      alt="Recipe preview"
-                      className="w-full max-h-64 object-contain rounded-lg border"
-                    />
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Supported formats: JPEG, PNG, WebP, GIF
-                </p>
+            {imagePreview && (
+              <div className="relative w-full">
+                <img
+                  src={imagePreview}
+                  alt="Recipe preview"
+                  className="w-full max-h-48 object-contain rounded-lg border"
+                />
               </div>
             )}
+            <RecipeParsingProgress
+              isVisible={parseRecipeFromImage.isPending}
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setImageDialogOpen(false);
-              setSelectedImage(null);
-              setImagePreview(null);
-            }} disabled={parseRecipeFromImage.isPending}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleParseFromImage}
-              disabled={!selectedImage || parseRecipeFromImage.isPending}
-            >
-              {parseRecipeFromImage.isPending ? 'Parsing...' : 'Parse Recipe'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

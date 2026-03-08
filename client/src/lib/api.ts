@@ -705,7 +705,7 @@ export const mealsApi = {
   },
 
   parseRecipeFromImage: async (imageFile: File) => {
-    // Validate file size (10MB max)
+    // Validate file size (10MB max for original, conversion may reduce)
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (imageFile.size > MAX_FILE_SIZE) {
       throw new Error('Image too large. Maximum size is 10MB.');
@@ -716,44 +716,100 @@ export const mealsApi = {
       throw new Error('Invalid file type. Please upload an image.');
     }
 
-    // Validate file signature (magic bytes) for security
-    const validImageSignatures: Record<string, number[][]> = {
-      'image/jpeg': [[0xFF, 0xD8, 0xFF]],
-      'image/png': [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
-      'image/gif': [[0x47, 0x49, 0x46, 0x38, 0x37, 0x61], [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]],
-      'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF header, followed by WEBP
-      'image/heic': [[0x00, 0x00, 0x00]], // ftyp box (varies)
-      'image/heif': [[0x00, 0x00, 0x00]], // ftyp box (varies)
-    };
+    // Check client-side rate limit before calling AI
+    checkRateLimit(rateLimiters.aiParsing, 'parseRecipeFromImage', 'AI parsing limit reached.');
 
-    // Read first 12 bytes to check magic bytes
-    const headerBuffer = await imageFile.slice(0, 12).arrayBuffer();
-    const headerBytes = new Uint8Array(headerBuffer);
+    // Convert non-web-standard formats to JPEG before sending to API.
+    // Claude vision supports JPEG, PNG, GIF, WebP natively.
+    const WEB_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    let fileToSend = imageFile;
 
-    const signatures = validImageSignatures[imageFile.type];
-    if (signatures) {
-      const isValidSignature = signatures.some(sig =>
-        sig.every((byte, i) => headerBytes[i] === byte)
-      );
-      if (!isValidSignature) {
-        throw new Error('File content does not match image type. Please upload a valid image.');
+    if (!WEB_IMAGE_TYPES.includes(imageFile.type)) {
+      // HEIC/HEIF needs a dedicated library; other formats use canvas
+      if (imageFile.type === 'image/heic' || imageFile.type === 'image/heif' || imageFile.name.toLowerCase().endsWith('.heic') || imageFile.name.toLowerCase().endsWith('.heif')) {
+        const heic2any = (await import('heic2any')).default;
+        const blob = await heic2any({ blob: imageFile, toType: 'image/jpeg', quality: 0.9 }) as Blob;
+        fileToSend = new File([blob], imageFile.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+      } else {
+        // BMP, TIFF, SVG, etc. — render via canvas and export as JPEG
+        const bitmap = await createImageBitmap(imageFile);
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Image conversion failed')), 'image/jpeg', 0.9);
+        });
+        fileToSend = new File([blob], imageFile.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
       }
     }
 
-    // Check client-side rate limit before calling AI
-    checkRateLimit(rateLimiters.aiParsing, 'parseRecipeFromImage', 'AI parsing limit reached.');
+    // Enhance image for better text recognition: convert to grayscale,
+    // boost contrast and sharpness. This dramatically improves OCR accuracy
+    // on cookbook photos where text can be small or low-contrast.
+    const enhanced = await (async () => {
+      const bitmap = await createImageBitmap(fileToSend);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d')!;
+
+      // Draw original image
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+
+      // Convert to grayscale + boost contrast via pixel manipulation
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const d = imageData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        // Grayscale using luminosity method
+        const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        // Boost contrast: stretch toward black/white
+        const contrast = 1.5; // 1.5x contrast boost
+        const adjusted = Math.min(255, Math.max(0, ((gray / 255 - 0.5) * contrast + 0.5) * 255));
+        d[i] = d[i + 1] = d[i + 2] = adjusted;
+      }
+      ctx.putImageData(imageData, 0, 0);
+
+      // Apply unsharp mask via off-screen blur comparison
+      const sharpCanvas = document.createElement('canvas');
+      sharpCanvas.width = canvas.width;
+      sharpCanvas.height = canvas.height;
+      const sharpCtx = sharpCanvas.getContext('2d')!;
+      sharpCtx.filter = 'blur(1px)';
+      sharpCtx.drawImage(canvas, 0, 0);
+      const blurData = sharpCtx.getImageData(0, 0, canvas.width, canvas.height);
+      const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const od = origData.data;
+      const bd = blurData.data;
+      const amount = 1.0; // sharpening amount
+      for (let i = 0; i < od.length; i += 4) {
+        od[i] = Math.min(255, Math.max(0, od[i] + (od[i] - bd[i]) * amount));
+        od[i + 1] = Math.min(255, Math.max(0, od[i + 1] + (od[i + 1] - bd[i + 1]) * amount));
+        od[i + 2] = Math.min(255, Math.max(0, od[i + 2] + (od[i + 2] - bd[i + 2]) * amount));
+      }
+      ctx.putImageData(origData, 0, 0);
+
+      // Export as JPEG (keep under 5MB API limit)
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Image enhancement failed')), 'image/jpeg', 0.85);
+      });
+      return new File([blob], 'enhanced.jpg', { type: 'image/jpeg' });
+    })();
 
     // Convert file to base64
     const reader = new FileReader();
     const base64 = await new Promise<string>((resolve, reject) => {
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = reject;
-      reader.readAsDataURL(imageFile);
+      reader.readAsDataURL(enhanced);
     });
 
     const { data, error } = await invokeWithTimeout<Meal>('parse-recipe-image', {
       image_data: base64,
-      image_type: imageFile.type,
+      image_type: 'image/jpeg',
     });
 
     if (error) {

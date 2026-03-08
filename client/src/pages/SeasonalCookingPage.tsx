@@ -1079,7 +1079,7 @@ Example:
                           <input
                             type="file"
                             className="hidden"
-                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            accept="image/*"
                             onChange={handleImageUpload}
                           />
                         </label>

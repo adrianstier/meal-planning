@@ -46,6 +46,7 @@ interface FetchResult {
   html: string | null;
   text: string | null;
   usedFallback: boolean;
+  jinaImageUrl?: string | null;
 }
 
 async function fetchPage(url: string): Promise<FetchResult> {
@@ -60,8 +61,8 @@ async function fetchPage(url: string): Promise<FetchResult> {
 
   // Fallback: use Jina Reader API for sites with bot protection
   try {
-    const text = await jinaReaderFetch(url);
-    return { html: null, text, usedFallback: true };
+    const jina = await jinaReaderFetch(url);
+    return { html: null, text: jina.text, usedFallback: true, jinaImageUrl: jina.imageUrl };
   } catch (fallbackError) {
     const msg = fallbackError instanceof Error ? fallbackError.message : "Unknown";
     throw new Error(`Could not access recipe page: ${msg}`);
@@ -135,17 +136,17 @@ async function directFetch(url: string): Promise<string> {
   }
 }
 
-async function jinaReaderFetch(url: string): Promise<string> {
+async function jinaReaderFetch(url: string): Promise<{ text: string; imageUrl: string | null }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 40000);
 
   try {
-    // URL is already validated as public by isPublicUrl() in the main handler
-    // Use text/plain mode — JSON mode returns empty content for many sites
+    // Use JSON mode to get both content and metadata (including og:image)
     const response = await fetch(`https://r.jina.ai/${url}`, {
       signal: controller.signal,
       headers: {
-        "Accept": "text/plain",
+        "Accept": "application/json",
+        "X-Return-Format": "markdown",
       },
     });
 
@@ -153,12 +154,18 @@ async function jinaReaderFetch(url: string): Promise<string> {
       throw new Error(`Jina Reader returned ${response.status}`);
     }
 
-    const text = await response.text();
+    const json = await response.json();
+    const data = json?.data;
+    const text = data?.content;
     if (!text || text.length < 100) {
       throw new Error("No content returned from Jina Reader");
     }
 
-    return text;
+    // Extract og:image from Jina metadata
+    const metadata = data?.metadata;
+    const imageUrl = metadata?.["og:image"] || metadata?.["twitter:image"] || null;
+
+    return { text, imageUrl };
   } finally {
     clearTimeout(timeout);
   }
@@ -172,6 +179,25 @@ function extractImageUrl(html: string): string | null {
   const twitterMatch = html.match(/<meta(?=[^>]*name=["']twitter:image["'])(?=[^>]*content=["']([^"']+)["'])[^>]*>/i);
   if (twitterMatch) return twitterMatch[1];
 
+  return null;
+}
+
+function extractImageUrlFromText(text: string): string | null {
+  // Extract image URLs from markdown-style content (Jina Reader output)
+  // Look for markdown images: ![alt](url)
+  const mdImages = [...text.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)];
+  for (const m of mdImages) {
+    const url = m[1];
+    // Skip small icons, logos, avatars — want the main recipe photo
+    if (/\.(jpg|jpeg|png|webp)/i.test(url) &&
+        !/logo|icon|avatar|favicon|badge|button|sprite/i.test(url) &&
+        !/\b(?:1x1|16x16|32x32|48x48|64x64)\b/.test(url)) {
+      return url;
+    }
+  }
+  // Also check for bare image URLs on their own line
+  const bareUrl = text.match(/^(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|webp)[^\s]*)/im);
+  if (bareUrl) return bareUrl[1];
   return null;
 }
 
@@ -410,6 +436,9 @@ Deno.serve(async (req: Request) => {
       }
     } else if (fetchResult.text) {
       // Jina Reader fallback - content is already extracted text/markdown
+      // Use og:image from Jina metadata, or try to extract from markdown text
+      imageUrl = fetchResult.jinaImageUrl || extractImageUrlFromText(fetchResult.text);
+
       // Smart extraction: skip navigation boilerplate, find recipe content
       const jinaText = fetchResult.text;
       let recipeContent = jinaText;

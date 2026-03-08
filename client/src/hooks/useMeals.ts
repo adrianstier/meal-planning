@@ -87,9 +87,9 @@ export const useParseRecipe = () => {
 
 export const useParseRecipeFromImage = () => {
   return useMutation({
-    mutationFn: async (imageFile: File) => {
+    mutationFn: async ({ textImage, dishImage }: { textImage: File; dishImage?: File }) => {
       try {
-        const response = await mealsApi.parseRecipeFromImage(imageFile);
+        const response = await mealsApi.parseRecipeFromImage(textImage, dishImage);
         return response;
       } catch (error) {
         console.error('Parse recipe from image mutation error:', error);

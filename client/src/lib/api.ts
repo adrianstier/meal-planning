@@ -704,76 +704,65 @@ export const mealsApi = {
     return wrapResponse(data as Meal);
   },
 
-  parseRecipeFromImage: async (imageFile: File) => {
-    // Validate file size (10MB max for original, conversion may reduce)
+  parseRecipeFromImage: async (textImage: File, dishImage?: File) => {
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
-    if (imageFile.size > MAX_FILE_SIZE) {
-      throw new Error('Image too large. Maximum size is 10MB.');
-    }
 
-    // Validate file type by MIME type first
-    if (!imageFile.type.startsWith('image/')) {
-      throw new Error('Invalid file type. Please upload an image.');
-    }
-
-    // Check client-side rate limit before calling AI
-    checkRateLimit(rateLimiters.aiParsing, 'parseRecipeFromImage', 'AI parsing limit reached.');
-
-    // Convert non-web-standard formats to JPEG before sending to API.
-    // Claude vision supports JPEG, PNG, GIF, WebP natively.
-    const WEB_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    let fileToSend = imageFile;
-
-    if (!WEB_IMAGE_TYPES.includes(imageFile.type)) {
-      // HEIC/HEIF needs a dedicated library; other formats use canvas
-      if (imageFile.type === 'image/heic' || imageFile.type === 'image/heif' || imageFile.name.toLowerCase().endsWith('.heic') || imageFile.name.toLowerCase().endsWith('.heif')) {
+    // Convert any image format to JPEG (handles HEIC, BMP, TIFF, etc.)
+    const convertToJpeg = async (file: File): Promise<File> => {
+      const WEB_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (WEB_IMAGE_TYPES.includes(file.type)) return file;
+      if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
         const heic2any = (await import('heic2any')).default;
-        const blob = await heic2any({ blob: imageFile, toType: 'image/jpeg', quality: 0.9 }) as Blob;
-        fileToSend = new File([blob], imageFile.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
-      } else {
-        // BMP, TIFF, SVG, etc. — render via canvas and export as JPEG
-        const bitmap = await createImageBitmap(imageFile);
-        const canvas = document.createElement('canvas');
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(bitmap, 0, 0);
-        bitmap.close();
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Image conversion failed')), 'image/jpeg', 0.9);
-        });
-        fileToSend = new File([blob], imageFile.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+        const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 }) as Blob;
+        return new File([blob], 'converted.jpg', { type: 'image/jpeg' });
       }
-    }
-
-    // Enhance image for better text recognition: convert to grayscale,
-    // boost contrast and sharpness. This dramatically improves OCR accuracy
-    // on cookbook photos where text can be small or low-contrast.
-    const enhanced = await (async () => {
-      const bitmap = await createImageBitmap(fileToSend);
+      const bitmap = await createImageBitmap(file);
       const canvas = document.createElement('canvas');
       canvas.width = bitmap.width;
       canvas.height = bitmap.height;
       const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Image conversion failed')), 'image/jpeg', 0.9);
+      });
+      return new File([blob], 'converted.jpg', { type: 'image/jpeg' });
+    };
 
-      // Draw original image
+    // Validate text image
+    if (textImage.size > MAX_FILE_SIZE) {
+      throw new Error('Image too large. Maximum size is 10MB.');
+    }
+    if (!textImage.type.startsWith('image/')) {
+      throw new Error('Invalid file type. Please upload an image.');
+    }
+
+    checkRateLimit(rateLimiters.aiParsing, 'parseRecipeFromImage', 'AI parsing limit reached.');
+
+    // Convert text image to web format
+    const textFile = await convertToJpeg(textImage);
+
+    // Enhance text image for OCR: grayscale + contrast boost + sharpen
+    const enhanced = await (async () => {
+      const bitmap = await createImageBitmap(textFile);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d')!;
       ctx.drawImage(bitmap, 0, 0);
       bitmap.close();
 
-      // Convert to grayscale + boost contrast via pixel manipulation
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const d = imageData.data;
       for (let i = 0; i < d.length; i += 4) {
-        // Grayscale using luminosity method
         const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        // Boost contrast: stretch toward black/white
-        const contrast = 1.5; // 1.5x contrast boost
+        const contrast = 1.5;
         const adjusted = Math.min(255, Math.max(0, ((gray / 255 - 0.5) * contrast + 0.5) * 255));
         d[i] = d[i + 1] = d[i + 2] = adjusted;
       }
       ctx.putImageData(imageData, 0, 0);
 
-      // Apply unsharp mask via off-screen blur comparison
+      // Unsharp mask
       const sharpCanvas = document.createElement('canvas');
       sharpCanvas.width = canvas.width;
       sharpCanvas.height = canvas.height;
@@ -784,22 +773,20 @@ export const mealsApi = {
       const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const od = origData.data;
       const bd = blurData.data;
-      const amount = 1.0; // sharpening amount
       for (let i = 0; i < od.length; i += 4) {
-        od[i] = Math.min(255, Math.max(0, od[i] + (od[i] - bd[i]) * amount));
-        od[i + 1] = Math.min(255, Math.max(0, od[i + 1] + (od[i + 1] - bd[i + 1]) * amount));
-        od[i + 2] = Math.min(255, Math.max(0, od[i + 2] + (od[i + 2] - bd[i + 2]) * amount));
+        od[i] = Math.min(255, Math.max(0, od[i] + (od[i] - bd[i])));
+        od[i + 1] = Math.min(255, Math.max(0, od[i + 1] + (od[i + 1] - bd[i + 1])));
+        od[i + 2] = Math.min(255, Math.max(0, od[i + 2] + (od[i + 2] - bd[i + 2])));
       }
       ctx.putImageData(origData, 0, 0);
 
-      // Export as JPEG (keep under 5MB API limit)
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Image enhancement failed')), 'image/jpeg', 0.85);
       });
       return new File([blob], 'enhanced.jpg', { type: 'image/jpeg' });
     })();
 
-    // Convert file to base64
+    // Send enhanced text image to AI
     const reader = new FileReader();
     const base64 = await new Promise<string>((resolve, reject) => {
       reader.onload = () => resolve(reader.result as string);
@@ -807,67 +794,63 @@ export const mealsApi = {
       reader.readAsDataURL(enhanced);
     });
 
-    const { data, error } = await invokeWithTimeout<Meal & { food_photo_bounds?: { x: number; y: number; width: number; height: number } | null }>('parse-recipe-image', {
+    const { data, error } = await invokeWithTimeout<Meal>('parse-recipe-image', {
       image_data: base64,
       image_type: 'image/jpeg',
     });
 
     if (error) {
       errorLogger.logApiError(error, '/functions/parse-recipe-image', 'POST');
-
-      // Extract error message from response body if available
       const edgeError = error as EdgeFunctionError;
       const errorMessage = getEdgeErrorMessage(edgeError, 'Failed to parse recipe from image. Please try again.');
       throw new Error(errorMessage);
     }
 
-    const result = data as Meal & { food_photo_bounds?: { x: number; y: number; width: number; height: number } | null };
+    const result = data as Meal;
 
-    // If AI detected a food photo in the image, crop it and upload to storage
-    if (result?.food_photo_bounds) {
+    // Upload dish photo to Supabase Storage if provided
+    if (dishImage) {
       try {
-        const bounds = result.food_photo_bounds;
-        const bitmap = await createImageBitmap(fileToSend);
-        const cropX = Math.round((bounds.x / 100) * bitmap.width);
-        const cropY = Math.round((bounds.y / 100) * bitmap.height);
-        const cropW = Math.round((bounds.width / 100) * bitmap.width);
-        const cropH = Math.round((bounds.height / 100) * bitmap.height);
+        if (dishImage.size > MAX_FILE_SIZE) {
+          console.warn('Dish photo too large, skipping upload');
+        } else {
+          let dishFile = await convertToJpeg(dishImage);
 
-        const canvas = document.createElement('canvas');
-        // Cap at 1200px wide for reasonable file size
-        const scale = Math.min(1, 1200 / cropW);
-        canvas.width = Math.round(cropW * scale);
-        canvas.height = Math.round(cropH * scale);
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(bitmap, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-        bitmap.close();
+          // Resize to max 1200px wide
+          const bitmap = await createImageBitmap(dishFile);
+          const scale = Math.min(1, 1200 / bitmap.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(bitmap.width * scale);
+          canvas.height = Math.round(bitmap.height * scale);
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          bitmap.close();
 
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Crop failed')), 'image/jpeg', 0.85);
-        });
+          const blob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Resize failed')), 'image/jpeg', 0.85);
+          });
 
-        // Upload to Supabase Storage
-        const userId = await getCurrentUserId();
-        const fileName = `${userId}/${Date.now()}.jpg`;
-        const { error: uploadError } = await supabase.storage
-          .from('recipe-images')
-          .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
-
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage
+          const userId = await getCurrentUserId();
+          const fileName = `${userId}/${Date.now()}.jpg`;
+          const { error: uploadError } = await supabase.storage
             .from('recipe-images')
-            .getPublicUrl(fileName);
-          result.image_url = urlData.publicUrl;
+            .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('recipe-images')
+              .getPublicUrl(fileName);
+            result.image_url = urlData.publicUrl;
+          } else {
+            console.warn('Failed to upload dish photo:', uploadError);
+          }
         }
-      } catch (cropErr) {
-        // Non-fatal — recipe still works without the image
-        console.warn('Failed to crop/upload food photo:', cropErr);
+      } catch (dishErr) {
+        console.warn('Failed to process dish photo:', dishErr);
       }
-      // Remove bounds from the returned data (not a DB field)
-      delete result.food_photo_bounds;
     }
 
-    return wrapResponse(result as Meal);
+    return wrapResponse(result);
   },
 
   parseRecipeFromUrl: async (url: string) => {

@@ -82,7 +82,9 @@ const RecipesPage: React.FC = () => {
   const [parseDialogOpen, setParseDialogOpen] = useState(false);
   const [urlDialogOpen, setUrlDialogOpen] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [captureDialogOpen, setCaptureDialogOpen] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const dishInputRef = useRef<HTMLInputElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [bulkTagDialogOpen, setBulkTagDialogOpen] = useState(false);
@@ -92,6 +94,8 @@ const RecipesPage: React.FC = () => {
   const [recipeUrl, setRecipeUrl] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dishPhoto, setDishPhoto] = useState<File | null>(null);
+  const [dishPhotoPreview, setDishPhotoPreview] = useState<string | null>(null);
   const [parsedRecipe, setParsedRecipe] = useState<Partial<Meal> | null>(null);
   const [bulkTagInput, setBulkTagInput] = useState('');
   const [enrichingMealId, setEnrichingMealId] = useState<number | null>(null);
@@ -309,22 +313,35 @@ const RecipesPage: React.FC = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      // Auto-parse immediately — no extra button click needed
-      handleParseFromImage(file);
     }
-    // Reset input so the same file can be re-selected
     if (e.target) e.target.value = '';
   };
 
-  const handleParseFromImage = async (file?: File) => {
-    const imageFile = file || selectedImage;
+  const handleDishPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setDishPhoto(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setDishPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+    if (e.target) e.target.value = '';
+  };
+
+  const handleParseFromImage = async (textFile?: File, dishFile?: File) => {
+    const imageFile = textFile || selectedImage;
     if (!imageFile) return;
 
-    // Show the progress dialog
+    setCaptureDialogOpen(false);
     setImageDialogOpen(true);
 
     try {
-      const result = await parseRecipeFromImage.mutateAsync(imageFile);
+      const result = await parseRecipeFromImage.mutateAsync({
+        textImage: imageFile,
+        dishImage: dishFile || dishPhoto || undefined,
+      });
 
       const parsedData = result.data;
 
@@ -389,6 +406,8 @@ const RecipesPage: React.FC = () => {
 
       setSelectedImage(null);
       setImagePreview(null);
+      setDishPhoto(null);
+      setDishPhotoPreview(null);
     } catch (error) {
       console.error('Failed to parse recipe from image:', error);
       setImageDialogOpen(false);
@@ -771,7 +790,7 @@ const RecipesPage: React.FC = () => {
                     <Link className="mr-2 h-4 w-4" />
                     Parse from URL
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => imageInputRef.current?.click()} className="cursor-pointer transition-colors">
+                  <DropdownMenuItem onClick={() => setCaptureDialogOpen(true)} className="cursor-pointer transition-colors">
                     <Camera className="mr-2 h-4 w-4" />
                     Parse from Image
                   </DropdownMenuItem>
@@ -780,7 +799,7 @@ const RecipesPage: React.FC = () => {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => imageInputRef.current?.click()}
+                onClick={() => setCaptureDialogOpen(true)}
                 title="Snap a recipe photo"
                 disabled={parseRecipeFromImage.isPending}
               >
@@ -792,6 +811,14 @@ const RecipesPage: React.FC = () => {
                 accept="image/*"
                 capture="environment"
                 onChange={handleImageSelect}
+                className="hidden"
+              />
+              <input
+                ref={dishInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleDishPhotoSelect}
                 className="hidden"
               />
             </div>
@@ -1392,6 +1419,81 @@ const RecipesPage: React.FC = () => {
                   Import Recipe
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Two-Photo Capture Dialog */}
+      <Dialog open={captureDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCaptureDialogOpen(false);
+          setSelectedImage(null);
+          setImagePreview(null);
+          setDishPhoto(null);
+          setDishPhotoPreview(null);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Capture Recipe</DialogTitle>
+            <DialogDescription>
+              Take two photos: one of the recipe text, and optionally one of the dish
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Step 1: Recipe text photo */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold shrink-0">1</div>
+                <Label className="font-medium">Recipe text <span className="text-red-500">*</span></Label>
+              </div>
+              <p className="text-sm text-muted-foreground ml-8">
+                Photo of the recipe page from your cookbook
+              </p>
+              {imagePreview ? (
+                <div className="relative ml-8">
+                  <img src={imagePreview} alt="Recipe text" className="w-full max-h-40 object-contain rounded-lg border" />
+                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 bg-white/80 rounded-full"
+                    onClick={() => { setSelectedImage(null); setImagePreview(null); }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" className="ml-8" onClick={() => imageInputRef.current?.click()}>
+                  <Camera className="mr-2 h-4 w-4" /> Take Photo
+                </Button>
+              )}
+            </div>
+
+            {/* Step 2: Dish photo */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center h-6 w-6 rounded-full bg-gray-100 text-gray-600 text-xs font-bold shrink-0">2</div>
+                <Label className="font-medium">Photo of the dish <span className="text-muted-foreground text-sm font-normal">(optional)</span></Label>
+              </div>
+              <p className="text-sm text-muted-foreground ml-8">
+                A photo of the finished dish for your recipe card
+              </p>
+              {dishPhotoPreview ? (
+                <div className="relative ml-8">
+                  <img src={dishPhotoPreview} alt="Dish" className="w-full max-h-40 object-contain rounded-lg border" />
+                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 bg-white/80 rounded-full"
+                    onClick={() => { setDishPhoto(null); setDishPhotoPreview(null); }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" className="ml-8" onClick={() => dishInputRef.current?.click()}>
+                  <Camera className="mr-2 h-4 w-4" /> Take Photo
+                </Button>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCaptureDialogOpen(false)}>Cancel</Button>
+            <Button disabled={!selectedImage} onClick={() => handleParseFromImage()}>
+              <Sparkles className="mr-2 h-4 w-4" /> Parse Recipe
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -34,7 +34,6 @@ interface ParsedRecipe {
   kid_friendly_level: number;
   makes_leftovers: boolean;
   leftover_days: number | null;
-  food_photo_bounds: { x: number; y: number; width: number; height: number } | null;
 }
 
 // Strip control characters that can break JSON parsing in clients
@@ -69,18 +68,6 @@ function validateRecipe(parsed: Partial<ParsedRecipe>): ParsedRecipe {
     kid_friendly_level: Math.min(10, Math.max(1, Number.isFinite(parsed.kid_friendly_level) ? parsed.kid_friendly_level! : 5)),
     makes_leftovers: parsed.makes_leftovers ?? true,
     leftover_days: Number.isFinite(parsed.leftover_days) ? parsed.leftover_days! : null,
-    food_photo_bounds: parsed.food_photo_bounds &&
-      Number.isFinite(parsed.food_photo_bounds.x) &&
-      Number.isFinite(parsed.food_photo_bounds.y) &&
-      Number.isFinite(parsed.food_photo_bounds.width) &&
-      Number.isFinite(parsed.food_photo_bounds.height)
-        ? {
-            x: Math.max(0, Math.min(100, parsed.food_photo_bounds.x)),
-            y: Math.max(0, Math.min(100, parsed.food_photo_bounds.y)),
-            width: Math.max(1, Math.min(100, parsed.food_photo_bounds.width)),
-            height: Math.max(1, Math.min(100, parsed.food_photo_bounds.height)),
-          }
-        : null,
   };
 }
 
@@ -191,9 +178,10 @@ Deno.serve(async (req: Request) => {
 Your job is to extract the recipe data from the image into a structured JSON format. Read the text in the image carefully and accurately.
 
 CRITICAL RULES:
-- READ THE ACTUAL PRINTED TEXT in the image. Do NOT guess, invent, or generate a recipe from a food photo. Transcribe what is written.
+- READ THE ACTUAL PRINTED TEXT in the image. Do NOT guess, invent, or generate a recipe from a food photo. Transcribe what is written. NEVER add ingredients that are not printed on the page.
+- Cookbook pages often have MULTIPLE COLUMNS of ingredients. Scan the ENTIRE page systematically — left to right, top to bottom — to find ALL ingredient sections. Common sections: main protein, sauce, sides (like polenta/rice), and "For Serving" toppings. Do not skip any column.
 - Transcribe ALL ingredient quantities EXACTLY as shown. Pay close attention to fractions like 1½ vs ½ — these are different amounts.
-- List EVERY ingredient, including sub-sections (e.g. "Braised Pork:", "For Serving:"). Format: "quantity unit ingredient (prep notes)" on each line.
+- List EVERY ingredient, including sub-sections (e.g. "Braised Pork:", "Creamy Polenta:", "For Serving:"). Format: "quantity unit ingredient (prep notes)" on each line.
 - Number ALL instruction steps. Preserve section headers (e.g. "MAKE THE PORK:").
 - Capture useful tips, substitutions, or personal notes from the recipe text in the "notes" field.
 - Difficulty is about ACTIVE effort, not passive time. A recipe with 15 min prep + 2 hours braising is "easy", not "hard".
@@ -201,12 +189,12 @@ CRITICAL RULES:
 - Meal type: breakfast/lunch/dinner/snack — infer from context and ingredients.
 - Estimate nutrition per serving from ingredients if not explicitly shown.
 - For prep_time_minutes, count only hands-on time. For cook_time_minutes, count total cooking time including passive time.
-- FOOD PHOTO DETECTION: If the image contains a photograph of the finished dish (common in cookbooks), return its bounding box in "food_photo_bounds" as percentage coordinates {x, y, width, height} where x/y is the top-left corner. If no food photo is visible, return null.`;
+`;
 
     const userPrompt = `I'm digitizing this recipe from my cookbook into my meal planning app. Please extract ALL the recipe data from the image into this JSON format. Read the printed text carefully — do not guess or paraphrase.
 
 Return ONLY valid JSON:
-{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"ingredient1\\ningredient2\\n...","instructions":"1. Step one\\n2. Step two\\n...","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"comma,separated,tags","notes":"tips, substitutions, or other useful info from the text","calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null,"food_photo_bounds":{"x":0,"y":0,"width":50,"height":100}}`;
+{"name":"","meal_type":"breakfast|lunch|dinner|snack","ingredients":"ingredient1\\ningredient2\\n...","instructions":"1. Step one\\n2. Step two\\n...","prep_time_minutes":null,"cook_time_minutes":null,"servings":4,"difficulty":"easy|medium|hard","cuisine":null,"tags":"comma,separated,tags","notes":"tips, substitutions, or other useful info from the text","calories":null,"protein_g":null,"carbs_g":null,"fat_g":null,"fiber_g":null,"kid_friendly_level":5,"makes_leftovers":true,"leftover_days":null}`;
 
     // Allow env override for model
     const model = Deno.env.get('ANTHROPIC_MODEL') || CLAUDE_VISION_MODEL;

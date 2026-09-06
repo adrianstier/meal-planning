@@ -55,3 +55,6 @@ TEST_CREDENTIALS.md
 test-credentials.md
 
 # Trigger rebuild
+
+# local machine settings, not shared
+.claude/settings.local.json

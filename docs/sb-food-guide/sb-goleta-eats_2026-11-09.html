@@ -73,7 +73,7 @@ h1{font-family:var(--f-sign);font-weight:400;font-size:clamp(32px,4.6vw,54px);li
 .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1.5px solid var(--surface);box-shadow:0 0 0 1px var(--rule)}
 .pin{cursor:pointer}
 .pin circle.dot{stroke:var(--surface);stroke-width:1.6}
-.pin text{font-family:var(--f-text);font-weight:700;font-size:8px;fill:#fff;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.pin text{font-family:var(--f-text);font-weight:700;font-size:7.5px;fill:#fff;text-anchor:middle;dominant-baseline:central;pointer-events:none}
 .pin .halo{fill:none;stroke:var(--ink);stroke-width:2;opacity:0}
 .pin.sel .halo{opacity:1;animation:ping 1.4s ease-out 2}
 @keyframes ping{from{r:8;opacity:.9}to{r:20;opacity:0}}
@@ -106,8 +106,32 @@ h1{font-family:var(--f-sign);font-weight:400;font-size:clamp(32px,4.6vw,54px);li
 .empty{color:var(--muted);padding:22px 0;border-top:1px solid var(--rule)}
 .empty button{font:inherit;color:var(--pick);background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;font-weight:600}
 footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-size:14px;color:var(--muted);max-width:78ch}
-@media (max-width:900px){.main{grid-template-columns:minmax(0,1fr)}.chart{position:relative;top:auto}.filters{position:relative}#q{width:100%}.count{margin-left:0}}
-@media (max-width:600px){.views{position:static;padding:8px;background:var(--surface);border-top:1px solid var(--rule)}.mapctl{bottom:auto;top:10px}}
+@media (max-width:900px){
+  .main{grid-template-columns:minmax(0,1fr);margin-top:12px}
+  .filters{position:relative;margin-top:18px;gap:10px}
+  .fgroup{width:100%;flex-wrap:nowrap}
+  .fgroup > .q{width:46px;flex:none}
+  .seg{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;min-width:0;flex:1;padding-block:2px}
+  .seg::-webkit-scrollbar{display:none}
+  .opt{white-space:nowrap;min-height:40px;padding:8px 13px;flex:none}
+  .fgroup:has(#q){flex-wrap:wrap}
+  #q{width:100%;min-height:42px;font-size:16px}
+  .count{margin-left:0}
+  .chart{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--paper);padding-block:8px 6px;margin-inline:calc(-1 * max(16px, env(safe-area-inset-left,0px)))}
+  .chart > *{margin-inline:max(16px, env(safe-area-inset-left,0px))}
+  .mapbox svg{aspect-ratio:auto;height:min(36vh,300px)}
+  .legend{margin-top:6px;font-size:12.5px;gap:4px 14px}
+  .legend span:last-child{display:none}
+  .row{scroll-margin-top:calc(var(--mapH,320px) + 12px)}
+  .pname{font-size:19px}
+}
+@media (pointer:coarse){
+  .links{gap:4px 18px}
+  .links a{display:inline-flex;align-items:center;min-height:40px}
+  .mapctl button{width:40px;height:40px}
+  .views button{min-height:38px;padding:6px 12px}
+}
+@media (max-width:600px){.views{position:static;padding:6px;background:var(--surface);border-top:1px solid var(--rule);flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.views::-webkit-scrollbar{display:none}.views button{flex:none;white-space:nowrap}.mapctl{bottom:auto;top:8px;right:8px}}
 @media (prefers-reduced-motion:reduce){.pin.sel .halo{animation:none;opacity:1}}
 </style>
 
@@ -220,11 +244,18 @@ function row(p,n){
 }
 
 // ---- chart ----
-const svg=$("#map");const ASP=520/1000;
+const svg=$("#map");let ASP=520/1000;
 let vb=[0,0,GEO.VW,GEO.VW*ASP];
 function frame(lat1,lng1,lat2,lng2){const[a,b]=proj(lat1,lng1),[c,d]=proj(lat2,lng2);const w=c-a,h=w*ASP,cy=(b+d)/2;return[a,cy-h/2,w,h]}
-const VIEWS={all:frame(34.462,-119.893,34.39,-119.618),goleta:frame(34.45,-119.885,34.405,-119.80),sb:frame(34.433,-119.716,34.408,-119.68),montecito:frame(34.445,-119.665,34.41,-119.625)};
-function setVB(v,key){vb=v.slice();svg.setAttribute("viewBox",vb.join(" "));document.querySelectorAll("#views button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.zoom===key));scaleMarks()}
+const VB={all:[34.462,-119.893,34.39,-119.618],goleta:[34.45,-119.885,34.405,-119.80],sb:[34.433,-119.716,34.408,-119.68],montecito:[34.445,-119.665,34.41,-119.625]};
+let VIEWS={},curView="all";
+function fitFrame(lat1,lng1,lat2,lng2){const[a,b]=proj(lat1,lng1),[c,d]=proj(lat2,lng2);let w=c-a,h=w*ASP;if(h<(d-b)*1.08){h=(d-b)*1.08;w=h/ASP}return[(a+c)/2-w/2,(b+d)/2-h/2,w,h]}
+function measure(){const r=svg.getBoundingClientRect();if(r.width>0&&r.height>0)ASP=r.height/r.width;
+  for(const k in VB)VIEWS[k]=fitFrame(...VB[k]);
+  // on tall phone maps, start on the dense middle of the coast, not the whole strip
+  if(ASP>0.6)VIEWS.all=fitFrame(34.452,-119.893,34.395,-119.62);
+  const ch=document.querySelector(".chart");document.documentElement.style.setProperty("--mapH",ch.getBoundingClientRect().height+"px")}
+function setVB(v,key){vb=v.slice();if(key!==undefined)curView=key;svg.setAttribute("viewBox",vb.join(" "));document.querySelectorAll("#views button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.zoom===key));scaleMarks()}
 function base(){
   svg.innerHTML=`<rect x="-2000" y="-2000" width="${GEO.VW+4000}" height="${GEO.VH+4000}" fill="var(--land)"/>
   <path d="${GEO.ocean}" fill="var(--sea)"/>
@@ -233,7 +264,7 @@ function base(){
   <path d="${GEO.major}" fill="none" stroke="var(--hwy)" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
   ${GEO.coast.map(c=>`<path d="${c}" fill="none" stroke="var(--sea-deep)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>`).join("")}
   <g id="names"></g><g id="glbl"></g><g id="pins"></g>`;
-  const T=[["Goleta",34.4535,-119.828,"town"],["Isla Vista",34.4095,-119.861,"town"],["Santa Barbara",34.4495,-119.712,"town"],["Montecito",34.4505,-119.650,"town"],["Santa Barbara Channel",34.394,-119.775,"sea-name"]];
+  const T=[["Goleta",34.4535,-119.828,"town"],["Isla Vista",34.4095,-119.861,"town"],["Santa Barbara",34.4495,-119.722,"town"],["Montecito",34.4545,-119.638,"town"],["Santa Barbara Channel",34.394,-119.775,"sea-name"]];
   const g=svg.querySelector("#names");
   for(const[t,la,ln,c]of T){const[x,y]=proj(la,ln);const e=document.createElementNS(svgNS,"text");e.setAttribute("x",x);e.setAttribute("y",y);e.setAttribute("class",c);e.setAttribute("text-anchor","middle");e.dataset.base=c==="town"?17:16;e.textContent=t;g.appendChild(e)}
   // graticule every 1 arc-minute
@@ -244,11 +275,13 @@ function base(){
 }
 function dm(v,pos,neg){const a=Math.abs(v),deg=Math.floor(a+1e-9),min=Math.round((a-deg)*60);return `${deg}°${String(min).padStart(2,"0")}′${v>=0?pos:neg}`}
 function scaleMarks(){
-  const s=vb[2]/GEO.VW;
-  svg.querySelectorAll(".pin").forEach(p=>p.setAttribute("transform",`translate(${p.dataset.x},${p.dataset.y}) scale(${(s*1.55).toFixed(4)})`));
-  svg.querySelectorAll("#names text").forEach(t=>t.setAttribute("font-size",(+t.dataset.base*s*1.15).toFixed(3)));
+  const px=vb[2]/(svg.clientWidth||800);            // svg units per screen pixel
+  const coarse=matchMedia("(pointer:coarse)").matches;
+  const pinR=coarse?11:9.5;                          // pin radius in screen px
+  svg.querySelectorAll(".pin").forEach(p=>p.setAttribute("transform",`translate(${p.dataset.x},${p.dataset.y}) scale(${(pinR/7.5*px).toFixed(5)})`));
+  svg.querySelectorAll("#names text").forEach(t=>t.setAttribute("font-size",((+t.dataset.base-2)*px).toFixed(4)));
   // edge labels for the graticule, spaced so they never crowd
-  const g=svg.querySelector("#glbl");g.innerHTML="";const fs=11*s,pad=6*s;
+  const g=svg.querySelector("#glbl");g.innerHTML="";const fs=10.5*px,pad=6*px;
   const pxPerMin=(GEO.scale/60)*(svg.clientWidth||800)/vb[2];const stepMin=[1,2,5,10].find(k=>k*pxPerMin>80)||10;
   const[latTop]=unproj(0,vb[1]),[latBot]=unproj(0,vb[1]+vb[3]);
   for(let m=Math.ceil(latBot*60/stepMin)*stepMin;m<=latTop*60;m+=stepMin){const[,y]=proj(m/60,GEO.W);
@@ -273,7 +306,7 @@ function select(id,fromMap){
   const p=PLACES.find(x=>x.id===id);
   if(fromMap){const c=document.getElementById("c-"+id);if(c)c.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}
   else if(p&&p.lat&&st.sel){const[x,y]=proj(p.lat,p.lng);const inView=x>vb[0]&&x<vb[0]+vb[2]&&y>vb[1]&&y<vb[1]+vb[3];
-    if(!inView||vb[2]>GEO.VW*.45){const w=GEO.VW*.16;setVB([x-w/2,y-w*ASP/2,w,w*ASP])}}
+    if(!inView||vb[2]>GEO.VW*.45){const w=GEO.VW*(ASP>0.6?.12:.16);setVB([x-w/2,y-w*ASP/2,w,w*ASP],null)}}
 }
 function zoom(f,cx,cy){const[x,y,w,h]=vb;cx??=x+w/2;cy??=y+h/2;const nw=Math.min(Math.max(w*f,GEO.VW*0.035),GEO.VW*1.1),nh=nw*ASP;setVB([cx-(cx-x)*nw/w,cy-(cy-y)*nh/h,nw,nh])}
 function toSvg(ev){const r=svg.getBoundingClientRect();return[vb[0]+(ev.clientX-r.left)/r.width*vb[2],vb[1]+(ev.clientY-r.top)/r.height*vb[3]]}
@@ -290,5 +323,6 @@ document.querySelectorAll("#views button").forEach(b=>b.onclick=()=>setVB(VIEWS[
 $("#f-new").onclick=()=>{st.onlyNew=!st.onlyNew;render()};
 $("#f-gone").onclick=()=>{st.showGone=!st.showGone;render()};
 $("#q").addEventListener("input",e=>{st.q=e.target.value;render()});
-base();setVB(VIEWS.all,"all");render();
+base();measure();setVB(VIEWS.all,"all");render();
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{const cx=vb[0]+vb[2]/2,cy=vb[1]+vb[3]/2,w=vb[2];measure();if(curView&&VIEWS[curView])setVB(VIEWS[curView],curView);else setVB([cx-w/2,cy-w*ASP/2,w,w*ASP],null)},150)});
 </script>

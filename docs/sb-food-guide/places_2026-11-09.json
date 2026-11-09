@@ -1,0 +1,1747 @@
+[
+ {
+  "id": "p0",
+  "name": "Reunion Kitchen + Drink",
+  "cats": [
+   "dinner"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "American, beachfront",
+  "price": "$$$",
+  "note": "At East Beach. Good for groups.",
+  "url": "https://www.yelp.com/biz/reunion-kitchen-drink-santa-barbara-3",
+  "status": "open",
+  "statusNote": "Opened Jan 2022 in Cabrillo Pavilion; current listings, no closure news found",
+  "source": "https://santabarbaraca.com/businesses/reunion-kitchen/",
+  "address": "1118 E Cabrillo Blvd (Cabrillo Pavilion)",
+  "lat": 34.4170129,
+  "lng": -119.6689813,
+  "isNew": false
+ },
+ {
+  "id": "p1",
+  "name": "Kanaloa Seafood",
+  "cats": [
+   "dinner",
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Seafood market & kitchen",
+  "price": "$$",
+  "note": "",
+  "url": null,
+  "status": "open",
+  "statusNote": "Own site lists SB Market and Kitchen hours, no closure notice; Groupon/MapQuest show undated 'closed' flags, so confidence is moderate",
+  "source": "https://kanaloaseafood.com",
+  "address": "715 Chapala St",
+  "lat": 34.4178901,
+  "lng": -119.699945,
+  "isNew": false
+ },
+ {
+  "id": "p2",
+  "name": "Secret Bao",
+  "cats": [
+   "dinner",
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Asian, bao",
+  "price": "$$",
+  "note": "",
+  "url": null,
+  "status": "open",
+  "statusNote": "Listed as a 2026 Santa Barbara Wine Festival participant; no closure news",
+  "source": "https://www.opentable.com/r/secret-bao-santa-barbara",
+  "address": "1201 Anacapa St",
+  "lat": 34.424449,
+  "lng": -119.703487,
+  "isNew": false
+ },
+ {
+  "id": "p3",
+  "name": "Barbareño",
+  "cats": [
+   "dinner"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Central Coast farm-to-table",
+  "price": "$$$$",
+  "note": "Fancy. In the Michelin Guide.",
+  "url": "https://www.yelp.com/biz/barbare%C3%B1o-santa-barbara",
+  "status": "open",
+  "statusNote": "Michelin-listed and taking OpenTable bookings; a second downtown restaurant was announced May 2025 (Sitelines); no closure news",
+  "source": "https://guide.michelin.com/us/en/california/santa-barbara/restaurant/barbareno",
+  "address": "205 W Canon Perdido St",
+  "lat": 34.418064,
+  "lng": -119.702935,
+  "isNew": false
+ },
+ {
+  "id": "p4",
+  "name": "The Lark",
+  "cats": [
+   "dinner",
+   "cocktails"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Farm-to-table, family style",
+  "price": "$$$$",
+  "note": "Fancy. In the Michelin Guide; great bar too.",
+  "url": "https://www.yelp.com/biz/the-lark-santa-barbara-3",
+  "status": "open",
+  "statusNote": "Father's Day dinner Jun 2026 and OpenTable experiences through Oct 2026; no closure news",
+  "source": "https://www.opentable.com/r/the-lark-santa-barbara",
+  "address": "131 Anacapa St",
+  "lat": 34.4144546,
+  "lng": -119.6906741,
+  "isNew": false
+ },
+ {
+  "id": "p5",
+  "name": "Santo Mezcal",
+  "cats": [
+   "dinner",
+   "cocktails"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Mexican, mezcal bar",
+  "price": "$$$",
+  "note": "Fancy Mexican.",
+  "url": "https://yelp.to/6O4Ye6Bo3pb",
+  "status": "open",
+  "statusNote": "Online ordering on Toast is still live; no closure news (MapQuest 'closed' tag is undated)",
+  "source": "https://toast.app/r/santo-mezcal-119-state-street/order",
+  "address": "119 State St",
+  "lat": 34.4135042,
+  "lng": -119.6912658,
+  "isNew": false
+ },
+ {
+  "id": "p6",
+  "name": "Lucky Penny",
+  "cats": [
+   "casual",
+   "dinner"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Wood-fired pizza",
+  "price": "$$",
+  "note": "Pizza from the Lark team.",
+  "url": "https://yelp.to/H0JexdFo3pb",
+  "status": "open",
+  "statusNote": "Active visitor-bureau listing; expanding to the Santa Ynez Valley (Sitelines, Jul 2025); no closure news",
+  "source": "https://santabarbaraca.com/businesses/lucky-penny/",
+  "address": "127 Anacapa St",
+  "lat": 34.4146457,
+  "lng": -119.6902303,
+  "isNew": false
+ },
+ {
+  "id": "p7",
+  "name": "Sama Sama Kitchen",
+  "cats": [
+   "dinner"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Indonesian",
+  "price": "$$$",
+  "note": "Get the wings! Michelin Bib Gourmand.",
+  "url": "https://www.yelp.com/biz/sama-sama-kitchen-santa-barbara",
+  "status": "open",
+  "statusNote": "Michelin Bib Gourmand 2026 per OpenTable; closed Mondays",
+  "source": "https://guide.michelin.com/us/en/california/santa-barbara/restaurant/sama-sama-kitchen",
+  "address": "1208 State St",
+  "lat": 34.423783,
+  "lng": -119.7046209,
+  "isNew": false
+ },
+ {
+  "id": "p8",
+  "name": "The Good Lion",
+  "cats": [
+   "cocktails"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Cocktail bar",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/the-good-lion-santa-barbara",
+  "status": "open",
+  "statusNote": "Runner-up for Neighborhood Bar in SB Independent Best of 2026 (Oct 2026)",
+  "source": "https://www.independent.com/2026/01/28/the-cool-cats-keep-coming-for-good-lion-hospitality/",
+  "address": "1212 State St",
+  "lat": 34.4237762,
+  "lng": -119.7047601,
+  "isNew": false
+ },
+ {
+  "id": "p9",
+  "name": "Test Pilot",
+  "cats": [
+   "cocktails"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Tiki & cocktails",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/test-pilot-santa-barbara-2",
+  "status": "open",
+  "statusNote": "9-year anniversary party Aug 2025; community event listed Jun 2026; no closure news",
+  "source": "https://theinfatuation.com/los-angeles/reviews/test-pilot-santa-barbara",
+  "address": "211 Helena Ave",
+  "lat": 34.4146175,
+  "lng": -119.6914088,
+  "isNew": false
+ },
+ {
+  "id": "p10",
+  "name": "Shaker Mill",
+  "cats": [
+   "cocktails"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Cocktail bar",
+  "price": "$$",
+  "note": "Broad Street Oyster Co. serves inside.",
+  "url": "https://www.yelp.com/biz/shaker-mill-santa-barbara",
+  "status": "open",
+  "statusNote": "Active Downtown SB listing; no closure news (MapQuest 'closed' tag is undated)",
+  "source": "https://downtownsb.org/go/shaker-mill",
+  "address": "418 State St",
+  "lat": 34.4164592,
+  "lng": -119.6946775,
+  "isNew": false
+ },
+ {
+  "id": "p11",
+  "name": "Lab Social",
+  "cats": [
+   "cocktails"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Speakeasy cocktails",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/lab-social-santa-barbara",
+  "status": "closed",
+  "statusNote": "LOW CONFIDENCE: only a Yelp-derived MapQuest 'CLOSED PERMANENTLY' flag; no news story, no closure date; no coverage since 2020",
+  "source": "https://startpage.mapquest.com/us/california/lab-social-closed-permanently-422827767",
+  "address": "416 E Haley St (The Mill",
+  "lat": 34.4213825,
+  "lng": -119.6903742,
+  "isNew": false
+ },
+ {
+  "id": "p12",
+  "name": "Pearl Social Cocktail Club",
+  "cats": [
+   "cocktails"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Cocktail lounge",
+  "price": "$$",
+  "note": "Holiday MIRACLE pop-up Nov 13 – Dec 31.",
+  "url": "https://www.yelp.com/biz/pearl-social-santa-barbara-santa-barbara",
+  "status": "renamed",
+  "statusNote": "Reopened as Pearl Social Cocktail Club Jul 2024 (Sitelines). Visitor listing says 'call for availability'; MIRACLE holiday pop-up runs Nov 13 to Dec 31, 2026",
+  "source": "https://santabarbaraca.com/businesses/pearl-social-cocktail-club/",
+  "address": "131 Anacapa St Suite B",
+  "lat": 34.4144546,
+  "lng": -119.6906741,
+  "isNew": false
+ },
+ {
+  "id": "p13",
+  "name": "Satellite",
+  "cats": [
+   "beer-wine"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Wine & snacks",
+  "price": "$$",
+  "note": "",
+  "url": null,
+  "status": "moved",
+  "statusNote": "State St bar closed Sep 13, 2026 after a lease dispute; tastings, wine club and music moved to The Factory (SB Independent Aug 2026, Sitelines). It is no longer a daily walk-in wine bar",
+  "source": "https://www.independent.com/2026/08/18/satellite-s-b-shutting-down/",
+  "address": "616 E Haley St (The Factory)",
+  "lat": 34.4235102,
+  "lng": -119.6880661,
+  "isNew": false
+ },
+ {
+  "id": "p14",
+  "name": "Figueroa Mountain Brewing",
+  "cats": [
+   "beer-wine"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Brewery taproom / sports",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/figueroa-mountain-brewing-santa-barbara",
+  "status": "open",
+  "statusNote": "Brewery site lists current hours; shared concept with Flying Embers kombucha since 2020; the bankruptcy case was dismissed in 2025",
+  "source": "https://figmtnbrew.com/santabarbara",
+  "address": "137 Anacapa St",
+  "lat": 34.4146968,
+  "lng": -119.6906986,
+  "isNew": false
+ },
+ {
+  "id": "p15",
+  "name": "Yellow Belly Tap",
+  "cats": [
+   "casual",
+   "beer-wine"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Burgers & beer",
+  "price": "$$",
+  "note": "Upper De La Vina, not downtown.",
+  "url": "https://www.yelp.com/biz/yellow-belly-santa-barbara",
+  "status": "open",
+  "statusNote": "Not on State St; listings show it operating with no closure news, but no recent dated source",
+  "source": "https://www.latlong.net/poi/yellow-belly-tap-292059",
+  "address": "2611 De La Vina St",
+  "lat": 34.4348537,
+  "lng": -119.724704,
+  "isNew": false
+ },
+ {
+  "id": "p16",
+  "name": "Santa Barbara Public Market",
+  "cats": [
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Food hall",
+  "price": "$$",
+  "note": "Several counters under one roof (Corazon Cocina, Empty Bowl).",
+  "url": "https://www.sbpublicmarket.com/",
+  "status": "open",
+  "statusNote": "Operating; Lily's Donuts & Pops opened a stall Apr 2026 (Edhat). Vendor turnover continues (Fala Bar left Jan 2025)",
+  "source": "https://www.edhat.com/news/lilys-donuts-pops-opens-at-santa-barbara-public-market-bringing-sweet-treats/",
+  "address": "38 W Victoria St",
+  "lat": 34.4236858,
+  "lng": -119.7070229,
+  "isNew": false
+ },
+ {
+  "id": "p17",
+  "name": "Olio Crudo Bar",
+  "cats": [
+   "dinner"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Italian crudo",
+  "price": "$$$",
+  "note": "",
+  "url": null,
+  "status": "closed",
+  "statusNote": "Crudo bar converted around 2020-21 into Olio Bottega, an Italian deli and market (Sitelines Oct 2020, SB Independent Apr 2021). Sister Olio Pizzeria at the same address appears open (OpenTable)",
+  "source": "https://www.independent.com/2021/04/13/olio-bottega-serves-sandwiches-and-supplies-in-santa-barbara/",
+  "address": "11 W Victoria St",
+  "lat": 34.4240534,
+  "lng": -119.7058479,
+  "isNew": false
+ },
+ {
+  "id": "p18",
+  "name": "Saint Bibiana",
+  "cats": [
+   "casual",
+   "dinner"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Pizza",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/saint-bibiana-santa-barbara",
+  "status": "open",
+  "statusNote": "Sitelines (Sep 27, 2026) reports 'St. Bibiana is expanding'; Toast ordering is live",
+  "source": "https://www.sitelinesb.com/tag/st-bibiana",
+  "address": "17 W Ortega St",
+  "lat": 34.4180083,
+  "lng": -119.698546,
+  "isNew": false
+ },
+ {
+  "id": "p19",
+  "name": "Broad Street Oyster Co.",
+  "cats": [
+   "casual"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Lobster rolls & oysters",
+  "price": "$$",
+  "note": "Inside Shaker Mill.",
+  "url": "https://yelp.to/ETuX1Mso3pb",
+  "status": "open",
+  "statusNote": "Walk-up window inside Shaker Mill; no closure news, but no recent dated source either",
+  "source": "https://theinfatuation.com/los-angeles/reviews/los-angeles-reviews-broad-street-oyster-co-santa-barbara",
+  "address": "418 State St (inside Shaker Mill)",
+  "lat": 34.4164592,
+  "lng": -119.6946775,
+  "isNew": false
+ },
+ {
+  "id": "p20",
+  "name": "Corazon Comedor",
+  "cats": [
+   "breakfast",
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Mexican",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/corazon-comedor-santa-barbara",
+  "status": "open",
+  "statusNote": "Closed for upgrades Aug 2025; Siteline (Jun 7, 2026) reports it switched back to table service. Reservations active on OpenTable.",
+  "source": "https://www.sitelinesb.com/tag/corazon-comedor",
+  "address": "29 E Victoria St",
+  "lat": 34.4253085,
+  "lng": -119.7049246,
+  "isNew": false
+ },
+ {
+  "id": "p21",
+  "name": "Jeannine's",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "American bakery & breakfast",
+  "price": "$$",
+  "note": "Also on Coast Village Rd (Montecito) and 7060 Hollister (Goleta).",
+  "url": "https://www.yelp.com/biz/jeannine-s-american-bakery-and-restaurant-santa-barbara",
+  "status": "open",
+  "statusNote": "Official site lists 3 public locations: 1 State St (At the Shore), 1253 Coast Village Rd (Montecito), 7060 Hollister Ave #105 (Goleta). Uptown/San Roque 3607 State St is closed to the public (central bakery, pre-order pickup only). La Arcada downtown closed 2020.",
+  "source": "https://www.jeannines.com/",
+  "address": "1 State St",
+  "lat": 34.4118,
+  "lng": -119.6859,
+  "isNew": false
+ },
+ {
+  "id": "p22",
+  "name": "Boathouse at Hendry's",
+  "cats": [
+   "breakfast",
+   "dinner"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Beachfront American",
+  "price": "$$$",
+  "note": "Breakfast on the sand at Arroyo Burro.",
+  "url": "https://www.yelp.com/biz/boathouse-at-hendrys-beach-santa-barbara",
+  "status": "open",
+  "statusNote": "No closure reports; reviews dated Feb 2026 and active Toast ordering.",
+  "source": "https://www.toasttab.com/local/order/boathouse-at-hendrys-beach",
+  "address": "2981 Cliff Dr",
+  "lat": 34.4037807,
+  "lng": -119.7436547,
+  "isNew": false
+ },
+ {
+  "id": "p23",
+  "name": "Renaud's Patisserie",
+  "cats": [
+   "breakfast",
+   "dessert"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "French bakery",
+  "price": "$$",
+  "note": "",
+  "url": null,
+  "status": "open",
+  "statusNote": "No closure reports found; active Toast ordering pages (Uptown, Gelson's). Also 1187 Coast Village Rd, Montecito (dinner dropped 2019). Latest dated activity found: May 2025 review.",
+  "source": "https://www.toasttab.com/local/order/renauds-patisserie-bistro-uptown",
+  "address": "3315 State St (Loreto Plaza)",
+  "lat": 34.439435,
+  "lng": -119.735853,
+  "isNew": false
+ },
+ {
+  "id": "p24",
+  "name": "Finch & Fork",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "American, slightly fancier",
+  "price": "$$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/finch-and-fork-santa-barbara",
+  "status": "open",
+  "statusNote": "Temporarily closed during the hotel renovation, then reopened with a new look and menu, per the hotel. Review dated Dec 2025.",
+  "source": "https://canarysantabarbara.com/renovation/",
+  "address": "31 W Carrillo St (Kimpton Canary)",
+  "lat": 34.4204232,
+  "lng": -119.7025541,
+  "isNew": false
+ },
+ {
+  "id": "p25",
+  "name": "D'Angelo's",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Bakery & diner",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/d-angelos-bakery-santa-barbara",
+  "status": "unverified",
+  "statusNote": "No closure news found, but nothing dated 2025-2026 confirms it is operating. Only stale directory listings.",
+  "source": "https://www.foodnetwork.com/restaurants/ca/santa-barbara/dangelo-bread-restaurant",
+  "address": "25 W Gutierrez St",
+  "lat": 34.4150609,
+  "lng": -119.6947924,
+  "isNew": false
+ },
+ {
+  "id": "p26",
+  "name": "Hook & Press",
+  "cats": [
+   "breakfast",
+   "dessert"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Fancy donuts & coffee",
+  "price": "$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/hook-and-press-donuts-santa-barbara",
+  "status": "open",
+  "statusNote": "Moved to La Arcada in 2021-22. Siteline item of Oct 9, 2025 (stolen turtle returned) implies it is operating. No closure news.",
+  "source": "https://www.sitelinesb.com/tag/hook-press-donuts/",
+  "address": "15 E Figueroa St (La Arcada)",
+  "lat": 34.4229668,
+  "lng": -119.7028071,
+  "isNew": false
+ },
+ {
+  "id": "p27",
+  "name": "Dawn Patrol",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Scrambles",
+  "price": "$$",
+  "note": "",
+  "url": null,
+  "status": "closed",
+  "statusNote": "Siteline reported 'Dawn Patrol has closed' (Jan 8, 2025). MapQuest lists it as permanently closed.",
+  "source": "https://www.sitelinesb.com/tag/dawn-patrol/",
+  "address": "324 State St",
+  "lat": 34.4156837,
+  "lng": -119.6937385,
+  "isNew": false
+ },
+ {
+  "id": "p28",
+  "name": "Oat Bakery",
+  "cats": [
+   "casual",
+   "breakfast"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Sandwiches & bakery",
+  "price": "$",
+  "note": "Also an Old Town Goleta location.",
+  "url": "https://www.yelp.com/biz/oat-bakery-santa-barbara",
+  "status": "open",
+  "statusNote": "Original downtown shop. Old Town Goleta location at 231 Magnolia Ave, Goleta 93117 (opened late 2022, also wholesale kitchen); third shop at Montecito Country Mart. No closure news. Goleta hours reportedly limited, so check before going.",
+  "source": "https://dailynexus.com/2023-03-02/whats-new-in-old-town-goleta-oat-bakerys-second-location/",
+  "address": "5 W Haley St",
+  "lat": 34.4165248,
+  "lng": -119.695651,
+  "isNew": false
+ },
+ {
+  "id": "p29",
+  "name": "La Super Rica",
+  "cats": [
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Mexican",
+  "price": "$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/la-super-rica-taqueria-santa-barbara",
+  "status": "open",
+  "statusNote": "Listed as Recommended in Opinionated About Dining Cheap Eats 2026. No closure news. Cash only; closed Tue-Wed per listings.",
+  "source": "https://www.frommers.com/destinations/santa-barbara/restaurants/la-super-rica-taqueria",
+  "address": "622 N Milpas St",
+  "lat": 34.4280989,
+  "lng": -119.6871135,
+  "isNew": false
+ },
+ {
+  "id": "p30",
+  "name": "Los Agaves (Milpas)",
+  "cats": [
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Mexican",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/los-agaves-santa-barbara",
+  "status": "open",
+  "statusNote": "Milpas location reopened after an extended closure (Edhat). Second SB location at 2911 De La Vina St. Michelin page still shows a 'temporarily closed' note, so check before going.",
+  "source": "https://www.edhat.com/news/popular-santa-barbara-mexican-restaurant-reopens-milpas-street-location/",
+  "address": "600 N Milpas St",
+  "lat": 34.427405,
+  "lng": -119.686665,
+  "isNew": false
+ },
+ {
+  "id": "p31",
+  "name": "Los Arroyos",
+  "cats": [
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Mexican",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/los-arroyos-santa-barbara-2",
+  "status": "open",
+  "statusNote": "Downtown flagship. KEYT covered its 25th anniversary (2024). No closure news. The Coast Village Rd outpost closed for renovation in Oct 2023 and no reopening was found.",
+  "source": "https://keyt.com/?p=1041243",
+  "address": "14 W Figueroa St",
+  "lat": 34.4220584,
+  "lng": -119.7037554,
+  "isNew": false
+ },
+ {
+  "id": "p32",
+  "name": "South Coast Deli (Chapala)",
+  "cats": [
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Sandwiches",
+  "price": "$",
+  "note": "",
+  "url": null,
+  "status": "closed",
+  "statusNote": "Closed Jan 20, 2023 after losing its lease. Other locations remain: 10 E Carrillo, 3534 State, Goleta, and the Funk Zone (205 Santa Barbara St).",
+  "source": "https://www.independent.com/2023/01/19/south-coast-deli-on-chapala-closing-its-doors/",
+  "address": "1436 Chapala St",
+  "lat": 34.4251129,
+  "lng": -119.7092251,
+  "isNew": false
+ },
+ {
+  "id": "p33",
+  "name": "Empty Bowl",
+  "cats": [
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Thai noodle bar",
+  "price": "$$",
+  "note": "Try the khao soi and duck buns.",
+  "url": "https://www.yelp.com/biz/empty-bowl-gourmet-noodle-bar-santa-barbara",
+  "status": "unverified",
+  "statusNote": "Marked its 10th anniversary in 2024. No closure news found, but nothing newer confirms it. MapQuest shows a 'Closed' label of unclear meaning.",
+  "source": "https://www.independent.com/2024/03/28/empty-bowl-gourmet-noodle-bar-celebrates-10-years-of-thai-noodling/",
+  "address": "38 W Victoria St (Public Market)",
+  "lat": 34.4236858,
+  "lng": -119.7070229,
+  "isNew": false
+ },
+ {
+  "id": "p34",
+  "name": "Joe's Cafe",
+  "cats": [
+   "casual",
+   "beer-wine"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Old-school American & stiff drinks",
+  "price": "$$",
+  "note": "",
+  "url": "https://yelp.to/zTWYYsTEK0",
+  "status": "open",
+  "statusNote": "SB's oldest restaurant (1928). Review dated Jan 2026. No closure news.",
+  "source": "https://www.opentable.com/joes-cafe",
+  "address": "536 State St",
+  "lat": 34.4177617,
+  "lng": -119.6965161,
+  "isNew": false
+ },
+ {
+  "id": "p35",
+  "name": "The Blue Owl",
+  "cats": [
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Asian fusion rice bowls",
+  "price": "$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/the-blue-owl-santa-barbara",
+  "status": "unverified",
+  "statusNote": "New owner in 2021. Last dated Siteline mention is Jul 2022. No closure news, but nothing 2025-2026 confirms it, and the exact current address is uncertain.",
+  "source": "https://sitelinesb.com/tag/the-blue-owl",
+  "address": "5 W Canon Perdido St",
+  "lat": 34.4201826,
+  "lng": -119.7007405,
+  "isNew": false
+ },
+ {
+  "id": "p36",
+  "name": "Mony's",
+  "cats": [
+   "casual"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Mexican",
+  "price": "$",
+  "note": "Affordable; open about 10–4 only.",
+  "url": "https://www.yelp.com/biz/monys-mexican-food-santa-barbara",
+  "status": "open",
+  "statusNote": "Still expanding: Santa Barbara Bowl outpost (2024) and UCSB outpost (Sep 2025). No closure of Anacapa reported.",
+  "source": "https://www.sitelinesb.com/tag/monys",
+  "address": "217 Anacapa St (Funk Zone)",
+  "lat": 34.4154345,
+  "lng": -119.6912738,
+  "isNew": false
+ },
+ {
+  "id": "p37",
+  "name": "Corazon Cocina",
+  "cats": [
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Tacos",
+  "price": "$",
+  "note": "In the Public Market. Michelin Bib Gourmand.",
+  "url": "https://www.yelp.com/biz/corazon-cocina-santa-barbara-2",
+  "status": "open",
+  "statusNote": "Original Public Market stall. Review dated Jan 24, 2026. No closure news.",
+  "source": "https://guide.michelin.com/us/en/california/santa-barbara/restaurant/corazon-cocina",
+  "address": "38 W Victoria St (Public Market)",
+  "lat": 34.4236858,
+  "lng": -119.7070229,
+  "isNew": false
+ },
+ {
+  "id": "p38",
+  "name": "Shalhoob's Funk Zone Patio",
+  "cats": [
+   "casual",
+   "beer-wine"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "BBQ & burgers",
+  "price": "$$",
+  "note": "",
+  "url": null,
+  "status": "unverified",
+  "statusNote": "No closure news, but nothing dated 2025-2026 confirms it. Shalhoob's left the Public Market in Mar 2024 (separate venue). Correct spelling is 'Shalhoob's'.",
+  "source": "https://www.independent.com/2017/09/20/shalhoob-meat-company-evolves-funk-zone-patio/",
+  "address": "220 Gray Ave",
+  "lat": 34.4163373,
+  "lng": -119.6904828,
+  "isNew": false
+ },
+ {
+  "id": "p39",
+  "name": "McConnell's Ice Cream",
+  "cats": [
+   "dessert"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Ice cream",
+  "price": "$",
+  "note": "Long lines but worth it; ice cream sandwiches run out by 8.",
+  "url": "https://www.yelp.com/biz/mcconnells-fine-ice-creams-santa-barbara",
+  "status": "open",
+  "statusNote": "Flagship scoop shop. Directory reviews dated through Apr 2026. Another shop at 120 State St (Funk Zone).",
+  "source": "https://www.independent.com/2024/05/01/we-believe-you-should-always-get-a-double-scoop/",
+  "address": "728 State St",
+  "lat": 34.4194809,
+  "lng": -119.6987612,
+  "isNew": false
+ },
+ {
+  "id": "p40",
+  "name": "Handlebar Coffee",
+  "cats": [
+   "coffee"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Coffee roaster",
+  "price": "$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/handlebar-coffee-roasters-santa-barbara",
+  "status": "open",
+  "statusNote": "Siteline (Feb 8, 2026) reports a Canon Perdido annex opened. Second location at 2720 De La Vina St.",
+  "source": "https://www.sitelinesb.com/tag/old-town-coffee/",
+  "address": "128 E Canon Perdido St",
+  "lat": 34.4223852,
+  "lng": -119.6984603,
+  "isNew": false
+ },
+ {
+  "id": "p41",
+  "name": "Dune Coffee",
+  "cats": [
+   "coffee"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Coffee roaster",
+  "price": "$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/dune-coffee-roasters-state-street-santa-barbara",
+  "status": "open",
+  "statusNote": "Original Dune cafe (formerly The French Press). Mentioned on Siteline Jun 2025. No closure news.",
+  "source": "https://www.downtownsb.org/go/dune-coffee-roasters",
+  "address": "1101 State St",
+  "lat": 34.4222939,
+  "lng": -119.7035262,
+  "isNew": false
+ },
+ {
+  "id": "p42",
+  "name": "Rebar Coffee",
+  "cats": [
+   "coffee"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Coffee",
+  "price": "$",
+  "note": "",
+  "url": null,
+  "status": "closed",
+  "statusNote": "Closed. FoodGPS marks it [CLOSED]; a Nov 2017 Independent item called 214 State St the 'former site of Rebar Coffee'. The sister business Union Ale is also closed.",
+  "source": "https://foodgps.com/rebar-coffee-cold-brew-flight/",
+  "address": "214 State St",
+  "lat": 34.4145527,
+  "lng": -119.6918768,
+  "isNew": false
+ },
+ {
+  "id": "p43",
+  "name": "Dart Coffee",
+  "cats": [
+   "coffee"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Coffee",
+  "price": "$",
+  "note": "",
+  "url": "https://yelp.to/clxLBKnm3pb",
+  "status": "open",
+  "statusNote": "Open. Also has a SB Maritime Museum harbor bar and a Carpinteria store.",
+  "source": "https://sbmm.org/dart-coffee/",
+  "address": "121 E Yanonali St (Funk Zone)",
+  "lat": 34.4157665,
+  "lng": -119.6899858,
+  "isNew": false
+ },
+ {
+  "id": "p44",
+  "name": "Lighthouse Coffee",
+  "cats": [
+   "coffee"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Coffee (the Mesa)",
+  "price": "$",
+  "note": "",
+  "url": "https://yelp.to/piFIICIm3pb",
+  "status": "open",
+  "statusNote": "Original Mesa shop with active Toast ordering. Other shops on Chapala, Haley, Turnpike and Calle Real (Goleta).",
+  "source": "https://www.toasttab.com/local/order/lighthouse-coffee-cliff-dr-1819-cliff-drsuite-c",
+  "address": "1819 Cliff Dr Ste C (Mesa)",
+  "lat": 34.401058,
+  "lng": -119.721588,
+  "isNew": false
+ },
+ {
+  "id": "p45",
+  "name": "Dean Coffee",
+  "cats": [
+   "coffee"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Coffee",
+  "price": "$",
+  "note": "",
+  "url": "https://yelp.to/YtYCdIMm3pb",
+  "status": "unverified",
+  "statusNote": "Opened Aug 2020. Located in Goleta, not Santa Barbara proper. No closure news, but no dated 2025-2026 evidence it is operating.",
+  "source": "https://www.independent.com/?p=305233",
+  "address": "6100 Hollister Ave Ste 1B",
+  "lat": 34.4346416,
+  "lng": -119.8357863,
+  "isNew": false
+ },
+ {
+  "id": "p46",
+  "name": "Lilac Pâtisserie",
+  "cats": [
+   "breakfast",
+   "dessert",
+   "coffee"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Gluten-free bakery",
+  "price": "$$",
+  "note": "Get the scrambled eggs and watch them make cakes.",
+  "url": "https://www.yelp.com/biz/lilac-p%C3%A2tisserie-santa-barbara",
+  "status": "unverified",
+  "statusNote": "Dedicated gluten-free bakery. No closure news, but no dated 2025-2026 evidence for the State St shop. Sister restaurant Lilac Montecito has Aug 2026 reviews.",
+  "source": "https://www.noozhawk.com/listings/marketplace/lilac-patisserie/",
+  "address": "1017 State St",
+  "lat": 34.4217827,
+  "lng": -119.7025634,
+  "isNew": false
+ },
+ {
+  "id": "p47",
+  "name": "Blenders in the Grass",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Smoothies (local chain)",
+  "price": "$",
+  "note": "Multiple locations.",
+  "url": "https://www.drinkblenders.com/",
+  "status": "open",
+  "statusNote": "Local smoothie chain; the 3973 State St shop has an Apr 2025 review. Other shops at 720 State St, 1046 Coast Village Rd and 315 Meigs Rd, not individually confirmed.",
+  "source": "https://startpage.mapquest.com/us/california/blenders-in-the-grass-304702020",
+  "address": "3973 State St",
+  "lat": 34.4385361,
+  "lng": -119.751847,
+  "isNew": false
+ },
+ {
+  "id": "p48",
+  "name": "The Shop Kitchen",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Mexican/American breakfast",
+  "price": "$",
+  "note": "Eat outside.",
+  "url": "https://www.yelp.com/biz/the-shop-kitchen-santa-barbara",
+  "status": "unverified",
+  "statusNote": "Eastside breakfast/lunch spot, 8am-2pm per Noozhawk (undated). No closure news, but no dated 2025-2026 evidence.",
+  "source": "https://www.noozhawk.com/rob-raede-the-shop-kitchen-an-eastside-eatery-with-a-worldy-embrace",
+  "address": "730 N Milpas St",
+  "lat": 34.429143,
+  "lng": -119.6886468,
+  "isNew": false
+ },
+ {
+  "id": "p49",
+  "name": "M Special Brewing",
+  "cats": [
+   "beer-wine"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Brewery",
+  "price": "$",
+  "note": "Check the calendar for food pop-ups; closes around 10.",
+  "url": "https://www.yelp.com/biz/m-special-brew-co-goleta",
+  "status": "open",
+  "statusNote": "No closure news found. The Independent lists a 2026 show here, and Noozhawk reported Downtown Eats opening at M. Special in Sept 2025.",
+  "source": "https://www.independent.com/events/colonel-angus-ac-dc-tribute-m-special-goleta-7/",
+  "address": "6860 Cortona Dr, Bldg C",
+  "lat": 34.4322158,
+  "lng": -119.8682671,
+  "isNew": false
+ },
+ {
+  "id": "p50",
+  "name": "Hollister Brewing",
+  "cats": [
+   "beer-wine"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Brewpub",
+  "price": "$$",
+  "note": "",
+  "url": null,
+  "status": "closed",
+  "statusNote": "Closed. Finney's Crafthouse opened in the former Hollister Brewing space in Dec 2024.",
+  "source": "https://www.noozhawk.com/?p=652489",
+  "address": "6980 Marketplace Dr",
+  "lat": 34.4295573,
+  "lng": -119.8711359,
+  "isNew": false
+ },
+ {
+  "id": "p51",
+  "name": "Draughtsmen Aleworks",
+  "cats": [
+   "beer-wine"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Brewery",
+  "price": "$",
+  "note": "Fun industrial spot with food pop-ups; closes by 9.",
+  "url": "http://www.draughtsmenaleworks.com/",
+  "status": "open",
+  "statusNote": "The brewery's own site lists current Goleta taproom hours and no closure notice. A June 2025 Siteline mention shows it operating.",
+  "source": "https://www.draughtsmenaleworks.com",
+  "address": "53 Santa Felicia Dr",
+  "lat": 34.4322098,
+  "lng": -119.8761645,
+  "isNew": false
+ },
+ {
+  "id": "p52",
+  "name": "The Mercury Lounge",
+  "cats": [
+   "beer-wine"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Dive bar",
+  "price": "$",
+  "note": "",
+  "url": null,
+  "status": "closed",
+  "statusNote": "Closed for good on March 31, 2021 (COVID). The building was sold and Centennial Beer Hall opened in the space in 2021.",
+  "source": "https://www.edhat.com/news/restaurant-roundup-goletas-mercury-lounge-is-closing/",
+  "address": "5871 Hollister Ave",
+  "lat": 34.4360989,
+  "lng": -119.8284017,
+  "isNew": false
+ },
+ {
+  "id": "p53",
+  "name": "The Imperial",
+  "cats": [
+   "cocktails"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Upscale cocktails",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/the-imperial-goleta",
+  "status": "unverified",
+  "statusNote": "No closure news found. The newest evidence it is operating is a June 2025 Yelp review. Nothing confirms it is open in 2026.",
+  "source": "https://startpage.mapquest.com/us/california/the-imperial-446052612",
+  "address": "320 S Kellogg Ave",
+  "lat": 34.4342712,
+  "lng": -119.8204148,
+  "isNew": false
+ },
+ {
+  "id": "p54",
+  "name": "Cajun Kitchen Cafe",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Diner breakfast",
+  "price": "$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/cajun-kitchen-cafe-goleta",
+  "status": "open",
+  "statusNote": "The official locations page lists Calle Real as open (7am-2pm daily). There is also a second Goleta store at 6831 Hollister Ave.",
+  "source": "https://www.cajunkitchencafe.com/restaurant-locations",
+  "address": "6025 Calle Real",
+  "lat": 34.4412986,
+  "lng": -119.8313437,
+  "isNew": false
+ },
+ {
+  "id": "p55",
+  "name": "Sage & Onion Cafe",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Cafe",
+  "price": "$",
+  "note": "",
+  "url": null,
+  "status": "closed",
+  "statusNote": "Closed in July 2016. Worker Bee Cafe opened in the space in 2017.",
+  "source": "https://issuu.com/santabarbaraindependent/docs/sbi_610_09-21-17/50",
+  "address": "5599 Hollister Ave",
+  "lat": 34.435593,
+  "lng": -119.820397,
+  "isNew": false
+ },
+ {
+  "id": "p56",
+  "name": "Backyard Bowls",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Açaí bowls & smoothies",
+  "price": "$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/backyard-bowls-goleta",
+  "status": "open",
+  "statusNote": "The official locations page lists Goleta, open 8a-4p.",
+  "source": "https://www.backyardbowls.com/locations",
+  "address": "5668 Calle Real",
+  "lat": 34.441632,
+  "lng": -119.8232152,
+  "isNew": false
+ },
+ {
+  "id": "p57",
+  "name": "Pickles & Swiss",
+  "cats": [
+   "casual"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Sandwiches",
+  "price": "$",
+  "note": "",
+  "url": null,
+  "status": "closed",
+  "statusNote": "The Hollister Village shop closed and was reported as 'moving' in 2024 (the Paseo Nuevo store also closed). The new Goleta address was 'yet to be announced' as of Nov 2024, and no reopening has been confirmed.",
+  "source": "https://www.sitelinesb.com/?p=83758",
+  "address": "7060 Hollister Ave",
+  "lat": 34.4311362,
+  "lng": -119.874114,
+  "isNew": false
+ },
+ {
+  "id": "p58",
+  "name": "Noodle City",
+  "cats": [
+   "casual"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Pho / Vietnamese",
+  "price": "$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/noodle-city-goleta",
+  "status": "unverified",
+  "statusNote": "No closure news found. The newest evidence it is operating is a July 2025 review. Nothing confirms it is open in 2026.",
+  "source": "https://startpage.mapquest.com/us/california/noodle-city-11576567",
+  "address": "5869 Hollister Ave",
+  "lat": 34.4360964,
+  "lng": -119.8283654,
+  "isNew": false
+ },
+ {
+  "id": "p59",
+  "name": "La Chapala Market",
+  "cats": [
+   "casual"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Mexican, walk-up counter",
+  "price": "$",
+  "note": "In a storefront; open until 8pm.",
+  "url": "https://www.yelp.com/biz/la-chapala-market-goleta",
+  "status": "open",
+  "statusNote": "Listed in UCSB's June 2026 international market guide (groceries plus breakfast and lunch food).",
+  "source": "https://oiss.ucsb.edu/sites/default/files/2026-06/UCSB%20Goleta%20%26%20SB%20International%20Market%20Guide%20%281%29.pdf",
+  "address": "5780 Hollister Ave",
+  "lat": 34.4359682,
+  "lng": -119.825872,
+  "isNew": false
+ },
+ {
+  "id": "p60",
+  "name": "Los Agaves (Goleta)",
+  "cats": [
+   "casual"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Mexican",
+  "price": "$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/los-agaves-goleta-3",
+  "status": "open",
+  "statusNote": "The official site lists the Goleta location in Camino Real Marketplace.",
+  "source": "https://www.los-agaves.com/",
+  "address": "7024 Market Place Dr",
+  "lat": 34.4288352,
+  "lng": -119.873519,
+  "isNew": false
+ },
+ {
+  "id": "p61",
+  "name": "Lilly's Tacos",
+  "cats": [
+   "casual"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Tacos",
+  "price": "$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/lillys-tacos-goleta",
+  "status": "open",
+  "statusNote": "The official site lists Goleta (Wed-Mon 10am-9pm, closed Tue).",
+  "source": "https://www.lillystacos.com/",
+  "address": "290 Storke Rd, Suite D",
+  "lat": 34.4283612,
+  "lng": -119.8692773,
+  "isNew": false
+ },
+ {
+  "id": "p62",
+  "name": "On the Alley",
+  "cats": [
+   "casual",
+   "beer-wine"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Seafood & burgers, bar",
+  "price": "$$",
+  "note": "Lunch, dinner and drinks.",
+  "url": "https://www.yelp.com/biz/on-the-alley-goleta-2",
+  "status": "unverified",
+  "statusNote": "No closure news found. Yelp reviews from Oct 2025 show it operating, but its site did not resolve and the Brophy Bros site does not list it.",
+  "source": "https://startpage.mapquest.com/us/california/on-the-alley-367255378",
+  "address": "7038 Market Place Dr",
+  "lat": 34.4317,
+  "lng": -119.8775,
+  "isNew": false
+ },
+ {
+  "id": "p63",
+  "name": "The Habit (original)",
+  "cats": [
+   "casual"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Burgers",
+  "price": "$",
+  "note": "The original Habit.",
+  "url": "https://www.yelp.com/biz/the-habit-burger-grill-goleta",
+  "status": "open",
+  "statusNote": "The original is on Hollister Ave, not Calle Real. Pacific Business Times (Sept 2025) says the founders still run it. No closure news found.",
+  "source": "https://www.pacbiztimes.com/?p=69693",
+  "address": "5735 Hollister Ave",
+  "lat": 34.435445,
+  "lng": -119.824668,
+  "isNew": false
+ },
+ {
+  "id": "p64",
+  "name": "Kyle's Kitchen",
+  "cats": [
+   "casual"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Burgers, salads, sandwiches",
+  "price": "$",
+  "note": "10% of proceeds go to local charity.",
+  "url": "https://www.yelp.com/biz/kyles-kitchen-goleta",
+  "status": "moved",
+  "statusNote": "Moved from Hollister Village (7000 Hollister Ave, which is going to Raising Cane's) to Storke Plaza. Siteline reported it opened there the week of Sept 20, 2026. I did not check the separate Calle Real store.",
+  "source": "https://www.noozhawk.com/?p=806031",
+  "address": "6831 Hollister Ave, Suite D (Storke Plaza)",
+  "lat": 34.4299892,
+  "lng": -119.8670158,
+  "isNew": false
+ },
+ {
+  "id": "p65",
+  "name": "Beachside Bar-Café",
+  "cats": [
+   "dinner"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Beach bar",
+  "price": "$$",
+  "note": "",
+  "url": null,
+  "status": "closed",
+  "statusNote": "Closed in 2021 after 36 years. A new restaurant, The Ellwood, opened in 2025 at the same pier site, and its Little Woody's Pierside Bar & Grill was added in 2026.",
+  "source": "https://www.independent.com/2026/06/29/the-ellwood-opens-woodys-pierside-bar-grill/",
+  "address": "5905 Sandspit Rd",
+  "lat": 34.4170921,
+  "lng": -119.8291552,
+  "isNew": false
+ },
+ {
+  "id": "p66",
+  "name": "Jane at the Marketplace",
+  "cats": [
+   "dinner"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "American, mid-range to fancy",
+  "price": "$$$",
+  "note": "",
+  "url": "https://www.yelp.com/biz/jane-at-the-marketplace-goleta",
+  "status": "open",
+  "statusNote": "The official site lists current hours (Mon-Sat, closed Sun). The Independent listed an event here in May 2026.",
+  "source": "https://www.janeatthemarketplace.com/",
+  "address": "6940 Market Place Dr",
+  "lat": 34.4315,
+  "lng": -119.873,
+  "isNew": false
+ },
+ {
+  "id": "p67",
+  "name": "CAYA (formerly Outpost)",
+  "cats": [
+   "dinner",
+   "cocktails"
+  ],
+  "area": "goleta",
+  "areaLabel": "Goleta",
+  "cuisine": "Californian, hotel restaurant & bar",
+  "price": "$$$",
+  "note": "At The Leta hotel (formerly The Goodland).",
+  "url": null,
+  "status": "renamed",
+  "statusNote": "The Kimpton Goodland was renamed The Leta (Tapestry Collection by Hilton) in 2022. Hilton and OpenTable now list the hotel restaurant as CAYA Restaurant and Bar.",
+  "source": "https://www.hilton.com/en/hotels/sbactup-the-leta-santa-barbara-goleta/dining/",
+  "address": "5650 Calle Real",
+  "lat": 34.441632,
+  "lng": -119.8232152,
+  "isNew": false
+ },
+ {
+  "id": "n0",
+  "name": "Little Mountain",
+  "cats": [
+   "dinner"
+  ],
+  "area": "montecito",
+  "areaLabel": "Montecito",
+  "cuisine": "Californian, live-fire / hearth",
+  "price": "$$$",
+  "note": "",
+  "why": "Bon Appétit named it one of the best new restaurants of 2026, the Michelin Guide added it in March 2026, and the SB Independent, The Infatuation, Wallpaper* and Time Out all call it the area's buzziest newcomer.",
+  "opened": "November 2025",
+  "sources": [
+   "https://lamag.com/food/bon-appetite-names-two-southern-california-restaurants-among-best-new-of-2026/",
+   "https://guide.michelin.com/us/en/article/travel/new-restaurants-california",
+   "https://www.independent.com/2026/01/08/little-mountain-brings-a-homey-sophistication-to-montecito/",
+   "https://www.theinfatuation.com/los-angeles/reviews/little-mountain-montecito",
+   "https://www.wallpaper.com/travel/restaurants/little-mountain-montecito-review",
+   "https://www.timeout.com/usa/restaurants/best-restaurants-in-santa-barbara"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "516 San Ysidro Rd",
+  "lat": 34.437422,
+  "lng": -119.631508,
+  "isNew": true
+ },
+ {
+  "id": "n1",
+  "name": "Monte's",
+  "cats": [
+   "dinner"
+  ],
+  "area": "montecito",
+  "areaLabel": "Montecito",
+  "cuisine": "California-Korean, farm-to-table",
+  "price": "$$$",
+  "note": "",
+  "why": "Michelin added it in May 2026 and gave it a 2026 Green Star at the June ceremony; The Infatuation rates it 8.7, and Santa Barbara Magazine and Forbes also covered it.",
+  "opened": "March 2026",
+  "sources": [
+   "https://guide.michelin.com/us/en/california/santa-barbara/restaurant/monte-s",
+   "https://guide.michelin.com/us/en/article/travel/new-restaurants-california",
+   "https://thebusinessjournal.com/michelin-guide-california-2026-new-stars/",
+   "https://www.theinfatuation.com/los-angeles/reviews/montes",
+   "https://sbmag.com/whats-now/it-takes-a-village",
+   "https://robertedie.com/blog/santa-barbara-summer-2026-the-season-the-dining-map-slid-toward-the-water"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "1198 Coast Village Rd",
+  "lat": 34.4212865,
+  "lng": -119.644946,
+  "isNew": true
+ },
+ {
+  "id": "n2",
+  "name": "Silvers Omakase",
+  "cats": [
+   "dinner"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Japanese omakase (sushi)",
+  "price": "$$$$",
+  "note": "",
+  "why": "It won a Michelin star in the 2025 California guide and kept it in 2026 (Forbes, Fine Dining Lovers), and it is on The Infatuation's best-of-Santa Barbara guide.",
+  "opened": "February 2024",
+  "sources": [
+   "https://guide.michelin.com/us/en/california/santa-barbara/restaurants",
+   "https://www.forbes.com/sites/jimdobson/2025/06/25/california-gets-9-new-michelin-starred-restaurants-for-2025/",
+   "https://www.finedininglovers.com/explore/articles/2025-michelin-guide-california-providence-and-somni-earn-three-stars",
+   "https://en.wikipedia.org/wiki/Silvers_Omakase",
+   "https://www.theinfatuation.com/los-angeles/guides/the-best-restaurants-in-santa-barbara"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "224 Helena Ave",
+  "lat": 34.415204,
+  "lng": -119.691757,
+  "isNew": true
+ },
+ {
+  "id": "n3",
+  "name": "Dom's Taverna",
+  "cats": [
+   "dinner"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Basque / Spanish seafood",
+  "price": "$$$",
+  "note": "",
+  "why": "The SB Independent, The Infatuation (best-of guide), Time Out's 2026 best Santa Barbara restaurants, Sunset, Fine Dining Lovers and Santa Barbara Magazine all covered it.",
+  "opened": "August 2025",
+  "sources": [
+   "https://www.independent.com/2025/09/26/doms-taverna-connects-santa-barbara-to-san-sebastian/",
+   "https://www.theinfatuation.com/los-angeles/reviews/doms-taverna",
+   "https://www.timeout.com/usa/restaurants/best-restaurants-in-santa-barbara",
+   "https://sunset.com/travel/travel-directory/doms-taverna",
+   "https://sbmag.com/whats-now/basque-glow"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "30 E Victoria St",
+  "lat": 34.4248767,
+  "lng": -119.7047353,
+  "isNew": true
+ },
+ {
+  "id": "n4",
+  "name": "Gracie",
+  "cats": [
+   "casual"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Seafood, all-day / brunch (harbor)",
+  "price": "$$",
+  "note": "",
+  "why": "The SB Independent and Noozhawk covered its opening in the old Breakwater space, and Time Out put it first on its 2026 best Santa Barbara restaurants list.",
+  "opened": "September 2025",
+  "sources": [
+   "https://www.independent.com/2025/09/05/harborside-dining-finds-a-state-of-gracie/",
+   "https://www.noozhawk.com/?p=746357",
+   "https://www.timeout.com/usa/restaurants/best-restaurants-in-santa-barbara",
+   "https://santabarbaraca.com/itinerary/new-restaurants-in-santa-barbara/"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "107 Harbor Way",
+  "lat": 34.404239,
+  "lng": -119.6940314,
+  "isNew": true
+ },
+ {
+  "id": "n5",
+  "name": "Aegean",
+  "cats": [
+   "dinner"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Eastern Mediterranean / Turkish-Greek mezze",
+  "price": "$$",
+  "note": "",
+  "why": "Chef Efe Onoglu's pop-up became a permanent restaurant, with coverage in the SB Independent ('Greek Goodness'), Noozhawk, Edhat and Siteline.",
+  "opened": "Fall 2025",
+  "sources": [
+   "https://www.independent.com/2025/12/05/greek-goodness/",
+   "https://www.edhat.com/news/aegean-santa-barbara-chef-efe-onoglus-mediterranean-story-finds-a-new-home-on-the-central-coast/",
+   "https://www.sitelinesb.com/?p=94854",
+   "https://robertedie.com/blog/santa-barbara-summer-2026-the-season-the-dining-map-slid-toward-the-water"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "731 De la Guerra Plaza",
+  "lat": 34.41994,
+  "lng": -119.69871,
+  "isNew": true
+ },
+ {
+  "id": "n6",
+  "name": "Bistro Amasa",
+  "cats": [
+   "dinner"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "American bistro / reimagined comfort food",
+  "price": "$$$",
+  "note": "",
+  "why": "It is the sister restaurant of the Michelin-listed Barbareño, inside the Upham Hotel, and was covered by The Infatuation, the SB Independent, Edhat, Noozhawk and Siteline.",
+  "opened": "November 2025",
+  "sources": [
+   "https://www.theinfatuation.com/los-angeles/reviews/bistro-amasa",
+   "https://www.edhat.com/news/barbareno-team-expands-with-new-restaurant-bistro-amasa-in-santa-barbara/",
+   "https://www.independent.com/2025/12/05/traditional-with-some-tasty-tweaks",
+   "https://www.sitelinesb.com/?p=97539"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "1404 De la Vina St (The Upham Hotel)",
+  "lat": 34.4235034,
+  "lng": -119.709231,
+  "isNew": true
+ },
+ {
+  "id": "n7",
+  "name": "Ancora Osteria",
+  "cats": [
+   "dinner"
+  ],
+  "area": "montecito",
+  "areaLabel": "Montecito",
+  "cuisine": "Italian",
+  "price": "$$$",
+  "note": "",
+  "why": "S.Y. Kitchen chef Luca Crestanelli's Upper Village osteria opened to coverage in the SB Independent, Noozhawk, Edhat, the News-Press, Siteline and Santa Barbara Magazine, and reservations were limited at launch.",
+  "opened": "August 2026",
+  "sources": [
+   "https://www.independent.com/2026/09/15/ancora-osteria-revives-the-upper-villages-al-fresco-scene/",
+   "https://www.noozhawk.com/bizhawk-santa-ynez-chef-offers-a-taste-of-italy-with-new-montecito-restaurant/",
+   "https://www.newspress.com/2026/08/21/new-italian-restaurant-and-a-cafe-turned-wine-bar-spice-up-options-in-montecito/",
+   "https://sbmag.com/whats-now/italy-in-the-hood"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "1483 E Valley Rd",
+  "lat": 34.4369347,
+  "lng": -119.6329653,
+  "isNew": true
+ },
+ {
+  "id": "n8",
+  "name": "Ospi Montecito",
+  "cats": [
+   "dinner"
+  ],
+  "area": "montecito",
+  "areaLabel": "Montecito",
+  "cuisine": "Cal-Italian",
+  "price": "$$$",
+  "note": "",
+  "why": "The first location outside LA for the Venice favorite, at The Post, covered by the SB Independent, Noozhawk, the Montecito Journal and The Infatuation; Edhat still named it a draw at The Post in March 2026.",
+  "opened": "May 2025",
+  "sources": [
+   "https://www.independent.com/2025/07/21/ospi-posts-up-in-montecito/",
+   "https://www.noozhawk.com/bizhawk-ospi-eatery-the-newest-addition-to-the-post-in-santa-barbara/",
+   "https://www.montecitojournal.net/2025/05/13/ospi-montecito-brings-italian-elegance-to-the-american-riviera",
+   "https://www.theinfatuation.com:443/los-angeles/reviews/ospi"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "1801 E Cabrillo Blvd, Ste F (The Post)",
+  "lat": 34.4219009,
+  "lng": -119.6565647,
+  "isNew": true
+ },
+ {
+  "id": "n9",
+  "name": "Clark's Oyster Bar",
+  "cats": [
+   "dinner"
+  ],
+  "area": "montecito",
+  "areaLabel": "Montecito",
+  "cuisine": "Seafood / oyster bar",
+  "price": "$$$",
+  "note": "",
+  "why": "The first California outpost of Austin's Clark's, covered by the SB Independent, the Montecito Journal and Santa Barbara Magazine, and on The Infatuation's 2026 best Santa Barbara restaurants guide.",
+  "opened": "December 2024",
+  "sources": [
+   "https://www.independent.com/2025/02/28/clarks-oyster-bar-comes-to-coast-village-road",
+   "https://www.theinfatuation.com/los-angeles/guides/the-best-restaurants-in-santa-barbara",
+   "https://sbmag.com/whats-now/shell-game",
+   "https://www.sitelinesb.com/first-look-inside-clarks-oyster-bar-opening-tomorrow/"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "1212 Coast Village Rd",
+  "lat": 34.4213047,
+  "lng": -119.6441183,
+  "isNew": true
+ },
+ {
+  "id": "n10",
+  "name": "Mother Dough Bagels",
+  "cats": [
+   "breakfast"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Bagels",
+  "price": "$",
+  "note": "",
+  "why": "Lines run out the door on its short weekend hours; it made Edhat's 2025 best-openings list, the SB Independent covered it, and it was runner-up for Best Bagel Shop in the 2026 Best of Santa Barbara.",
+  "opened": "January 2025",
+  "sources": [
+   "https://www.edhat.com/news/exciting-santa-barbara-restaurants-that-opened-in-2025/",
+   "https://www.independent.com/2025/09/08/baked-with-love/",
+   "https://www.independent.com/2026/10/21/2026-best-of-santa-barbara-eating/"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "604 Santa Barbara St",
+  "lat": 34.4202475,
+  "lng": -119.6946759,
+  "isNew": true
+ },
+ {
+  "id": "n11",
+  "name": "The Mullet",
+  "cats": [
+   "cocktails"
+  ],
+  "area": "funk",
+  "areaLabel": "Funk Zone",
+  "cuisine": "Cocktail and vinyl hi-fi listening bar",
+  "price": "$$",
+  "note": "",
+  "why": "Lama Dog's new listening bar opened August 20, 2026, with coverage from Noozhawk, Edhat, the News-Press and Siteline.",
+  "opened": "August 2026",
+  "sources": [
+   "https://www.newspress.com/2026/08/20/the-mullet-entertains-funk-zone-with-vinyl-music-cocktails-at-soft-opening/",
+   "https://www.noozhawk.com/bizhawk-mullet-themed-cocktail-bar-opens-in-santa-barbaras-funk-zone/",
+   "https://www.edhat.com/news/lama-dog-vinyl-themed-cocktail-bar-the-mullet-funk-zone-opening/"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "116 Santa Barbara St (behind Lama Dog)",
+  "lat": 34.415724,
+  "lng": -119.688438,
+  "isNew": true
+ },
+ {
+  "id": "n12",
+  "name": "Beau",
+  "cats": [
+   "beer-wine"
+  ],
+  "area": "sb",
+  "areaLabel": "Santa Barbara",
+  "cuisine": "Wine bar (literary, speakeasy-style concept)",
+  "price": "$$",
+  "note": "",
+  "why": "Billed as Santa Barbara's first literary bar, it was covered by the SB Independent ('A New Kind of Wine Bar'), Edhat, Siteline and the News-Press, and hosts themed events.",
+  "opened": "March 2026",
+  "sources": [
+   "https://www.independent.com/2026/04/09/a-new-kind-of-wine-bar-in-santa-barbara/",
+   "https://www.edhat.com/news/santa-barbara-to-welcome-beau-the-bar-with-vintage-vibes-and-hidden-details/",
+   "https://www.sitelinesb.com/?p=102822"
+  ],
+  "url": null,
+  "status": "open",
+  "statusNote": "",
+  "source": null,
+  "address": "1129-A State St",
+  "lat": 34.42285,
+  "lng": -119.7041199,
+  "isNew": true
+ }
+]

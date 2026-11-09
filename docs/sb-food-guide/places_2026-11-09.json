@@ -1378,6 +1378,48 @@
   "isNew": false
  },
  {
+  "id": "x0",
+  "areaLabel": "Funk Zone",
+  "status": "open",
+  "isNew": false,
+  "name": "Loquita",
+  "cats": [
+   "dinner",
+   "cocktails"
+  ],
+  "area": "funk",
+  "cuisine": "Spanish tapas, wood-fired seafood and paella",
+  "price": "$$$",
+  "note": "Michelin Bib Gourmand. Reservations recommended; dinner Thursday to Sunday.",
+  "url": "https://www.loquitasb.com/",
+  "address": "202 State St",
+  "lat": 34.4142716,
+  "lng": -119.691583,
+  "statusNote": "Holds a 2026 Michelin Bib Gourmand; voted best tapas by Independent readers in 2026.",
+  "source": "https://www.independent.com/?p=777790"
+ },
+ {
+  "id": "x1",
+  "areaLabel": "Santa Barbara",
+  "status": "open",
+  "isNew": false,
+  "name": "Brophy Bros.",
+  "cats": [
+   "casual",
+   "dinner"
+  ],
+  "area": "sb",
+  "cuisine": "Seafood and clam bar on the harbor",
+  "price": "$$",
+  "note": "Clam chowder and Bloody Marys overlooking the marina. Waitlist, no reservations.",
+  "url": "https://www.brophybros.com/",
+  "address": "119 Harbor Way",
+  "lat": 34.4039908,
+  "lng": -119.6944633,
+  "statusNote": "Open; reviews through Aug 2026.",
+  "source": "https://www.brophybros.com/hours-location"
+ },
+ {
   "id": "n0",
   "name": "Little Mountain",
   "cats": [

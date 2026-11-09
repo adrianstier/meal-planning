@@ -264,9 +264,9 @@ function base(){
   <path d="${GEO.major}" fill="none" stroke="var(--hwy)" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
   ${GEO.coast.map(c=>`<path d="${c}" fill="none" stroke="var(--sea-deep)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>`).join("")}
   <g id="names"></g><g id="glbl"></g><g id="pins"></g>`;
-  const T=[["Goleta",34.4535,-119.828,"town"],["Isla Vista",34.4095,-119.861,"town"],["Santa Barbara",34.4495,-119.722,"town"],["Montecito",34.4545,-119.638,"town"],["Santa Barbara Channel",34.394,-119.775,"sea-name"]];
+  const T=[["Goleta",34.4535,-119.828,"town"],["Isla Vista",34.4095,-119.861,"town"],["Santa Barbara",34.4495,-119.722,"town"],["Montecito",34.4545,-119.624,"town"],["Santa Barbara Channel",34.394,-119.775,"sea-name"]];
   const g=svg.querySelector("#names");
-  for(const[t,la,ln,c]of T){const[x,y]=proj(la,ln);const e=document.createElementNS(svgNS,"text");e.setAttribute("x",x);e.setAttribute("y",y);e.setAttribute("class",c);e.setAttribute("text-anchor","middle");e.dataset.base=c==="town"?17:16;e.textContent=t;g.appendChild(e)}
+  for(const[t,la,ln,c]of T){const[x,y]=proj(la,ln);const e=document.createElementNS(svgNS,"text");e.setAttribute("x",x);e.setAttribute("y",y);e.setAttribute("class",c);e.setAttribute("text-anchor",t==="Montecito"?"end":"middle");e.dataset.base=c==="town"?17:16;e.textContent=t;g.appendChild(e)}
   // graticule every 1 arc-minute
   const gg=svg.querySelector("#grat");let d="";
   for(let m=0;m<=Math.ceil((GEO.N-34.36)*60);m++){const lat=GEO.N-m/60;if(Math.abs(lat*60-Math.round(lat*60))>1e-6)continue;const[,y]=proj(lat,GEO.W);d+=`M-2000,${y.toFixed(1)}H${GEO.VW+2000}`}

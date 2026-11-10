@@ -21,7 +21,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.reunionkitchen.net/santa-barbara"
+  "site": "https://www.reunionkitchen.net/santa-barbara",
+  "yelp": "https://www.yelp.com/biz/reunion-kitchen-drink-santa-barbara-3",
+  "yelpExact": true
  },
  {
   "id": "p1",
@@ -46,7 +48,9 @@
   "photo": true,
   "credit": "kanaloaseafood.com",
   "creditUrl": "https://kanaloaseafood.com/",
-  "site": "https://kanaloaseafood.com/"
+  "site": "https://kanaloaseafood.com/",
+  "yelp": "https://www.yelp.com/biz/kanaloa-seafood-santa-barbara-2",
+  "yelpExact": true
  },
  {
   "id": "p2",
@@ -71,7 +75,9 @@
   "photo": true,
   "credit": "secretbaosb.com",
   "creditUrl": "https://www.secretbaosb.com/",
-  "site": "https://www.secretbaosb.com/"
+  "site": "https://www.secretbaosb.com/",
+  "yelp": "https://www.yelp.com/biz/secret-bao-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p3",
@@ -95,7 +101,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.barbareno.com/"
+  "site": "https://www.barbareno.com/",
+  "yelp": "https://www.yelp.com/biz/barbare%C3%B1o-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p4",
@@ -120,7 +128,9 @@
   "photo": true,
   "credit": "thelarksb.com",
   "creditUrl": "https://www.thelarksb.com/",
-  "site": "https://www.thelarksb.com/"
+  "site": "https://www.thelarksb.com/",
+  "yelp": "https://www.yelp.com/biz/the-lark-santa-barbara-3",
+  "yelpExact": true
  },
  {
   "id": "p5",
@@ -134,7 +144,7 @@
   "cuisine": "Mexican, mezcal bar",
   "price": "$$$",
   "note": "Fancy Mexican.",
-  "url": "https://yelp.to/6O4Ye6Bo3pb",
+  "url": "https://www.yelp.com/biz/santo-mezcal-santa-barbara",
   "status": "open",
   "statusNote": "Online ordering on Toast is still live; no closure news (MapQuest 'closed' tag is undated)",
   "source": "https://toast.app/r/santo-mezcal-119-state-street/order",
@@ -145,7 +155,9 @@
   "photo": true,
   "credit": "santomezcalsb.com",
   "creditUrl": "https://santomezcalsb.com/",
-  "site": "https://santomezcalsb.com/"
+  "site": "https://santomezcalsb.com/",
+  "yelp": "https://www.yelp.com/biz/santo-mezcal-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p6",
@@ -159,7 +171,7 @@
   "cuisine": "Wood-fired pizza",
   "price": "$$",
   "note": "Pizza from the Lark team.",
-  "url": "https://yelp.to/H0JexdFo3pb",
+  "url": "https://www.yelp.com/biz/lucky-penny-santa-barbara",
   "status": "open",
   "statusNote": "Active visitor-bureau listing; expanding to the Santa Ynez Valley (Sitelines, Jul 2025); no closure news",
   "source": "https://santabarbaraca.com/businesses/lucky-penny/",
@@ -170,7 +182,9 @@
   "photo": true,
   "credit": "luckypennysb.com",
   "creditUrl": "https://www.luckypennysb.com/",
-  "site": "https://www.luckypennysb.com/"
+  "site": "https://www.luckypennysb.com/",
+  "yelp": "https://www.yelp.com/biz/lucky-penny-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p7",
@@ -194,7 +208,9 @@
   "photo": true,
   "credit": "samasamakitchen.com",
   "creditUrl": "https://samasamakitchen.com/",
-  "site": "https://samasamakitchen.com/"
+  "site": "https://samasamakitchen.com/",
+  "yelp": "https://www.yelp.com/biz/sama-sama-kitchen-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p8",
@@ -218,7 +234,9 @@
   "photo": true,
   "credit": "goodlioncocktails.com",
   "creditUrl": "https://www.goodlioncocktails.com/",
-  "site": "https://www.goodlioncocktails.com/"
+  "site": "https://www.goodlioncocktails.com/",
+  "yelp": "https://www.yelp.com/biz/the-good-lion-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p9",
@@ -242,7 +260,9 @@
   "photo": true,
   "credit": "testpilotcocktails.com",
   "creditUrl": "https://www.testpilotcocktails.com/",
-  "site": "https://www.testpilotcocktails.com/"
+  "site": "https://www.testpilotcocktails.com/",
+  "yelp": "https://www.yelp.com/biz/test-pilot-santa-barbara-2",
+  "yelpExact": true
  },
  {
   "id": "p10",
@@ -266,7 +286,9 @@
   "photo": true,
   "credit": "shakermillsb.com",
   "creditUrl": "https://www.shakermillsb.com/",
-  "site": "https://www.shakermillsb.com/"
+  "site": "https://www.shakermillsb.com/",
+  "yelp": "https://www.yelp.com/biz/shaker-mill-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p11",
@@ -279,7 +301,7 @@
   "cuisine": "Speakeasy cocktails",
   "price": "$$",
   "note": "",
-  "url": "https://www.yelp.com/biz/lab-social-santa-barbara",
+  "url": "https://www.yelp.com/search?find_desc=Lab+Social&find_loc=416+E+Haley+St+%28The+Mill%2C+Santa+Barbara%2C+CA",
   "status": "closed",
   "statusNote": "LOW CONFIDENCE: only a Yelp-derived MapQuest 'CLOSED PERMANENTLY' flag; no news story, no closure date; no coverage since 2020",
   "source": "https://startpage.mapquest.com/us/california/lab-social-closed-permanently-422827767",
@@ -290,7 +312,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=Lab+Social&find_loc=416+E+Haley+St+%28The+Mill%2C+Santa+Barbara%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p12",
@@ -303,7 +327,7 @@
   "cuisine": "Cocktail lounge",
   "price": "$$",
   "note": "Holiday MIRACLE pop-up Nov 13 – Dec 31.",
-  "url": "https://www.yelp.com/biz/pearl-social-santa-barbara-santa-barbara",
+  "url": "https://www.yelp.com/biz/pearl-social-cocktail-club-santa-barbara",
   "status": "renamed",
   "statusNote": "Reopened as Pearl Social Cocktail Club Jul 2024 (Sitelines). Visitor listing says 'call for availability'; MIRACLE holiday pop-up runs Nov 13 to Dec 31, 2026",
   "source": "https://santabarbaraca.com/businesses/pearl-social-cocktail-club/",
@@ -314,7 +338,9 @@
   "photo": true,
   "credit": "pearlsocialsb.com",
   "creditUrl": "https://www.pearlsocialsb.com/",
-  "site": "https://www.pearlsocialsb.com/"
+  "site": "https://www.pearlsocialsb.com/",
+  "yelp": "https://www.yelp.com/biz/pearl-social-cocktail-club-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p13",
@@ -338,7 +364,9 @@
   "photo": true,
   "credit": "satellitesb.com",
   "creditUrl": "https://satellitesb.com/",
-  "site": "https://satellitesb.com/"
+  "site": "https://satellitesb.com/",
+  "yelp": "https://www.yelp.com/biz/satellite-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p14",
@@ -351,7 +379,7 @@
   "cuisine": "Brewery taproom / sports",
   "price": "$$",
   "note": "",
-  "url": "https://www.yelp.com/biz/figueroa-mountain-brewing-santa-barbara",
+  "url": "https://www.yelp.com/biz/figueroa-mountain-brewing-santa-barbara-3",
   "status": "open",
   "statusNote": "Brewery site lists current hours; shared concept with Flying Embers kombucha since 2020; the bankruptcy case was dismissed in 2025",
   "source": "https://figmtnbrew.com/santabarbara",
@@ -362,7 +390,9 @@
   "photo": true,
   "credit": "figmtnbrew.com",
   "creditUrl": "https://www.figmtnbrew.com/santabarbara",
-  "site": "https://www.figmtnbrew.com/santabarbara/"
+  "site": "https://www.figmtnbrew.com/santabarbara/",
+  "yelp": "https://www.yelp.com/biz/figueroa-mountain-brewing-santa-barbara-3",
+  "yelpExact": true
  },
  {
   "id": "p15",
@@ -387,7 +417,9 @@
   "photo": true,
   "credit": "yellowbellytap.com",
   "creditUrl": "https://www.yellowbellytap.com",
-  "site": "https://www.yellowbellytap.com"
+  "site": "https://www.yellowbellytap.com",
+  "yelp": "https://www.yelp.com/biz/yellow-belly-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p16",
@@ -411,7 +443,9 @@
   "photo": true,
   "credit": "sbpublicmarket.com",
   "creditUrl": "https://www.sbpublicmarket.com/",
-  "site": "https://www.sbpublicmarket.com/"
+  "site": "https://www.sbpublicmarket.com/",
+  "yelp": "https://www.yelp.com/biz/santa-barbara-public-market-santa-barbara-4",
+  "yelpExact": true
  },
  {
   "id": "p17",
@@ -435,7 +469,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=Olio+Crudo+Bar&find_loc=11+W+Victoria+St%2C+Santa+Barbara%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p18",
@@ -460,7 +496,9 @@
   "photo": true,
   "credit": "saintbibianapizza.square.site",
   "creditUrl": "https://saintbibianapizza.square.site/",
-  "site": "https://saintbibianapizza.square.site/"
+  "site": "https://saintbibianapizza.square.site/",
+  "yelp": "https://www.yelp.com/biz/saint-bibiana-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p19",
@@ -473,7 +511,7 @@
   "cuisine": "Lobster rolls & oysters",
   "price": "$$",
   "note": "Inside Shaker Mill.",
-  "url": "https://yelp.to/ETuX1Mso3pb",
+  "url": "https://www.yelp.com/biz/broad-street-oyster-company-santa-barbara",
   "status": "open",
   "statusNote": "Walk-up window inside Shaker Mill; no closure news, but no recent dated source either",
   "source": "https://theinfatuation.com/los-angeles/reviews/los-angeles-reviews-broad-street-oyster-co-santa-barbara",
@@ -484,7 +522,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.broadstreetoyster.com/santa-barbara-seafood"
+  "site": "https://www.broadstreetoyster.com/santa-barbara-seafood",
+  "yelp": "https://www.yelp.com/biz/broad-street-oyster-company-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p20",
@@ -509,7 +549,9 @@
   "photo": true,
   "credit": "corazoncomedor.toast.site",
   "creditUrl": "https://corazoncomedor.toast.site/",
-  "site": "https://corazoncomedor.toast.site/"
+  "site": "https://corazoncomedor.toast.site/",
+  "yelp": "https://www.yelp.com/biz/corazon-comedor-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p21",
@@ -522,7 +564,7 @@
   "cuisine": "American bakery & breakfast",
   "price": "$$",
   "note": "Also on Coast Village Rd (Montecito) and 7060 Hollister (Goleta).",
-  "url": "https://www.yelp.com/biz/jeannine-s-american-bakery-and-restaurant-santa-barbara",
+  "url": "https://www.yelp.com/biz/jeannines-bakery-and-restaurant-santa-barbara",
   "status": "open",
   "statusNote": "Official site lists 3 public locations: 1 State St (At the Shore), 1253 Coast Village Rd (Montecito), 7060 Hollister Ave #105 (Goleta). Uptown/San Roque 3607 State St is closed to the public (central bakery, pre-order pickup only). La Arcada downtown closed 2020.",
   "source": "https://www.jeannines.com/",
@@ -533,7 +575,9 @@
   "photo": true,
   "credit": "jeannines.com",
   "creditUrl": "https://jeannines.com",
-  "site": "https://jeannines.com"
+  "site": "https://jeannines.com",
+  "yelp": "https://www.yelp.com/biz/jeannines-bakery-and-restaurant-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p22",
@@ -558,7 +602,9 @@
   "photo": true,
   "credit": "boathousesb.com",
   "creditUrl": "https://boathousesb.com/",
-  "site": "https://boathousesb.com/"
+  "site": "https://boathousesb.com/",
+  "yelp": "https://www.yelp.com/biz/boathouse-at-hendrys-beach-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p23",
@@ -583,7 +629,9 @@
   "photo": true,
   "credit": "renaudsbistro.com",
   "creditUrl": "https://renaudsbistro.com/",
-  "site": "https://renaudsbistro.com/"
+  "site": "https://renaudsbistro.com/",
+  "yelp": "https://www.yelp.com/biz/renauds-patisserie-and-bistro-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p24",
@@ -607,7 +655,9 @@
   "photo": true,
   "credit": "finchandforkrestaurant.com",
   "creditUrl": "https://www.finchandforkrestaurant.com/",
-  "site": "https://www.finchandforkrestaurant.com/"
+  "site": "https://www.finchandforkrestaurant.com/",
+  "yelp": "https://www.yelp.com/biz/finch-and-fork-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p25",
@@ -631,7 +681,9 @@
   "photo": true,
   "credit": "dangelobakery.com",
   "creditUrl": "https://www.dangelobakery.com/",
-  "site": "https://www.dangelobakery.com/"
+  "site": "https://www.dangelobakery.com/",
+  "yelp": "https://www.yelp.com/biz/d-angelos-bakery-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p26",
@@ -645,7 +697,7 @@
   "cuisine": "Fancy donuts & coffee",
   "price": "$",
   "note": "",
-  "url": "https://www.yelp.com/biz/hook-and-press-donuts-santa-barbara",
+  "url": "https://www.yelp.com/search?find_desc=Hook+%26+Press&find_loc=15+E+Figueroa+St+%28La+Arcada%29%2C+Santa+Barbara%2C+CA",
   "status": "open",
   "statusNote": "Moved to La Arcada in 2021-22. Siteline item of Oct 9, 2025 (stolen turtle returned) implies it is operating. No closure news.",
   "source": "https://www.sitelinesb.com/tag/hook-press-donuts/",
@@ -656,7 +708,9 @@
   "photo": true,
   "credit": "hookandpressdonuts.com",
   "creditUrl": "https://www.hookandpressdonuts.com/",
-  "site": "https://www.hookandpressdonuts.com/"
+  "site": "https://www.hookandpressdonuts.com/",
+  "yelp": "https://www.yelp.com/search?find_desc=Hook+%26+Press&find_loc=15+E+Figueroa+St+%28La+Arcada%29%2C+Santa+Barbara%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p27",
@@ -680,7 +734,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=Dawn+Patrol&find_loc=324+State+St%2C+Santa+Barbara%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p28",
@@ -694,7 +750,7 @@
   "cuisine": "Sandwiches & bakery",
   "price": "$",
   "note": "Also an Old Town Goleta location.",
-  "url": "https://www.yelp.com/biz/oat-bakery-santa-barbara",
+  "url": "https://www.yelp.com/biz/oat-bakery-santa-barbara-2",
   "status": "open",
   "statusNote": "Original downtown shop. Old Town Goleta location at 231 Magnolia Ave, Goleta 93117 (opened late 2022, also wholesale kitchen); third shop at Montecito Country Mart. No closure news. Goleta hours reportedly limited, so check before going.",
   "source": "https://dailynexus.com/2023-03-02/whats-new-in-old-town-goleta-oat-bakerys-second-location/",
@@ -705,7 +761,9 @@
   "photo": true,
   "credit": "oatbakery.com",
   "creditUrl": "https://www.oatbakery.com/",
-  "site": "https://www.oatbakery.com/"
+  "site": "https://www.oatbakery.com/",
+  "yelp": "https://www.yelp.com/biz/oat-bakery-santa-barbara-2",
+  "yelpExact": true
  },
  {
   "id": "p29",
@@ -729,7 +787,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/biz/la-super-rica-taqueria-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p30",
@@ -753,7 +813,9 @@
   "photo": true,
   "credit": "los-agaves.com",
   "creditUrl": "https://los-agaves.com/",
-  "site": "https://los-agaves.com/"
+  "site": "https://los-agaves.com/",
+  "yelp": "https://www.yelp.com/biz/los-agaves-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p31",
@@ -766,7 +828,7 @@
   "cuisine": "Mexican",
   "price": "$$",
   "note": "",
-  "url": "https://www.yelp.com/biz/los-arroyos-santa-barbara-2",
+  "url": "https://www.yelp.com/biz/los-arroyos-mexican-restaurant-and-take-out-santa-barbara",
   "status": "open",
   "statusNote": "Downtown flagship. KEYT covered its 25th anniversary (2024). No closure news. The Coast Village Rd outpost closed for renovation in Oct 2023 and no reopening was found.",
   "source": "https://keyt.com/?p=1041243",
@@ -777,7 +839,9 @@
   "photo": true,
   "credit": "losarroyos.com",
   "creditUrl": "https://www.losarroyos.com/santa-barbara-location/",
-  "site": "https://www.losarroyos.net/santa-barbara-location/"
+  "site": "https://www.losarroyos.net/santa-barbara-location/",
+  "yelp": "https://www.yelp.com/biz/los-arroyos-mexican-restaurant-and-take-out-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p32",
@@ -801,7 +865,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=South+Coast+Deli&find_loc=1436+Chapala+St%2C+Santa+Barbara%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p33",
@@ -825,7 +891,9 @@
   "photo": true,
   "credit": "emptybowlnoodle.com",
   "creditUrl": "https://emptybowlnoodle.com/",
-  "site": "https://emptybowlnoodle.com/"
+  "site": "https://emptybowlnoodle.com/",
+  "yelp": "https://www.yelp.com/biz/empty-bowl-gourmet-noodle-bar-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p34",
@@ -839,7 +907,7 @@
   "cuisine": "Old-school American & stiff drinks",
   "price": "$$",
   "note": "",
-  "url": "https://yelp.to/zTWYYsTEK0",
+  "url": "https://www.yelp.com/biz/joes-cafe-santa-barbara",
   "status": "open",
   "statusNote": "SB's oldest restaurant (1928). Review dated Jan 2026. No closure news.",
   "source": "https://www.opentable.com/joes-cafe",
@@ -850,7 +918,9 @@
   "photo": true,
   "credit": "joescafesb.com",
   "creditUrl": "https://www.joescafesb.com/",
-  "site": "https://www.joescafesb.com/"
+  "site": "https://www.joescafesb.com/",
+  "yelp": "https://www.yelp.com/biz/joes-cafe-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p35",
@@ -874,7 +944,9 @@
   "photo": true,
   "credit": "theblueowlsb.com",
   "creditUrl": "https://theblueowlsb.com/",
-  "site": "https://theblueowlsb.com/"
+  "site": "https://theblueowlsb.com/",
+  "yelp": "https://www.yelp.com/biz/the-blue-owl-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p36",
@@ -898,7 +970,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://monyssb.com/"
+  "site": "https://monyssb.com/",
+  "yelp": "https://www.yelp.com/biz/monys-mexican-food-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p37",
@@ -922,7 +996,9 @@
   "photo": true,
   "credit": "corazoncocinasb.com",
   "creditUrl": "https://corazoncocinasb.com/",
-  "site": "https://corazoncocinasb.com/"
+  "site": "https://corazoncocinasb.com/",
+  "yelp": "https://www.yelp.com/biz/corazon-cocina-santa-barbara-2",
+  "yelpExact": true
  },
  {
   "id": "p38",
@@ -947,7 +1023,9 @@
   "photo": true,
   "credit": "shalhoob.com",
   "creditUrl": "https://shalhoob.com/",
-  "site": "https://shalhoob.com/"
+  "site": "https://shalhoob.com/",
+  "yelp": "https://www.yelp.com/biz/shalhoobs-funk-zone-patio-santa-barbara-4",
+  "yelpExact": true
  },
  {
   "id": "p39",
@@ -960,7 +1038,7 @@
   "cuisine": "Ice cream",
   "price": "$",
   "note": "Long lines but worth it; ice cream sandwiches run out by 8.",
-  "url": "https://www.yelp.com/biz/mcconnells-fine-ice-creams-santa-barbara",
+  "url": "https://www.yelp.com/biz/mcconnells-fine-ice-creams-santa-barbara-5",
   "status": "open",
   "statusNote": "Flagship scoop shop. Directory reviews dated through Apr 2026. Another shop at 120 State St (Funk Zone).",
   "source": "https://www.independent.com/2024/05/01/we-believe-you-should-always-get-a-double-scoop/",
@@ -971,7 +1049,9 @@
   "photo": true,
   "credit": "mcconnells.com",
   "creditUrl": "https://mcconnells.com/",
-  "site": "https://mcconnells.com/"
+  "site": "https://mcconnells.com/",
+  "yelp": "https://www.yelp.com/biz/mcconnells-fine-ice-creams-santa-barbara-5",
+  "yelpExact": true
  },
  {
   "id": "p40",
@@ -995,7 +1075,9 @@
   "photo": true,
   "credit": "handlebarcoffee.com",
   "creditUrl": "https://handlebarcoffee.com/",
-  "site": "https://handlebarcoffee.com/"
+  "site": "https://handlebarcoffee.com/",
+  "yelp": "https://www.yelp.com/biz/handlebar-coffee-roasters-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p41",
@@ -1019,7 +1101,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.dunecoffee.com/pages/state-street"
+  "site": "https://www.dunecoffee.com/pages/state-street",
+  "yelp": "https://www.yelp.com/biz/dune-coffee-roasters-state-street-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p42",
@@ -1043,7 +1127,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=Rebar+Coffee&find_loc=214+State+St%2C+Santa+Barbara%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p43",
@@ -1056,7 +1142,7 @@
   "cuisine": "Coffee",
   "price": "$",
   "note": "",
-  "url": "https://yelp.to/clxLBKnm3pb",
+  "url": "https://www.yelp.com/biz/dart-coffee-co-santa-barbara",
   "status": "open",
   "statusNote": "Open. Also has a SB Maritime Museum harbor bar and a Carpinteria store.",
   "source": "https://sbmm.org/dart-coffee/",
@@ -1067,7 +1153,9 @@
   "photo": true,
   "credit": "dartcoffeeco.com",
   "creditUrl": "https://www.dartcoffeeco.com",
-  "site": "https://www.dartcoffeeco.com"
+  "site": "https://www.dartcoffeeco.com",
+  "yelp": "https://www.yelp.com/biz/dart-coffee-co-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p44",
@@ -1080,7 +1168,7 @@
   "cuisine": "Coffee (the Mesa)",
   "price": "$",
   "note": "",
-  "url": "https://yelp.to/piFIICIm3pb",
+  "url": "https://www.yelp.com/biz/lighthouse-coffee-santa-barbara",
   "status": "open",
   "statusNote": "Original Mesa shop with active Toast ordering. Other shops on Chapala, Haley, Turnpike and Calle Real (Goleta).",
   "source": "https://www.toasttab.com/local/order/lighthouse-coffee-cliff-dr-1819-cliff-drsuite-c",
@@ -1091,7 +1179,9 @@
   "photo": true,
   "credit": "lighthousecoffeesb.com",
   "creditUrl": "https://www.lighthousecoffeesb.com/mesa",
-  "site": "https://www.lighthousecoffeesb.com/mesa"
+  "site": "https://www.lighthousecoffeesb.com/mesa",
+  "yelp": "https://www.yelp.com/biz/lighthouse-coffee-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p45",
@@ -1104,7 +1194,7 @@
   "cuisine": "Coffee",
   "price": "$",
   "note": "",
-  "url": "https://yelp.to/YtYCdIMm3pb",
+  "url": "https://www.yelp.com/biz/dean-a-coffee-shop-goleta",
   "status": "unverified",
   "statusNote": "Opened Aug 2020. Located in Goleta, not Santa Barbara proper. No closure news, but no dated 2025-2026 evidence it is operating.",
   "source": "https://www.independent.com/?p=305233",
@@ -1115,7 +1205,9 @@
   "photo": true,
   "credit": "deancoffeeshop.com",
   "creditUrl": "https://www.deancoffeeshop.com/",
-  "site": "https://www.deancoffeeshop.com/"
+  "site": "https://www.deancoffeeshop.com/",
+  "yelp": "https://www.yelp.com/biz/dean-a-coffee-shop-goleta",
+  "yelpExact": true
  },
  {
   "id": "p46",
@@ -1141,7 +1233,9 @@
   "photo": true,
   "credit": "lilacpatisserie.com",
   "creditUrl": "https://lilacpatisserie.com/",
-  "site": "https://lilacpatisserie.com/"
+  "site": "https://lilacpatisserie.com/",
+  "yelp": "https://www.yelp.com/biz/lilac-p%C3%A2tisserie-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p47",
@@ -1165,7 +1259,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.drinkblenders.com"
+  "site": "https://www.drinkblenders.com",
+  "yelp": "https://www.yelp.com/biz/blenders-in-the-grass-santa-barbara-3",
+  "yelpExact": true
  },
  {
   "id": "p48",
@@ -1178,7 +1274,7 @@
   "cuisine": "Mexican/American breakfast",
   "price": "$",
   "note": "Eat outside.",
-  "url": "https://www.yelp.com/biz/the-shop-kitchen-santa-barbara",
+  "url": "https://www.yelp.com/biz/the-shop-brunch-santa-barbara",
   "status": "unverified",
   "statusNote": "Eastside breakfast/lunch spot, 8am-2pm per Noozhawk (undated). No closure news, but no dated 2025-2026 evidence.",
   "source": "https://www.noozhawk.com/rob-raede-the-shop-kitchen-an-eastside-eatery-with-a-worldy-embrace",
@@ -1189,7 +1285,9 @@
   "photo": true,
   "credit": "shopbrunch.com",
   "creditUrl": "https://www.shopbrunch.com/",
-  "site": "https://www.shopbrunch.com/"
+  "site": "https://www.shopbrunch.com/",
+  "yelp": "https://www.yelp.com/biz/the-shop-brunch-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "p49",
@@ -1202,7 +1300,7 @@
   "cuisine": "Brewery",
   "price": "$",
   "note": "Check the calendar for food pop-ups; closes around 10.",
-  "url": "https://www.yelp.com/biz/m-special-brew-co-goleta",
+  "url": "https://www.yelp.com/biz/m-special-brewing-company-goleta-2",
   "status": "open",
   "statusNote": "No closure news found. The Independent lists a 2026 show here, and Noozhawk reported Downtown Eats opening at M. Special in Sept 2025.",
   "source": "https://www.independent.com/events/colonel-angus-ac-dc-tribute-m-special-goleta-7/",
@@ -1213,7 +1311,9 @@
   "photo": true,
   "credit": "mspecialbrewco.com",
   "creditUrl": "https://mspecialbrewco.com/",
-  "site": "https://www.mspecialbrewco.com/"
+  "site": "https://www.mspecialbrewco.com/",
+  "yelp": "https://www.yelp.com/biz/m-special-brewing-company-goleta-2",
+  "yelpExact": true
  },
  {
   "id": "p50",
@@ -1237,7 +1337,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=Hollister+Brewing&find_loc=6980+Marketplace+Dr%2C+Goleta%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p51",
@@ -1261,7 +1363,9 @@
   "photo": true,
   "credit": "draughtsmenaleworks.com",
   "creditUrl": "https://www.draughtsmenaleworks.com/",
-  "site": "https://www.draughtsmenaleworks.com/"
+  "site": "https://www.draughtsmenaleworks.com/",
+  "yelp": "https://www.yelp.com/biz/draughtsmen-aleworks-goleta-2",
+  "yelpExact": true
  },
  {
   "id": "p52",
@@ -1285,7 +1389,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=The+Mercury+Lounge&find_loc=5871+Hollister+Ave%2C+Goleta%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p53",
@@ -1309,7 +1415,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/biz/the-imperial-goleta",
+  "yelpExact": true
  },
  {
   "id": "p54",
@@ -1322,7 +1430,7 @@
   "cuisine": "Diner breakfast",
   "price": "$",
   "note": "",
-  "url": "https://www.yelp.com/biz/cajun-kitchen-cafe-goleta",
+  "url": "https://www.yelp.com/biz/cajun-kitchen-cafe-goleta-2",
   "status": "open",
   "statusNote": "The official locations page lists Calle Real as open (7am-2pm daily). There is also a second Goleta store at 6831 Hollister Ave.",
   "source": "https://www.cajunkitchencafe.com/restaurant-locations",
@@ -1333,7 +1441,9 @@
   "photo": true,
   "credit": "cajunkitchencafe.com",
   "creditUrl": "https://cajunkitchencafe.com/",
-  "site": "https://cajunkitchencafe.com/"
+  "site": "https://cajunkitchencafe.com/",
+  "yelp": "https://www.yelp.com/biz/cajun-kitchen-cafe-goleta-2",
+  "yelpExact": true
  },
  {
   "id": "p55",
@@ -1357,7 +1467,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=Sage+%26+Onion+Cafe&find_loc=5599+Hollister+Ave%2C+Goleta%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p56",
@@ -1381,7 +1493,9 @@
   "photo": true,
   "credit": "backyardbowls.com",
   "creditUrl": "https://www.backyardbowls.com/",
-  "site": "https://www.backyardbowls.com/"
+  "site": "https://www.backyardbowls.com/",
+  "yelp": "https://www.yelp.com/biz/backyard-bowls-goleta",
+  "yelpExact": true
  },
  {
   "id": "p57",
@@ -1405,7 +1519,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=Pickles+%26+Swiss&find_loc=7060+Hollister+Ave%2C+Goleta%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p58",
@@ -1429,7 +1545,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://noodlecitygoleta.com/"
+  "site": "https://noodlecitygoleta.com/",
+  "yelp": "https://www.yelp.com/biz/noodle-city-goleta",
+  "yelpExact": true
  },
  {
   "id": "p59",
@@ -1453,7 +1571,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/biz/la-chapala-market-goleta",
+  "yelpExact": true
  },
  {
   "id": "p60",
@@ -1477,7 +1597,9 @@
   "photo": true,
   "credit": "los-agaves.com",
   "creditUrl": "https://los-agaves.com",
-  "site": "https://los-agaves.com"
+  "site": "https://los-agaves.com",
+  "yelp": "https://www.yelp.com/biz/los-agaves-goleta-3",
+  "yelpExact": true
  },
  {
   "id": "p61",
@@ -1501,7 +1623,9 @@
   "photo": true,
   "credit": "lillystacos.com",
   "creditUrl": "https://www.lillystacos.com/",
-  "site": "http://www.lillystacos.com"
+  "site": "http://www.lillystacos.com",
+  "yelp": "https://www.yelp.com/biz/lillys-tacos-goleta",
+  "yelpExact": true
  },
  {
   "id": "p62",
@@ -1515,7 +1639,7 @@
   "cuisine": "Seafood & burgers, bar",
   "price": "$$",
   "note": "Lunch, dinner and drinks.",
-  "url": "https://www.yelp.com/biz/on-the-alley-goleta-2",
+  "url": "https://www.yelp.com/biz/on-the-alley-goleta-goleta-2",
   "status": "unverified",
   "statusNote": "No closure news found. Yelp reviews from Oct 2025 show it operating, but its site did not resolve and the Brophy Bros site does not list it.",
   "source": "https://startpage.mapquest.com/us/california/on-the-alley-367255378",
@@ -1526,7 +1650,9 @@
   "photo": true,
   "credit": "onthealley.com",
   "creditUrl": "https://www.onthealley.com/",
-  "site": "https://www.onthealley.com/"
+  "site": "https://www.onthealley.com/",
+  "yelp": "https://www.yelp.com/biz/on-the-alley-goleta-goleta-2",
+  "yelpExact": true
  },
  {
   "id": "p63",
@@ -1539,7 +1665,7 @@
   "cuisine": "Burgers",
   "price": "$",
   "note": "The original Habit.",
-  "url": "https://www.yelp.com/biz/the-habit-burger-grill-goleta",
+  "url": "https://www.yelp.com/biz/habit-burger-and-grill-goleta",
   "status": "open",
   "statusNote": "The original is on Hollister Ave, not Calle Real. Pacific Business Times (Sept 2025) says the founders still run it. No closure news found.",
   "source": "https://www.pacbiztimes.com/?p=69693",
@@ -1550,7 +1676,9 @@
   "photo": true,
   "credit": "habitburger.com",
   "creditUrl": "https://www.habitburger.com/locations/goleta/",
-  "site": "https://www.habitburger.com/locations/goleta/"
+  "site": "https://www.habitburger.com/locations/goleta/",
+  "yelp": "https://www.yelp.com/biz/habit-burger-and-grill-goleta",
+  "yelpExact": true
  },
  {
   "id": "p64",
@@ -1563,7 +1691,7 @@
   "cuisine": "Burgers, salads, sandwiches",
   "price": "$",
   "note": "10% of proceeds go to local charity.",
-  "url": "https://www.yelp.com/biz/kyles-kitchen-goleta",
+  "url": "https://www.yelp.com/search?find_desc=Kyle%27s+Kitchen&find_loc=6831+Hollister+Ave%2C+Suite+D+%28Storke+Plaza%29%2C+Goleta%2C+CA",
   "status": "moved",
   "statusNote": "Moved from Hollister Village (7000 Hollister Ave, which is going to Raising Cane's) to Storke Plaza. Siteline reported it opened there the week of Sept 20, 2026. I did not check the separate Calle Real store.",
   "source": "https://www.noozhawk.com/?p=806031",
@@ -1574,7 +1702,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.kyleskitchen.com/"
+  "site": "https://www.kyleskitchen.com/",
+  "yelp": "https://www.yelp.com/search?find_desc=Kyle%27s+Kitchen&find_loc=6831+Hollister+Ave%2C+Suite+D+%28Storke+Plaza%29%2C+Goleta%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p65",
@@ -1598,7 +1728,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": null
+  "site": null,
+  "yelp": "https://www.yelp.com/search?find_desc=Beachside+Bar-Caf%C3%A9&find_loc=5905+Sandspit+Rd%2C+Goleta%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "p66",
@@ -1622,7 +1754,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.janeatthemarketplace.com/"
+  "site": "https://www.janeatthemarketplace.com/",
+  "yelp": "https://www.yelp.com/biz/jane-at-the-marketplace-goleta",
+  "yelpExact": true
  },
  {
   "id": "p67",
@@ -1647,7 +1781,9 @@
   "photo": true,
   "credit": "cayarestaurant.com",
   "creditUrl": "https://www.cayarestaurant.com/",
-  "site": "https://www.cayarestaurant.com/"
+  "site": "https://www.cayarestaurant.com/",
+  "yelp": "https://www.yelp.com/biz/caya-restaurant-goleta-2",
+  "yelpExact": true
  },
  {
   "id": "x0",
@@ -1672,7 +1808,9 @@
   "photo": true,
   "credit": "loquitasb.com",
   "creditUrl": "https://www.loquitasb.com/",
-  "site": "https://www.loquitasb.com/"
+  "site": "https://www.loquitasb.com/",
+  "yelp": "https://www.yelp.com/biz/loquita-santa-barbara-2",
+  "yelpExact": true
  },
  {
   "id": "x1",
@@ -1697,7 +1835,9 @@
   "photo": true,
   "credit": "brophybros.com",
   "creditUrl": "https://www.brophybros.com/",
-  "site": "https://www.brophybros.com/"
+  "site": "https://www.brophybros.com/",
+  "yelp": "https://www.yelp.com/biz/brophy-bros-santa-barbara-7",
+  "yelpExact": true
  },
  {
   "id": "n0",
@@ -1731,7 +1871,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.littlemountainsb.com/"
+  "site": "https://www.littlemountainsb.com/",
+  "yelp": "https://www.yelp.com/biz/little-mountain-montecito",
+  "yelpExact": true
  },
  {
   "id": "n1",
@@ -1765,7 +1907,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.montessb.com/"
+  "site": "https://www.montessb.com/",
+  "yelp": "https://www.yelp.com/biz/montes-montecito",
+  "yelpExact": true
  },
  {
   "id": "n2",
@@ -1798,7 +1942,9 @@
   "photo": true,
   "credit": "silversomakase.com",
   "creditUrl": "https://www.silversomakase.com/",
-  "site": "https://www.silversomakase.com/"
+  "site": "https://www.silversomakase.com/",
+  "yelp": "https://www.yelp.com/biz/silvers-omakase-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "n3",
@@ -1831,7 +1977,9 @@
   "photo": true,
   "credit": "domstaverna.com",
   "creditUrl": "https://www.domstaverna.com/",
-  "site": "https://www.domstaverna.com/"
+  "site": "https://www.domstaverna.com/",
+  "yelp": "https://www.yelp.com/biz/doms-taverna-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "n4",
@@ -1863,7 +2011,9 @@
   "photo": true,
   "credit": "graciewaterfront.com",
   "creditUrl": "https://www.graciewaterfront.com/",
-  "site": "https://www.graciewaterfront.com/"
+  "site": "https://www.graciewaterfront.com/",
+  "yelp": "https://www.yelp.com/biz/gracie-santa-barbara-2",
+  "yelpExact": true
  },
  {
   "id": "n5",
@@ -1895,7 +2045,9 @@
   "photo": true,
   "credit": "aegeansb.com",
   "creditUrl": "https://www.aegeansb.com/",
-  "site": "https://www.aegeansb.com/"
+  "site": "https://www.aegeansb.com/",
+  "yelp": "https://www.yelp.com/biz/aegean-santa-barbara-2",
+  "yelpExact": true
  },
  {
   "id": "n6",
@@ -1927,7 +2079,9 @@
   "photo": true,
   "credit": "bistroamasa.com",
   "creditUrl": "https://www.bistroamasa.com/",
-  "site": "https://www.bistroamasa.com/"
+  "site": "https://www.bistroamasa.com/",
+  "yelp": "https://www.yelp.com/biz/bistro-amasa-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "n7",
@@ -1959,7 +2113,9 @@
   "photo": true,
   "credit": "ancoraosteria.com",
   "creditUrl": "https://ancoraosteria.com/",
-  "site": "https://ancoraosteria.com/"
+  "site": "https://ancoraosteria.com/",
+  "yelp": "https://www.yelp.com/biz/ancora-osteria-santa-barbara",
+  "yelpExact": true
  },
  {
   "id": "n8",
@@ -1991,7 +2147,9 @@
   "photo": true,
   "credit": "ospi.com",
   "creditUrl": "https://ospi.com/montecito",
-  "site": "https://ospi.com/montecito"
+  "site": "https://ospi.com/montecito",
+  "yelp": "https://www.yelp.com/biz/ospi-montecito-montecito",
+  "yelpExact": true
  },
  {
   "id": "n9",
@@ -2023,7 +2181,9 @@
   "photo": true,
   "credit": "clarksoysterbar.com",
   "creditUrl": "https://www.clarksoysterbar.com/locations/montecito",
-  "site": "https://www.clarksoysterbar.com/locations/montecito"
+  "site": "https://www.clarksoysterbar.com/locations/montecito",
+  "yelp": "https://www.yelp.com/biz/clarks-oyster-bar-montecito",
+  "yelpExact": true
  },
  {
   "id": "n10",
@@ -2054,7 +2214,9 @@
   "photo": true,
   "credit": "motherdoughbagels.com",
   "creditUrl": "https://motherdoughbagels.com/",
-  "site": "https://motherdoughbagels.com/"
+  "site": "https://motherdoughbagels.com/",
+  "yelp": "https://www.yelp.com/biz/mother-dough-bagels-santa-barbara-2",
+  "yelpExact": true
  },
  {
   "id": "n11",
@@ -2085,7 +2247,9 @@
   "photo": false,
   "credit": null,
   "creditUrl": null,
-  "site": "https://www.themulletsb.com/"
+  "site": "https://www.themulletsb.com/",
+  "yelp": "https://www.yelp.com/search?find_desc=The+Mullet&find_loc=116+Santa+Barbara+St+%28behind+Lama+Dog%29%2C+Funk+Zone%2C+CA",
+  "yelpExact": false
  },
  {
   "id": "n12",
@@ -2116,6 +2280,8 @@
   "photo": true,
   "credit": "frombeau.com",
   "creditUrl": "https://frombeau.com/",
-  "site": "https://frombeau.com/"
+  "site": "https://frombeau.com/",
+  "yelp": "https://www.yelp.com/biz/beau-santa-barbara-3",
+  "yelpExact": true
  }
 ]

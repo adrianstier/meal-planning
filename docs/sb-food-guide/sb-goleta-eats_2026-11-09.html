@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: compact header, a strip of recent openings, one sticky filter bar, then photo cards beside a sticky street map. Opening a place docks its panel over the map. On phones the map and panel are a full-screen view. */
+/* Layout: compact header, collections, one sticky filter bar, then photo cards beside a sticky street map. Opening a place docks its panel over the map. On phones the map and panel are a full-screen view. */
 :root{
   --paper:#F3F5F6; --surface:#FFFFFF; --ink:#152A3D; --muted:#566675; --rule:#D9E0E5;
   --land:#E6E2D6; --pick:#1F5F7A; --new:#B5136F; --warn:#8A5200; --sel:#E3EEF3; --ok:#1B7A46;
@@ -39,7 +39,7 @@ h1{font-family:var(--f-sign);font-weight:400;font-size:clamp(26px,3.2vw,40px);li
 .fresh h2 small,.group h2 small{font-family:var(--f-text);font-size:14px;color:var(--muted)}
 .strip{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 2px 12px;margin-inline:-2px;scrollbar-width:thin}
 .strip .card{flex:0 0 clamp(210px,24vw,290px);scroll-snap-align:start}
-.strip .when{color:var(--new);font-weight:600;font-size:13.5px;margin:0}
+.when{color:var(--new);font-weight:600;font-size:13.5px;margin:0}
 
 /* filter bar: type tabs and search on one line, quieter refinements below; on phones the refinements live in a sheet */
 .bar{position:sticky;top:0;z-index:6;background:var(--paper);margin-top:18px;padding-top:env(safe-area-inset-top,0px);border-bottom:1px solid var(--rule)}
@@ -220,11 +220,6 @@ footer a{color:inherit}
 
 <nav class="lists" id="lists" aria-label="Collections"></nav>
 
-<section class="fresh" aria-labelledby="h-fresh">
-  <h2 id="h-fresh">Opened since 2024 <small>13</small></h2>
-  <div class="strip" id="strip"></div>
-</section>
-
 <div class="bar" id="bar" role="search">
   <div class="row1">
     <nav class="tabs" id="tabs" aria-label="Type of place"></nav>
@@ -240,7 +235,6 @@ footer a{color:inherit}
     <div class="pills">
       <button class="pill" id="f-open" aria-pressed="false"><span class="dot on"></span>Open now</button>
       <button class="pill" id="f-pick" aria-pressed="false"><svg class="i star" viewBox="0 0 24 24"><path d="m12 3 2.700 5.800 6.300.800-4.600 4.400 1.200 6.300L12 17.200 6.400 20.300l1.200-6.300L3 9.600l6.300-.800z"/></svg>Our picks</button>
-      <button class="pill" id="f-new" aria-pressed="false"><span class="dot"></span>New</button>
       <button class="pill" id="f-saved" aria-pressed="false"><svg class="i heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.400-7-10a4 4 0 0 1 7-2.600A4 4 0 0 1 19 10c0 5.600-7 10-7 10z"/></svg><span id="savedn">Saved</span></button>
       <button class="pill" id="f-near" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="5"/></svg>Near me</button>
     </div>
@@ -250,7 +244,7 @@ footer a{color:inherit}
 
 <div class="main">
   <div class="list">
-    <div class="status"><span id="count" aria-live="polite"></span><button id="clear" hidden>Clear filters</button><span id="geomsg"></span><label class="sort">Sort <select id="sort"><option value="cat">By type</option><option value="rating">Top rated</option><option value="reviews">Most reviewed</option><option value="name">A to Z</option></select></label></div>
+    <div class="status"><span id="count" aria-live="polite"></span><button id="clear" hidden>Clear filters</button><span id="geomsg"></span><label class="sort">Sort <select id="sort"><option value="cat">By type</option><option value="rating">Top rated</option><option value="reviews">Most reviewed</option><option value="new">Newest first</option><option value="name">A to Z</option></select></label></div>
     <div id="list"></div>
   </div>
   <aside class="side" id="side" aria-label="Map">
@@ -311,8 +305,9 @@ function openState(p){
 const UCSB=[34.414,-119.8489];
 const FIRST=new Set("p29 p39 x1 p4 x0 p40 p22 a44 p9 p16 a0 a6 p21 p8".split(" "));
 const DATE=new Set("p3 p4 x0 a14 a4 a15 a27 a30 p7 p8 p12 n2 n3 n7 n6 n9 a29 a2 a16".split(" "));
-const LISTS=[["first","First weekend in town",p=>FIRST.has(p.id)],["ucsb","Near UCSB",p=>mi(p,UCSB)<=3],["date","Date night",p=>DATE.has(p.id)],["tacos","Tacos and Mexican",p=>/taco|burrito|taquer|mexican/i.test(p.name+" "+p.cuisine)]];
+const LISTS=[["first","First weekend in town",p=>FIRST.has(p.id)],["new","New since 2024",p=>p.isNew],["ucsb","Near UCSB",p=>mi(p,UCSB)<=3],["date","Date night",p=>DATE.has(p.id)],["tacos","Tacos and Mexican",p=>/taco|burrito|taquer|mexican/i.test(p.name+" "+p.cuisine)]];
 const fold=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u2018\u2019]/g,"'").toLowerCase();
+const newest=(a,b)=>openedKey(b)-openedKey(a)||a.name.localeCompare(b.name);
 const score=p=>p.temp?-1:p.rating?(p.rating*p.reviews+4.4*60)/(p.reviews+60):0;
 const listFn=()=>{const l=LISTS.find(l=>l[0]===st.list);return l&&l[2]};
 const fmtMi=d=>d==null?"":d<10?d.toFixed(1)+" mi":Math.round(d)+" mi";
@@ -341,7 +336,7 @@ function card(p,extra){
   const img=p.photo?`<img src="img/${p.id}-m.jpg" alt="" loading="lazy" width="640" height="400" onerror="this.outerHTML='<span class=noph>'+this.dataset.n+'</span>'" data-n="${esc(p.cuisine)}">`:`<span class="noph">${esc(p.cuisine)}</span>`;
   const on=saved.has(p.id);
   const mi=miles(p),os=openState(p);
-  d.innerHTML=`<div class="ph">${img}${p.isNew&&!extra?`<span class="badge">New</span>`:""}${p.pick?`<span class="badge pk">Our pick</span>`:""}</div>
+  d.innerHTML=`<div class="ph">${img}${p.isNew?`<span class="badge">New</span>`:""}${p.pick?`<span class="badge pk">Our pick</span>`:""}</div>
    <button class="save" aria-pressed="${on}" aria-label="${on?"Remove":"Save"} ${esc(p.name)}">${HEART}</button>
    <div class="cb"><h3><a href="#${p.id}">${esc(p.name)}</a></h3><span class="pr">${esc(p.price)}</span>
    ${extra||""}<p class="cu">${esc(p.cuisine)}</p>${os?`<p class="hr${os.open?"":" shut"}">${os.text}</p>`:""}<p>${p.rating?`<span class="rt" title="${p.rating} on Google from ${p.reviews.toLocaleString("en-US")} reviews">★ ${p.rating.toFixed(1)}</span>`:""}${esc(where(p))}${mi!=null?`, <span class="dist">${fmtMi(mi)}</span>`:""}</p></div>`;
@@ -365,7 +360,6 @@ function render(){
     b.onclick=()=>{st.cat=k;render()};tabs.appendChild(b)}
   segs($("#f-area"),AREAS,st.area,k=>st.area=k);
   segs($("#f-price"),PRICES,st.price,k=>st.price=st.price===k?"":k);
-  $("#f-new").setAttribute("aria-pressed",st.onlyNew);
   $("#f-saved").setAttribute("aria-pressed",st.onlySaved);
   $("#f-near").setAttribute("aria-pressed",!!st.near);
   $("#savedn").textContent=saved.size?`Saved (${saved.size})`:"Saved";
@@ -376,17 +370,17 @@ function render(){
   const list=$("#list");list.innerHTML="";
   const byName=(a,b)=>(b.photo-a.photo)||a.name.localeCompare(b.name);
   const groups=st.near?[["Nearest to you",vis.slice().sort((a,b)=>(miles(a)??1e9)-(miles(b)??1e9))]]
-    :st.sort!=="cat"?[[st.cat!=="all"?CATS.find(c=>c[0]===st.cat)[1]:"All places",vis.slice().sort({rating:(a,b)=>score(b)-score(a),reviews:(a,b)=>(b.reviews||0)-(a.reviews||0),name:(a,b)=>a.name.localeCompare(b.name)}[st.sort])]]
+    :st.list==="new"&&st.sort==="cat"?[["New since 2024",vis.slice().sort(newest)]]
+    :st.sort!=="cat"?[[st.cat!=="all"?CATS.find(c=>c[0]===st.cat)[1]:"All places",vis.slice().sort({rating:(a,b)=>score(b)-score(a),reviews:(a,b)=>(b.reviews||0)-(a.reviews||0),new:newest,name:(a,b)=>a.name.localeCompare(b.name)}[st.sort])]]
     :st.cat!=="all"?[[CATS.find(c=>c[0]===st.cat)[1],vis.slice().sort(byName)]]
     :CATS.map(([k,l])=>[l,vis.filter(p=>p.cats[0]===k).sort((a,b)=>(b.photo-a.photo)||a.name.localeCompare(b.name))]);
   for(const[label,g]of groups){if(!g.length)continue;
     const sec=document.createElement("section");sec.className="group";
     sec.innerHTML=`<h2>${label} <small>${g.length}</small></h2><div class="grid"></div>`;
-    const grid=sec.lastChild;for(const p of g)grid.appendChild(card(p));
+    const grid=sec.lastChild;for(const p of g)grid.appendChild(card(p,p.isNew&&(st.list==="new"||st.sort==="new")?`<p class="when">Opened ${esc(p.opened||"recently")}</p>`:""));
     list.appendChild(sec)}
   if(!vis.length){list.innerHTML=`<p class="empty">${st.onlySaved&&!saved.size?"You have not saved any places yet. Tap the heart on a place to keep it here.":"No places match these filters."} <button id="reset">Clear filters</button></p>`;$("#reset").onclick=clearAll}
   const sig=[st.area,st.price,st.cat,st.onlyNew,st.onlySaved,st.openNow,st.picks,[...st.tags],st.list,st.q,!!st.near].join("|");
-  document.querySelectorAll("#strip .card").forEach(c=>{const b=c.querySelector(".save"),on=saved.has(c.dataset.id);b.setAttribute("aria-pressed",on);b.setAttribute("aria-label",(on?"Remove ":"Save ")+byId.get(c.dataset.id).name)});
   drawPins(vis,sig!==lastSig);lastSig=sig;
 }
 function segs(el,items,cur,set){el.innerHTML="";for(const[k,l]of items){const b=document.createElement("button");b.className="seg";b.textContent=l;b.setAttribute("aria-pressed",cur===k);b.onclick=()=>{set(k);render()};el.appendChild(b)}}
@@ -496,7 +490,6 @@ $("#f-open").onclick=()=>{st.openNow=!st.openNow;render()};
 $("#f-pick").onclick=()=>{st.picks=!st.picks;render()};
 $("#sort").onchange=e=>{st.sort=e.target.value;render()};
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){render();if(st.sel)showDetail()}});
-$("#f-new").onclick=()=>{st.onlyNew=!st.onlyNew;render()};
 $("#f-saved").onclick=()=>{st.onlySaved=!st.onlySaved;render()};
 $("#clear").onclick=clearAll;
 $("#q").addEventListener("input",e=>{st.q=e.target.value;render()});
@@ -510,9 +503,6 @@ $("#f-near").onclick=()=>{
     ()=>{msg.textContent="Could not get your location. Check the browser's location permission."},{maximumAge:60000,timeout:10000});
 };
 
-// recent openings strip
-(function(){const s=$("#strip");
-  PLACES.filter(p=>p.isNew).sort((a,b)=>(b.photo-a.photo)||openedKey(b)-openedKey(a)).forEach(p=>s.appendChild(card(p,`<p class="when">Opened ${esc(p.opened||"recently")}</p>`)))})();
 function barH(){document.documentElement.style.setProperty("--barH",$("#bar").offsetHeight+"px")}
 barH();initMap();render();barH();apply();
 let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{barH();if(map)map.invalidateSize()},150)});

@@ -247,8 +247,8 @@ function row(p,n){
   if(p.sources)p.sources.slice(0,2).forEach((s,i)=>links.push(`<a href="${esc(s)}" target="_blank" rel="noopener">${i?"More coverage":"Read the coverage"}</a>`));
   if(p.source&&p.status!=="open")links.push(`<a href="${esc(p.source)}" target="_blank" rel="noopener">Status source</a>`);
   const sel=st.sel===p.id;
-  const thumb=sel?"":p.photo?`<img class="thumb" src="img/${p.id}-t.jpg" alt="" loading="lazy" width="96" height="72">`:`<span class="thumb none" aria-hidden="true">${esc(p.name.replace(/^The /,"")[0])}</span>`;
-  const hero=sel&&p.photo?`<figure class="hero"><img src="img/${p.id}.jpg" alt="${esc(p.name)}" width="960" height="600"><figcaption>Photo: <a href="${esc(p.creditUrl)}" target="_blank" rel="noopener">${esc(p.credit)}</a></figcaption></figure>`:"";
+  const thumb=sel?"":p.photo?`<img class="thumb" src="img/${p.id}-t.jpg" alt="" loading="lazy" width="96" height="72" onerror="this.removeAttribute('src');this.onerror=null">`:`<span class="thumb none" aria-hidden="true">${esc(p.name.replace(/^The /,"")[0])}</span>`;
+  const hero=sel&&p.photo?`<figure class="hero"><img src="img/${p.id}.jpg" alt="${esc(p.name)}" width="960" height="600" onerror="this.parentNode.remove()"><figcaption>Photo: <a href="${esc(p.creditUrl)}" target="_blank" rel="noopener">${esc(p.credit)}</a></figcaption></figure>`:"";
   d.innerHTML=`<span class="num">${n}</span>${thumb}<div class="pname">${esc(p.name)}</div><div class="price" aria-label="Price">${esc(p.price)}</div>
    <div class="what">${esc(p.cuisine)}, ${esc(p.address||p.areaLabel)}${p.area!=="sb"?" in "+esc(p.areaLabel):""}</div>
    <div class="body">${hero}${p.note?`<div class="note">${esc(p.note)}</div>`:""}${flagFor(p)}<div class="links">${links.join("")}</div></div>`;

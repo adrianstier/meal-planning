@@ -218,13 +218,57 @@ footer a{color:inherit}
   footer{padding-bottom:60px}
 }
 @media (max-width:340px){.grid{grid-template-columns:minmax(0,1fr)}}
+/* time control */
+.lede b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.lede,.tm,.checked{flex-basis:100%}
+.tm{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.tm select{height:36px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);padding:0 12px;font-size:14.5px;font-weight:500;cursor:pointer}
+.tm input[type=range]{flex:1 1 220px;max-width:440px;height:36px;margin:0;appearance:none;-webkit-appearance:none;background:none;cursor:pointer;--p:50%}
+.tm input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,var(--pick) var(--p),var(--rule) var(--p))}
+.tm input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--rule)}
+.tm input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--pick)}
+.tm input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-8px;border-radius:50%;background:var(--surface);border:2px solid var(--pick);box-shadow:0 1px 3px rgba(21,42,61,.3);transition:scale .14s var(--ease-out)}
+.tm input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--surface);border:2px solid var(--pick);box-shadow:0 1px 3px rgba(21,42,61,.3)}
+.tm input[type=range]:active::-webkit-slider-thumb{scale:1.15}
+.tm input[type=range]:focus-visible{outline:none}
+.tm input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px color-mix(in srgb,var(--pick) 35%,transparent)}
+.tm input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px color-mix(in srgb,var(--pick) 35%,transparent)}
+.tm output{font-weight:700;font-variant-numeric:tabular-nums;min-width:8ch;font-size:15px}
+.checked{margin:8px 0 0;color:var(--muted);font-size:13.5px}
+.pin.shut{background:var(--surface);border-color:var(--pick);box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.pin.shut.new{border-color:var(--new)}
+.key{position:absolute;left:10px;bottom:10px;z-index:900;margin:0;display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 12px 4px 10px;font-size:12.5px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
+.key i{width:10px;height:10px;border-radius:50%;border:2px solid var(--pick);background:var(--pick)}
+.key i.k2{background:var(--surface);margin-left:8px}
+/* finish: press feedback, browser surfaces, entrances */
+:root{--ease-out:cubic-bezier(.23,1,.32,1);accent-color:var(--pick);caret-color:var(--pick);scrollbar-color:var(--rule) transparent}
+::selection{background:color-mix(in srgb,var(--pick) 26%,transparent)}
+.pill,.seg,.tab,.act,.fbtn,.save,.tm select{transition:transform .14s var(--ease-out),background-color .16s ease,border-color .16s ease,color .16s ease}
+.pill:active,.seg:active,.act:active,.fbtn:active{transform:scale(.97)}
+.save:active{transform:scale(.9)}
+@media(hover:hover){.pill:not([aria-pressed="true"]):hover,.tm select:hover{border-color:var(--muted)}.act:not(.go):hover{border-color:var(--muted)}.tab:hover{color:var(--ink)}}
+.ph img{transition:scale .5s var(--ease-out)}
+.cb h3{text-wrap:balance}
+.dbody p{text-wrap:pretty}
+.detail{transition:opacity .22s var(--ease-out),translate .22s var(--ease-out)}
+@starting-style{.detail{opacity:0;translate:0 10px}}
+.status button,.empty button,.dbody a{text-decoration-thickness:1px}
+@media (prefers-reduced-motion:reduce){.pill,.seg,.tab,.act,.fbtn,.save,.detail{transition:none}.pill:active,.seg:active,.act:active,.fbtn:active,.save:active{transform:none}}
+@media(max-width:900px){.tm{gap:8px}.tm input[type=range]{flex-basis:100%;order:3;max-width:none}.tm select{height:42px}.key{bottom:auto;top:10px}}
 @media (prefers-reduced-motion:reduce){.ph img,.pin{transition:none}.card:hover .ph img{scale:1}}
 </style>
 
 <div class="wrap">
 <header class="top">
   <h1>Santa Barbara and Goleta restaurants and bars</h1>
-  <p class="lede">247 places to eat and drink from Goleta to Montecito. Every one was checked as open on Nov 10, 2026.</p>
+  <p class="lede" id="lede">247 places to eat and drink from Goleta to Montecito.</p>
+  <div class="tm" id="tm" role="group" aria-label="Check another day and time">
+    <button class="pill" id="w-now" aria-pressed="true"><span class="dot on"></span>Now</button>
+    <select id="w-day" aria-label="Day"></select>
+    <input id="w-time" type="range" min="300" max="1560" step="30" aria-label="Time of day">
+    <output id="w-out" for="w-time"></output>
+  </div>
+  <p class="checked">Every place was checked as open on Nov 10, 2026.</p>
 </header>
 
 <nav class="lists" id="lists" aria-label="Collections"></nav>
@@ -257,6 +301,7 @@ footer a{color:inherit}
   </div>
   <aside class="side" id="side" aria-label="Map">
     <div id="map"></div>
+    <p class="key" aria-hidden="true"><i class="k1"></i>Open<i class="k2"></i>Closed</p>
     <button class="act back" id="back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>List</button>
     <div class="detail" id="detail" hidden tabindex="-1"></div>
   </aside>
@@ -277,7 +322,7 @@ const PRICES=[["1","$"],["2","$$"],["3","$$$+"]];
 const AREAS=[["all","All"],["goleta","Goleta"],["sb","Santa Barbara"],["funk","Funk Zone"],["montecito","Montecito"]];
 const TAGS=[["patio","Patio"],["resv","Reservations"],["late","Open late"]];
 const TAGL={patio:"Patio",resv:"Takes reservations",late:"Open until 11 PM or later"};
-const st={area:"all",price:"",cat:"all",onlyNew:false,onlySaved:false,openNow:false,picks:false,tags:new Set(),list:"",sort:"cat",near:null,q:"",sel:null};
+const st={area:"all",price:"",cat:"all",onlyNew:false,onlySaved:false,openNow:false,at:null,picks:false,tags:new Set(),list:"",sort:"cat",near:null,q:"",sel:null};
 const $=s=>document.querySelector(s);
 const byId=new Map(PLACES.map(p=>[p.id,p]));
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -297,8 +342,10 @@ const miles=p=>mi(p,st.near);
 
 // opening hours are stored as minutes from midnight, Sunday first, in Santa Barbara time
 const DAY=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-let now={d:0,m:0};
-function tick(){try{const f=new Intl.DateTimeFormat("en-US",{timeZone:"America/Los_Angeles",weekday:"short",hour:"numeric",minute:"numeric",hourCycle:"h23"}).formatToParts(new Date()),g=k=>f.find(x=>x.type===k).value;
+let now={d:0,m:0},real={d:0,m:0};
+const DAYL=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+function tick(){tick0();real=now;if(st.at)now=st.at}
+function tick0(){try{const f=new Intl.DateTimeFormat("en-US",{timeZone:"America/Los_Angeles",weekday:"short",hour:"numeric",minute:"numeric",hourCycle:"h23"}).formatToParts(new Date()),g=k=>f.find(x=>x.type===k).value;
   now={d:Math.max(0,DAY.indexOf(g("weekday"))),m:(+g("hour")%24)*60+ +g("minute")}}catch(e){const n=new Date();now={d:n.getDay(),m:n.getHours()*60+n.getMinutes()}}}
 function fmtT(m){m%=1440;if(m===0)return"midnight";if(m===720)return"noon";const h=Math.floor(m/60),mm=m%60;return(h%12||12)+(mm?":"+String(mm).padStart(2,"0"):"")+(h<12?" AM":" PM")}
 function openState(p){
@@ -356,8 +403,26 @@ function card(p,extra){
   return d;
 }
 let lastSig="";
+const SHOWN=PLACES.filter(p=>p.status!=="closed");
+function whenUI(){
+  const wd=$("#w-day"),wt=$("#w-time");
+  if(wd.dataset.d!==String(real.d)){wd.dataset.d=real.d;wd.innerHTML="";for(let i=0;i<7;i++){const k=(real.d+i)%7,o=document.createElement("option");o.value=k;o.textContent=i===0?"Today":i===1?"Tomorrow":DAYL[k];wd.appendChild(o)}}
+  const v=st.at?st.at.v:Math.min(1560,Math.max(300,Math.round(real.m/30)*30));
+  wd.value=st.at?st.at.day:real.d;wt.value=v;wt.style.setProperty("--p",(v-300)/1260*100+"%");
+  $("#w-now").setAttribute("aria-pressed",!st.at);$("#tm").classList.toggle("then",!!st.at);
+  $("#w-out").textContent=st.at?fmtT(st.at.m):"";
+  const n=SHOWN.filter(p=>(openState(p)||{}).open).length,are=n+" of "+SHOWN.length+" places are open";
+  $("#lede").innerHTML=st.at?`${wd.value==real.d?"Today":DAYL[st.at.day]} at ${fmtT(st.at.m)}: <b>${are}</b>.`:`It's ${DAYL[real.d]}, ${fmtT(real.m)} in Santa Barbara. <b>${are}</b>.`;
+  $("#f-open").lastChild.textContent=st.at?"Open then":"Open now";
+}
+function retime(){
+  if(st.openNow){render();return}
+  tick();whenUI();
+  for(const c of document.querySelectorAll("#list .card")){const p=byId.get(c.dataset.id),os=p&&openState(p),h=c.querySelector("p.hr");if(os&&h){h.textContent=os.text;h.classList.toggle("shut",!os.open)}}
+  drawPins(visible(),false);if(st.sel)showDetail();
+}
 function render(){
-  tick();
+  tick();whenUI();
   const pool=visible(true),tabs=$("#tabs");tabs.innerHTML="";
   const ls=$("#lists");ls.innerHTML="";
   for(const[k,l]of LISTS){const b=document.createElement("button");b.className="pill";b.textContent=l;b.setAttribute("aria-pressed",st.list===k);
@@ -412,7 +477,7 @@ function initMap(){
     m.bindTooltip(p.name,{direction:"top",offset:[0,-8]});
     m.on("click",()=>open(p.id));markers.set(p.id,m)}
 }
-const icon=p=>L.divIcon({className:"pin"+(p.isNew?" new":"")+(st.sel===p.id?" sel":""),iconSize:[16,16]});
+const icon=p=>L.divIcon({className:"pin"+(p.isNew?" new":"")+(st.sel===p.id?" sel":"")+((openState(p)||{open:true}).open?"":" shut"),iconSize:[16,16]});
 function drawPins(vis,refit){
   if(!map)return;const ids=new Set(vis.map(p=>p.id));if(st.sel)ids.add(st.sel);
   const pts=[];
@@ -506,6 +571,8 @@ const sheet=on=>document.body.classList.toggle("fopen",on);
 $("#fopen").onclick=()=>sheet(true);$("#fclose").onclick=$("#scrim").onclick=$("#fdone").onclick=()=>sheet(false);
 $("#fclear").onclick=()=>{st.area="all";st.price="";st.onlyNew=false;st.onlySaved=false;st.openNow=false;st.picks=false;st.tags.clear();render()};
 $("#f-open").onclick=()=>{st.openNow=!st.openNow;render()};
+{let raf=0;const setAt=()=>{const day=+$("#w-day").value,v=+$("#w-time").value;st.at={day,v,d:(day+(v>=1440?1:0))%7,m:v%1440};if(!raf)raf=requestAnimationFrame(()=>{raf=0;retime()})};
+ $("#w-time").oninput=setAt;$("#w-day").onchange=setAt;$("#w-now").onclick=()=>{st.at=null;retime()}}
 $("#sort").onchange=e=>{st.sort=e.target.value;render()};
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){render();if(st.sel)showDetail()}});
 $("#f-saved").onclick=()=>{st.onlySaved=!st.onlySaved;render()};
